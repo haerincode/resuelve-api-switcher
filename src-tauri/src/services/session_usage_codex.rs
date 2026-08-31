@@ -1,17 +1,17 @@
-//! Codex 会话日志使用追踪
+//! Seguimiento de uso de log de sesiones Codex
 //!
-//! 从 ~/.codex/sessions/ 下的 JSONL 会话文件中提取精确 token 使用数据，
-//! 替代原有的 state_5.sqlite 估算方案。
+//! Extrae datos precisos de uso de tokens desde archivos de sesión JSONL bajo ~/.codex/sessions/,
+//! reemplaza esquema de estimación anterior state_5.sqlite.
 //!
-//! ## 数据流
+//! ## Flujo de datos
 //! ```text
-//! ~/.codex/sessions/YYYY/MM/DD/*.jsonl → 增量解析 → delta 计算 → 费用计算 → proxy_request_logs 表
+//! ~/.codex/sessions/YYYY/MM/DD/*.jsonl → parseo incremental → cálculo delta → cálculo de costos → tabla proxy_request_logs
 //! ```
 //!
-//! ## 解析的事件类型
-//! - `session_meta` → 提取 session_id
-//! - `turn_context` → 提取当前 model
-//! - `event_msg` (type=token_count) → 提取累计 token 用量，计算 delta
+//! ## Tipos de eventos parseados
+//! - `session_meta` → extrae session_id
+//! - `turn_context` → extrae model actual
+//! - `event_msg` (type=token_count) → extrae uso acumulado de tokens, calcula delta
 
 use crate::codex_config::get_codex_config_dir;
 use crate::database::{lock_conn, Database};
@@ -28,7 +28,7 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-/// 累计 token 用量（跟踪 total_token_usage 字段）
+/// Uso acumulado de tokens (rastrea campo total_token_usage)
 #[derive(Debug, Clone, Default)]
 struct CumulativeTokens {
     input: u64,
@@ -36,7 +36,7 @@ struct CumulativeTokens {
     output: u64,
 }
 
-/// 单次 API 调用的 token 增量
+/// Incremento de tokens de llamada API única
 #[derive(Debug)]
 struct DeltaTokens {
     input: u32,
@@ -50,7 +50,7 @@ impl DeltaTokens {
     }
 }
 
-/// 单文件解析时的运行状态
+/// Estado de ejecución al parsear archivo único
 struct FileParseState {
     session_id: Option<String>,
     current_model: String,
@@ -58,23 +58,23 @@ struct FileParseState {
     event_index: u32,
 }
 
-/// 归一化 Codex 模型名
+/// Normaliza nombre de modelo Codex
 ///
-/// 处理规则（按顺序）：
-/// 1. 转小写：`GLM-4.6` → `glm-4.6`
-/// 2. 剥离 provider 前缀：`openai/gpt-5.4` → `gpt-5.4`
-/// 3. 剥离 ISO 日期后缀：`gpt-5.4-2026-03-05` → `gpt-5.4`
-/// 4. 剥离紧凑日期后缀：`gpt-5.4-20260305` → `gpt-5.4`
+/// Reglas de procesamiento (en orden):
+/// 1. A minúsculas: `GLM-4.6` → `glm-4.6`
+/// 2. Elimina prefijo provider: `openai/gpt-5.4` → `gpt-5.4`
+/// 3. Elimina sufijo fecha ISO: `gpt-5.4-2026-03-05` → `gpt-5.4`
+/// 4. Elimina sufijo fecha compacta: `gpt-5.4-20260305` → `gpt-5.4`
 fn normalize_codex_model(raw: &str) -> String {
-    // Step 1: 小写
+    // Paso 1: minúsculas
     let mut name = raw.to_lowercase();
 
-    // Step 2: 剥离 "provider/" 前缀（如 openai/, azure/）
+    // Paso 2: elimina prefijo "provider/" (como openai/, azure/)
     if let Some(pos) = name.rfind('/') {
         name = name[pos + 1..].to_string();
     }
 
-    // Step 3: 剥离 ISO 日期后缀 -YYYY-MM-DD（正好 11 字符）
+    // Paso 3: elimina sufijo fecha ISO -YYYY-MM-DD (exactamente 11 caracteres)
     if name.len() > 11 {
         let suffix = &name[name.len() - 11..];
         if suffix.as_bytes()[0] == b'-'
@@ -88,7 +88,7 @@ fn normalize_codex_model(raw: &str) -> String {
         }
     }
 
-    // Step 4: 剥离紧凑日期后缀 -YYYYMMDD（正好 9 字符）
+    // Paso 4: elimina sufijo fecha compacta -YYYYMMDD (exactamente 9 caracteres)
     if name.len() > 9 {
         let parts: Vec<&str> = name.rsplitn(2, '-').collect();
         if parts.len() == 2 {
@@ -103,7 +103,7 @@ fn normalize_codex_model(raw: &str) -> String {
     name
 }
 
-/// 计算两次累计值之间的 delta
+/// Calcula delta entre dos valores acumulados
 fn compute_delta(prev: &Option<CumulativeTokens>, current: &CumulativeTokens) -> DeltaTokens {
     match prev {
         None => DeltaTokens {
@@ -119,7 +119,7 @@ fn compute_delta(prev: &Option<CumulativeTokens>, current: &CumulativeTokens) ->
     }
 }
 
-/// 从 JSON Value 中提取累计 token 用量
+/// Extrae uso acumulado de tokens desde JSON Value
 fn parse_cumulative_tokens(total_usage: &serde_json::Value) -> Option<CumulativeTokens> {
     if total_usage.is_null() || !total_usage.is_object() {
         return None;
@@ -141,7 +141,7 @@ fn parse_cumulative_tokens(total_usage: &serde_json::Value) -> Option<Cumulative
     })
 }
 
-/// 同步 Codex 使用数据（从 JSONL 会话日志）
+/// Sincroniza datos de uso Codex (desde log de sesiones JSONL)
 pub fn sync_codex_usage(db: &Database) -> Result<SessionSyncResult, AppError> {
     let codex_dir = get_codex_config_dir();
 
@@ -165,7 +165,7 @@ pub fn sync_codex_usage(db: &Database) -> Result<SessionSyncResult, AppError> {
                 result.skipped += skipped;
             }
             Err(e) => {
-                let msg = format!("Codex 会话文件解析失败 {}: {e}", file_path.display());
+                let msg = format!("Falló parsear archivo de sesión Codex {}: {e}", file_path.display());
                 log::warn!("[CODEX-SYNC] {msg}");
                 result.errors.push(msg);
             }
@@ -174,7 +174,7 @@ pub fn sync_codex_usage(db: &Database) -> Result<SessionSyncResult, AppError> {
 
     if result.imported > 0 {
         log::info!(
-            "[CODEX-SYNC] 同步完成: 导入 {} 条, 跳过 {} 条, 扫描 {} 个文件",
+            "[CODEX-SYNC] Sincronización completa: importados {} registros, saltados {} registros, escaneados {} archivos",
             result.imported,
             result.skipped,
             result.files_scanned
@@ -184,17 +184,17 @@ pub fn sync_codex_usage(db: &Database) -> Result<SessionSyncResult, AppError> {
     Ok(result)
 }
 
-/// 收集所有 Codex 会话 JSONL 文件
+/// Recopila todos los archivos JSONL de sesiones Codex
 fn collect_codex_session_files(codex_dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
 
-    // 1. 扫描 sessions/YYYY/MM/DD/*.jsonl（日期分区目录）
+    // 1. Escanea sessions/YYYY/MM/DD/*.jsonl (directorio particionado por fechas)
     let sessions_dir = codex_dir.join("sessions");
     if sessions_dir.is_dir() {
         collect_jsonl_recursive(&sessions_dir, &mut files, 0, 3);
     }
 
-    // 2. 扫描 archived_sessions/*.jsonl（扁平归档目录）
+    // 2. Escanea archived_sessions/*.jsonl (directorio archivado plano)
     let archived_dir = codex_dir.join("archived_sessions");
     if archived_dir.is_dir() {
         if let Ok(entries) = fs::read_dir(&archived_dir) {
@@ -210,7 +210,7 @@ fn collect_codex_session_files(codex_dir: &Path) -> Vec<PathBuf> {
     files
 }
 
-/// 递归扫描目录下的 .jsonl 文件（限制最大深度）
+/// Escanea recursivamente archivos .jsonl bajo directorio (limita profundidad máxima)
 fn collect_jsonl_recursive(dir: &Path, files: &mut Vec<PathBuf>, depth: u32, max_depth: u32) {
     let entries = match fs::read_dir(dir) {
         Ok(e) => e,
@@ -227,26 +227,26 @@ fn collect_jsonl_recursive(dir: &Path, files: &mut Vec<PathBuf>, depth: u32, max
     }
 }
 
-/// 同步单个 Codex JSONL 文件，返回 (imported, skipped)
+/// Sincroniza archivo JSONL Codex individual, devuelve (imported, skipped)
 fn sync_single_codex_file(db: &Database, file_path: &Path) -> Result<(u32, u32), AppError> {
     let file_path_str = file_path.to_string_lossy().to_string();
 
-    // 获取文件元数据
+    // Obtiene metadata de archivo
     let metadata = fs::metadata(file_path)
-        .map_err(|e| AppError::Config(format!("无法读取文件元数据: {e}")))?;
+        .map_err(|e| AppError::Config(format!("No se puede leer metadata de archivo: {e}")))?;
     let file_modified = metadata_modified_nanos(&metadata);
 
-    // 检查同步状态
+    // Verifica estado de sincronización
     let (last_modified, last_offset) = get_sync_state(db, &file_path_str)?;
 
-    // 文件未变化则跳过
+    // Si archivo no cambió se salta
     if file_modified <= last_modified {
         return Ok((0, 0));
     }
 
-    // 打开文件逐行解析
+    // Abre archivo y parsea línea por línea
     let file =
-        fs::File::open(file_path).map_err(|e| AppError::Config(format!("无法打开文件: {e}")))?;
+        fs::File::open(file_path).map_err(|e| AppError::Config(format!("No se puede abrir archivo: {e}")))?;
     let reader = BufReader::new(file);
 
     let mut state = FileParseState {
@@ -265,14 +265,14 @@ fn sync_single_codex_file(db: &Database, file_path: &Path) -> Result<(u32, u32),
 
         let line = match line_result {
             Ok(l) => l,
-            Err(_) => continue, // 容忍不完整的最后一行
+            Err(_) => continue, // Tolera última línea incompleta
         };
 
         if line.trim().is_empty() {
             continue;
         }
 
-        // 快速过滤：在 JSON 反序列化前跳过无关行
+        // Filtro rápido: salta líneas irrelevantes antes de deserializar JSON
         let is_event_msg = line.contains("\"event_msg\"");
         let is_turn_context = line.contains("\"turn_context\"");
         let is_session_meta = line.contains("\"session_meta\"");
@@ -308,7 +308,7 @@ fn sync_single_codex_file(db: &Database, file_path: &Path) -> Result<(u32, u32),
             }
             "turn_context" => {
                 if let Some(payload) = value.get("payload") {
-                    // model 可能在 payload.model 或 payload.info.model
+                    // model puede estar en payload.model o payload.info.model
                     if let Some(model) = payload
                         .get("model")
                         .or_else(|| payload.get("info").and_then(|info| info.get("model")))
@@ -324,17 +324,17 @@ fn sync_single_codex_file(db: &Database, file_path: &Path) -> Result<(u32, u32),
                     None => continue,
                 };
 
-                // 只处理 token_count 类型
+                // Solo procesa tipo token_count
                 if payload.get("type").and_then(|t| t.as_str()) != Some("token_count") {
                     continue;
                 }
 
                 let info = match payload.get("info") {
                     Some(i) if !i.is_null() => i,
-                    _ => continue, // 跳过 info 为 null 的首个事件
+                    _ => continue, // Salta primer evento con info null
                 };
 
-                // 提取模型（token_count 事件也可能携带 model）
+                // Extrae modelo (evento token_count también puede llevar model)
                 if let Some(model) = info
                     .get("model")
                     .or_else(|| info.get("model_name"))
@@ -344,7 +344,7 @@ fn sync_single_codex_file(db: &Database, file_path: &Path) -> Result<(u32, u32),
                     state.current_model = normalize_codex_model(model);
                 }
 
-                // 优先用 total_token_usage（累计值），fallback 到 last_token_usage（增量值）
+                // Prioriza total_token_usage (valor acumulado), fallback a last_token_usage (valor incremental)
                 let (cumulative, is_total) = if let Some(total) = info.get("total_token_usage") {
                     (parse_cumulative_tokens(total), true)
                 } else if let Some(last) = info.get("last_token_usage") {
@@ -359,12 +359,12 @@ fn sync_single_codex_file(db: &Database, file_path: &Path) -> Result<(u32, u32),
                 };
 
                 let delta = if is_total {
-                    // 累计值模式：计算与上次的 delta
+                    // Modo valor acumulado: calcula delta con anterior
                     let d = compute_delta(&state.prev_total, &cumulative);
                     state.prev_total = Some(cumulative);
                     d
                 } else {
-                    // 增量值模式：直接使用 last_token_usage 的值
+                    // Modo valor incremental: usa directamente valor de last_token_usage
                     DeltaTokens {
                         input: cumulative.input as u32,
                         cached_input: cumulative.cached_input as u32,
@@ -372,28 +372,28 @@ fn sync_single_codex_file(db: &Database, file_path: &Path) -> Result<(u32, u32),
                     }
                 };
 
-                // 钳制：cached 不应超过 input（防护异常数据）
+                // Limita: cached no debería exceder input (protege contra datos anómalos)
                 let delta = DeltaTokens {
                     cached_input: delta.cached_input.min(delta.input),
                     ..delta
                 };
 
                 if delta.is_zero() {
-                    continue; // 跳过 task 边界的零 delta 事件
+                    continue; // Salta eventos delta cero en límite de task
                 }
 
                 state.event_index += 1;
 
-                // 跳过已处理的行（但仍需解析以恢复状态）
+                // Salta líneas ya procesadas (pero aún necesita parsear para restaurar estado)
                 if line_offset <= last_offset {
                     continue;
                 }
 
-                // 生成唯一 request_id
+                // Genera request_id único
                 let session_id_str = state.session_id.as_deref().unwrap_or("unknown");
                 let request_id = format!("codex_session:{}:{}", session_id_str, state.event_index);
 
-                // 提取时间戳
+                // Extrae timestamp
                 let timestamp = value
                     .get("timestamp")
                     .and_then(|v| v.as_str())
@@ -410,7 +410,7 @@ fn sync_single_codex_file(db: &Database, file_path: &Path) -> Result<(u32, u32),
                     Ok(true) => imported += 1,
                     Ok(false) => skipped += 1,
                     Err(e) => {
-                        log::warn!("[CODEX-SYNC] 插入失败 ({}): {e}", request_id);
+                        log::warn!("[CODEX-SYNC] Falló insertar ({}): {e}", request_id);
                         skipped += 1;
                     }
                 }
@@ -419,13 +419,13 @@ fn sync_single_codex_file(db: &Database, file_path: &Path) -> Result<(u32, u32),
         }
     }
 
-    // 更新同步状态
+    // Actualiza estado de sincronización
     update_sync_state(db, &file_path_str, file_modified, line_offset)?;
 
     Ok((imported, skipped))
 }
 
-/// 插入单条 Codex 会话记录到 proxy_request_logs
+/// Inserta registro único de sesión Codex a proxy_request_logs
 fn insert_codex_session_entry(
     db: &Database,
     request_id: &str,
@@ -462,7 +462,7 @@ fn insert_codex_session_entry(
         return Ok(false);
     }
 
-    // 计算费用
+    // Calcula costo
     let usage = TokenUsage {
         input_tokens: delta.input,
         output_tokens: delta.output,
@@ -512,7 +512,7 @@ fn insert_codex_session_entry(
             delta.input,
             delta.output,
             delta.cached_input,
-            0i64,                // cache_creation_tokens: Codex 日志无此数据
+            0i64,                // cache_creation_tokens: log Codex no tiene estos datos
             input_cost,
             output_cost,
             cache_read_cost,
@@ -530,12 +530,12 @@ fn insert_codex_session_entry(
             "codex_session",     // data_source
         ],
     )
-    .map_err(|e| AppError::Database(format!("插入 Codex 会话日志失败: {e}")))?;
+    .map_err(|e| AppError::Database(format!("Falló insertar log de sesión Codex: {e}")))?;
 
     Ok(true)
 }
 
-/// 查找 Codex 模型定价（带归一化）
+/// Busca precio de modelo Codex (con normalización)
 fn find_codex_pricing(conn: &rusqlite::Connection, model_id: &str) -> Option<ModelPricing> {
     find_model_pricing(conn, &normalize_codex_model(model_id))
 }
@@ -584,7 +584,7 @@ mod tests {
             cached_input: 46976,
             output: 1045,
         });
-        // task 边界：相同的累计值
+        // Límite de task: mismo valor acumulado
         let current = CumulativeTokens {
             input: 58346,
             cached_input: 46976,
@@ -596,7 +596,7 @@ mod tests {
 
     #[test]
     fn test_delta_saturating_sub() {
-        // 异常情况：当前值小于前值（不应发生，但需防护）
+        // Situación anómala: valor actual menor que valor previo (no debería ocurrir, pero necesita protección)
         let prev = Some(CumulativeTokens {
             input: 100,
             cached_input: 50,
@@ -637,7 +637,7 @@ mod tests {
 
     #[test]
     fn test_parse_cumulative_tokens_alt_field_names() {
-        // 某些版本可能使用 cache_read_input_tokens 而非 cached_input_tokens
+        // Algunas versiones pueden usar cache_read_input_tokens en vez de cached_input_tokens
         let json: serde_json::Value = serde_json::json!({
             "input_tokens": 1000,
             "cache_read_input_tokens": 500,
@@ -707,7 +707,7 @@ mod tests {
         Ok(())
     }
 
-    // ── 模型名归一化测试 ──
+    // ── Prueba de normalización de nombre de modelo ──
 
     #[test]
     fn test_normalize_codex_model_lowercase() {
@@ -765,7 +765,7 @@ mod tests {
 
     #[test]
     fn test_cached_clamped_to_input() {
-        // cached > input 的异常场景应被 min() 钳制
+        // Escenario anómalo cached > input debería ser limitado por min()
         let prev = Some(CumulativeTokens {
             input: 100,
             cached_input: 0,
@@ -773,14 +773,14 @@ mod tests {
         });
         let current = CumulativeTokens {
             input: 110,       // delta = 10
-            cached_input: 80, // delta = 80（异常：大于 input delta）
+            cached_input: 80, // delta = 80 (anómalo: mayor que input delta)
             output: 60,
         };
         let delta = compute_delta(&prev, &current);
-        // 钳制前：cached_input = 80, input = 10
+        // Antes de limitar: cached_input = 80, input = 10
         assert_eq!(delta.cached_input, 80);
         assert_eq!(delta.input, 10);
-        // 实际钳制在调用侧：delta.cached_input.min(delta.input)
+        // Limitación real en lado del llamador: delta.cached_input.min(delta.input)
         let clamped = delta.cached_input.min(delta.input);
         assert_eq!(clamped, 10);
     }

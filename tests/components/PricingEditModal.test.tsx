@@ -61,7 +61,7 @@ describe("PricingEditModal", () => {
     render(<PricingEditModal open model={model} onClose={() => {}} />);
 
     for (const { id } of PRICE_FIELDS) {
-      const input = screen.getByLabelText(/每百万 tokens/ as unknown as string, {
+      const input = screen.getByLabelText(/por millón de tokens/ as unknown as string, {
         selector: `#${id}`,
       }) as HTMLInputElement;
       expect(input).toHaveAttribute("step", "0.0001");

@@ -3,9 +3,9 @@ import { normalizeTomlText } from "@/utils/textNormalization";
 import { McpServerSpec } from "../types";
 
 /**
- * 验证 TOML 格式并转换为 JSON 对象
- * @param text TOML 文本
- * @returns 错误信息（空字符串表示成功）
+ * Validar formato TOML y convertir a objeto JSON
+ * @param text Texto TOML
+ * @returns Mensaje de error (cadena vacía indica éxito)
  */
 export const validateToml = (text: string): string => {
   if (!text.trim()) return "";
@@ -17,47 +17,47 @@ export const validateToml = (text: string): string => {
     }
     return "";
   } catch (e: any) {
-    // 返回底层错误信息，由上层进行 i18n 包装
+    // Devolver mensaje de error subyacente, el nivel superior realizará el envoltorio i18n
     return e?.message || "parseError";
   }
 };
 
 /**
- * 将 McpServerSpec 对象转换为 TOML 字符串
- * 使用 @iarna/toml 的 stringify，自动处理转义与嵌套表
- * 保留所有字段（包括扩展字段如 timeout_ms）
+ * Convertir objeto McpServerSpec a cadena TOML
+ * Usa stringify de @iarna/toml, maneja automáticamente escape y tablas anidadas
+ * Preserva todos los campos (incluidos campos extendidos como timeout_ms)
  */
 export const mcpServerToToml = (server: McpServerSpec): string => {
-  // 先复制所有字段（保留扩展字段）
+  // Primero copiar todos los campos (preservar campos extendidos)
   const obj: any = { ...server };
 
-  // 去除未定义字段，确保输出更干净
+  // Eliminar campos indefinidos, asegurar una salida más limpia
   for (const k of Object.keys(obj)) {
     if (obj[k] === undefined) delete obj[k];
   }
 
-  // stringify 默认会带换行，做一次 trim 以适配文本框展示
+  // stringify por defecto incluye saltos de línea, hacer un trim para adaptarse a la visualización en el cuadro de texto
   return stringifyToml(obj).trim();
 };
 
 /**
- * 将 TOML 文本转换为 McpServerSpec 对象（单个服务器配置）
- * 支持两种格式：
- * 1. 直接的服务器配置（type, command, args 等）
- * 2. [mcp_servers.<id>] 格式（推荐，取第一个服务器）
- * 3. [mcp.servers.<id>] 错误格式（容错解析，同样取第一个服务器）
- * @param tomlText TOML 文本
- * @returns McpServer 对象
- * @throws 解析或转换失败时抛出错误
+ * Convertir texto TOML a objeto McpServerSpec (configuración de servidor único)
+ * Soporta dos formatos:
+ * 1. Configuración directa de servidor (type, command, args, etc.)
+ * 2. Formato [mcp_servers.<id>] (recomendado, toma el primer servidor)
+ * 3. Formato erróneo [mcp.servers.<id>] (análisis tolerante a fallos, también toma el primer servidor)
+ * @param tomlText Texto TOML
+ * @returns Objeto McpServer
+ * @throws Lanza error cuando falla el análisis o conversión
  */
 export const tomlToMcpServer = (tomlText: string): McpServerSpec => {
   if (!tomlText.trim()) {
-    throw new Error("TOML 内容不能为空");
+    throw new Error("El contenido TOML no puede estar vacío");
   }
 
   const parsed = parseToml(normalizeTomlText(tomlText));
 
-  // 情况 1: 直接是服务器配置（包含 type/command/url 等字段）
+  // Caso 1: Directamente es configuración de servidor (contiene campos type/command/url, etc.)
   if (
     parsed.type ||
     parsed.command ||
@@ -68,7 +68,7 @@ export const tomlToMcpServer = (tomlText: string): McpServerSpec => {
     return normalizeServerConfig(parsed);
   }
 
-  // 情况 2: [mcp_servers.<id>] 格式（推荐）
+  // Caso 2: Formato [mcp_servers.<id>] (recomendado)
   if (parsed.mcp_servers && typeof parsed.mcp_servers === "object") {
     const serverIds = Object.keys(parsed.mcp_servers);
     if (serverIds.length > 0) {
@@ -77,7 +77,7 @@ export const tomlToMcpServer = (tomlText: string): McpServerSpec => {
     }
   }
 
-  // 情况 3: [mcp.servers.<id>] 错误格式（容错解析）
+  // Caso 3: Formato erróneo [mcp.servers.<id>] (análisis tolerante a fallos)
   if (parsed.mcp && typeof parsed.mcp === "object") {
     const mcpObj = parsed.mcp as any;
     if (mcpObj.servers && typeof mcpObj.servers === "object") {
@@ -90,27 +90,27 @@ export const tomlToMcpServer = (tomlText: string): McpServerSpec => {
   }
 
   throw new Error(
-    "无法识别的 TOML 格式。请提供单个 MCP 服务器配置，或使用 [mcp_servers.<id>] 格式",
+    "Formato TOML no reconocido. Por favor proporcione una configuración de servidor MCP único, o use el formato [mcp_servers.<id>]",
   );
 };
 
 /**
- * 规范化服务器配置对象为 McpServer 格式
- * 保留所有字段（包括扩展字段如 timeout_ms）
+ * Normalizar objeto de configuración de servidor al formato McpServer
+ * Preserva todos los campos (incluidos campos extendidos como timeout_ms)
  */
 function normalizeServerConfig(config: any): McpServerSpec {
   if (!config || typeof config !== "object") {
-    throw new Error("服务器配置必须是对象");
+    throw new Error("La configuración del servidor debe ser un objeto");
   }
 
   const type = (config.type as string) || "stdio";
 
-  // 已知字段列表（用于后续排除）
+  // Lista de campos conocidos (usada para exclusión posterior)
   const knownFields = new Set<string>();
 
   if (type === "stdio") {
     if (!config.command || typeof config.command !== "string") {
-      throw new Error("stdio 类型的 MCP 服务器必须包含 command 字段");
+      throw new Error("El servidor MCP de tipo stdio debe contener el campo command");
     }
 
     const server: McpServerSpec = {
@@ -120,7 +120,7 @@ function normalizeServerConfig(config: any): McpServerSpec {
     knownFields.add("type");
     knownFields.add("command");
 
-    // 可选字段
+    // Campos opcionales
     if (config.args && Array.isArray(config.args)) {
       server.args = config.args.map((arg: any) => String(arg));
       knownFields.add("args");
@@ -138,7 +138,7 @@ function normalizeServerConfig(config: any): McpServerSpec {
       knownFields.add("cwd");
     }
 
-    // 保留所有未知字段（如 timeout_ms 等扩展字段）
+    // Preservar todos los campos desconocidos (como campos extendidos timeout_ms, etc.)
     for (const key of Object.keys(config)) {
       if (!knownFields.has(key)) {
         server[key] = config[key];
@@ -148,7 +148,7 @@ function normalizeServerConfig(config: any): McpServerSpec {
     return server;
   } else if (type === "http" || type === "sse") {
     if (!config.url || typeof config.url !== "string") {
-      throw new Error(`${type} 类型的 MCP 服务器必须包含 url 字段`);
+      throw new Error(`El servidor MCP de tipo ${type} debe contener el campo url`);
     }
 
     const server: McpServerSpec = {
@@ -158,7 +158,7 @@ function normalizeServerConfig(config: any): McpServerSpec {
     knownFields.add("type");
     knownFields.add("url");
 
-    // 可选字段
+    // Campos opcionales
     if (config.headers && typeof config.headers === "object") {
       const headers: Record<string, string> = {};
       for (const [k, v] of Object.entries(config.headers)) {
@@ -168,7 +168,7 @@ function normalizeServerConfig(config: any): McpServerSpec {
       knownFields.add("headers");
     }
 
-    // 保留所有未知字段
+    // Preservar todos los campos desconocidos
     for (const key of Object.keys(config)) {
       if (!knownFields.has(key)) {
         server[key] = config[key];
@@ -177,20 +177,20 @@ function normalizeServerConfig(config: any): McpServerSpec {
 
     return server;
   } else {
-    throw new Error(`不支持的 MCP 服务器类型: ${type}`);
+    throw new Error(`Tipo de servidor MCP no soportado: ${type}`);
   }
 }
 
 /**
- * 尝试从 TOML 中提取合理的服务器 ID/标题
- * @param tomlText TOML 文本
- * @returns 建议的 ID，失败返回空字符串
+ * Intentar extraer un ID/título de servidor razonable del TOML
+ * @param tomlText Texto TOML
+ * @returns ID sugerido, devuelve cadena vacía en caso de fallo
  */
 export const extractIdFromToml = (tomlText: string): string => {
   try {
     const parsed = parseToml(normalizeTomlText(tomlText));
 
-    // 尝试从 [mcp_servers.<id>] 或 [mcp.servers.<id>] 中提取 ID
+    // Intentar extraer ID de [mcp_servers.<id>] o [mcp.servers.<id>]
     if (parsed.mcp_servers && typeof parsed.mcp_servers === "object") {
       const serverIds = Object.keys(parsed.mcp_servers);
       if (serverIds.length > 0) {
@@ -208,13 +208,13 @@ export const extractIdFromToml = (tomlText: string): string => {
       }
     }
 
-    // 尝试从 command 中推断
+    // Intentar inferir del command
     if (parsed.command && typeof parsed.command === "string") {
       const cmd = parsed.command.split(/[\\/]/).pop() || "";
       return cmd.replace(/\.(exe|bat|sh|js|py)$/i, "");
     }
   } catch {
-    // 解析失败，返回空
+    // Error de análisis, devolver vacío
   }
 
   return "";

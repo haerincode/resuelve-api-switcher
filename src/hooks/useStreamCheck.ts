@@ -33,7 +33,7 @@ export function useStreamCheck(appId: AppId) {
             { closeButton: true },
           );
 
-          // 测试通过后重置熔断器状态
+          // Después de pasar la prueba, restablecer el estado del circuit breaker
           resetCircuitBreaker.mutate({ providerId, appType: appId });
         } else if (result.status === "degraded") {
           toast.warning(
@@ -44,10 +44,10 @@ export function useStreamCheck(appId: AppId) {
             }),
           );
 
-          // 降级状态也重置熔断器，因为至少能通信
+          // El estado degradado también restablece el circuit breaker, porque al menos puede comunicarse
           resetCircuitBreaker.mutate({ providerId, appType: appId });
         } else if (result.errorCategory === "modelNotFound") {
-          // 专门处理"模型不存在/已下架"：指向配置入口，比通用 404 文案更有指导性
+          // Manejar específicamente "modelo no existe/descatalogado": apunta a la entrada de configuración, más orientado que el mensaje genérico 404
           toast.error(
             t("streamCheck.modelNotFound", {
               providerName: providerName,
@@ -84,7 +84,7 @@ export function useStreamCheck(appId: AppId) {
           const description =
             (hintKey ? t(hintKey, { defaultValue: "" }) : "") || undefined;
 
-          // 401/403/400 = 检查被拒（供应商可能正常）；429/5xx = 临时问题
+          // 401/403/400 = verificación rechazada (el proveedor puede estar normal); 429/5xx = problema temporal
           const isProbeRejection =
             httpStatus != null &&
             ([401, 403, 400, 429].includes(httpStatus) || httpStatus >= 500);

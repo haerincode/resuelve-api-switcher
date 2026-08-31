@@ -545,9 +545,8 @@
       }
     },
     "autoReload": "Datos actualizados",
-    "languageOptionChinese": "中文",
     "languageOptionEnglish": "English",
-    "languageOptionJapanese": "日本語",
+    "languageOptionSpanish": "Español",
     "windowBehavior": "Comportamiento de Ventana",
     "windowBehaviorHint": "Configurar políticas de minimizar ventana e integración del plugin Claude.",
     "launchOnStartup": "Iniciar al Arranque",

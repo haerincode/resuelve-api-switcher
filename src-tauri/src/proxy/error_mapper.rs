@@ -1,74 +1,74 @@
-//! 错误类型到 HTTP 状态码的映射
+//! errortipoa HTTP estado码demapeo
 //!
-//! 将 ProxyError 映射到合适的 HTTP 状态码，用于日志记录
+//! / ProxyError mapeoa合适de HTTP estado码，usar/日志registrar
 
 use super::ProxyError;
 
-/// 将 ProxyError 映射到 HTTP 状态码
+/// / ProxyError mapeoa HTTP estado码
 ///
-/// 映射规则：
-/// - 上游错误：直接使用上游返回的状态码
-/// - 超时：504 Gateway Timeout
-/// - 连接失败：502 Bad Gateway
-/// - 无可用 Provider：503 Service Unavailable
-/// - 重试耗尽：503 Service Unavailable
-/// - 其他错误：500 Internal Server Error
+/// mapeo规entonces：
+/// - upstreamerror：直接使usarupstreamretornardeestado码
+/// - timeout：504 Gateway Timeout
+/// - conexiónfalló：502 Bad Gateway
+/// - sindisponible Provider：503 Service Unavailable
+/// - reintentar耗尽：503 Service Unavailable
+/// - 其他error：500 Internal Server Error
 pub fn map_proxy_error_to_status(error: &ProxyError) -> u16 {
     match error {
-        // 上游错误：使用实际状态码
+        // upstreamerror：使usar实际estado码
         ProxyError::UpstreamError { status, .. } => *status,
 
-        // 超时错误：504 Gateway Timeout
+        // timeouterror：504 Gateway Timeout
         ProxyError::Timeout(_) => 504,
 
-        // 转发失败/连接失败：502 Bad Gateway
+        // 转发falló/conexiónfalló：502 Bad Gateway
         ProxyError::ForwardFailed(_) => 502,
 
-        // 无可用 Provider：503 Service Unavailable
+        // sindisponible Provider：503 Service Unavailable
         ProxyError::NoAvailableProvider => 503,
 
-        // 所有供应商已熔断：503 Service Unavailable
+        // 所有proveedorya熔断：503 Service Unavailable
         ProxyError::AllProvidersCircuitOpen => 503,
 
-        // 未配置供应商：503 Service Unavailable
+        // noconfiguraciónproveedor：503 Service Unavailable
         ProxyError::NoProvidersConfigured => 503,
 
-        // 重试耗尽：503 Service Unavailable
+        // reintentar耗尽：503 Service Unavailable
         ProxyError::MaxRetriesExceeded => 503,
 
         // Provider 不健康：503 Service Unavailable
         ProxyError::ProviderUnhealthy(_) => 503,
 
-        // 数据库错误：500 Internal Server Error
+        // 数据库error：500 Internal Server Error
         ProxyError::DatabaseError(_) => 500,
 
-        // 转换错误：500 Internal Server Error
+        // convertirerror：500 Internal Server Error
         ProxyError::TransformError(_) => 500,
 
-        // 其他未知错误：500 Internal Server Error
+        // 其他no知error：500 Internal Server Error
         _ => 500,
     }
 }
 
-/// 将 ProxyError 转换为用户友好的错误消息
+/// / ProxyError convertirparausar户友好deerrormensaje
 pub fn get_error_message(error: &ProxyError) -> String {
     match error {
         ProxyError::UpstreamError { status, body } => {
             if let Some(body) = body {
-                format!("上游错误 ({status}): {body}")
+                format!("upstreamerror ({status}): {body}")
             } else {
-                format!("上游错误 ({status})")
+                format!("upstreamerror ({status})")
             }
         }
-        ProxyError::Timeout(msg) => format!("请求超时: {msg}"),
-        ProxyError::ForwardFailed(msg) => format!("转发失败: {msg}"),
-        ProxyError::NoAvailableProvider => "无可用 Provider".to_string(),
-        ProxyError::AllProvidersCircuitOpen => "所有供应商已熔断，无可用渠道".to_string(),
-        ProxyError::NoProvidersConfigured => "未配置供应商".to_string(),
-        ProxyError::MaxRetriesExceeded => "所有 Provider 都失败，重试耗尽".to_string(),
+        ProxyError::Timeout(msg) => format!("solicitudtimeout: {msg}"),
+        ProxyError::ForwardFailed(msg) => format!("转发falló: {msg}"),
+        ProxyError::NoAvailableProvider => "sindisponible Provider".to_string(),
+        ProxyError::AllProvidersCircuitOpen => "所有proveedorya熔断，sindisponible渠道".to_string(),
+        ProxyError::NoProvidersConfigured => "noconfiguraciónproveedor".to_string(),
+        ProxyError::MaxRetriesExceeded => "所有 Provider 都falló，reintentar耗尽".to_string(),
         ProxyError::ProviderUnhealthy(msg) => format!("Provider 不健康: {msg}"),
-        ProxyError::DatabaseError(msg) => format!("数据库错误: {msg}"),
-        ProxyError::TransformError(msg) => format!("请求/响应转换错误: {msg}"),
+        ProxyError::DatabaseError(msg) => format!("数据库error: {msg}"),
+        ProxyError::TransformError(msg) => format!("solicitud/respuestaconvertirerror: {msg}"),
         _ => error.to_string(),
     }
 }
@@ -111,7 +111,7 @@ mod tests {
             body: Some("Internal Server Error".to_string()),
         };
         let msg = get_error_message(&error);
-        assert!(msg.contains("上游错误"));
+        assert!(msg.contains("upstreamerror"));
         assert!(msg.contains("500"));
         assert!(msg.contains("Internal Server Error"));
     }

@@ -92,10 +92,10 @@ const createSettingsFormMock = (overrides: Record<string, unknown> = {}) => ({
     geminiConfigDir: "/gemini",
     opencodeConfigDir: "/opencode",
     openclawConfigDir: "/openclaw",
-    language: "zh",
+    language: "es",
   },
   isLoading: false,
-  initialLanguage: "zh",
+  initialLanguage: "es",
   updateSettings: vi.fn(),
   resetSettings: vi.fn(),
   syncLanguage: vi.fn(),
@@ -161,7 +161,7 @@ describe("useSettings hook", () => {
       geminiConfigDir: "/server/gemini",
       opencodeConfigDir: "/server/opencode",
       openclawConfigDir: "/server/openclaw",
-      language: "zh",
+      language: "es",
     };
 
     useSettingsQueryMock.mockReturnValue({
@@ -172,7 +172,7 @@ describe("useSettings hook", () => {
     settingsFormMock = createSettingsFormMock({
       settings: {
         ...serverSettings,
-        language: "zh",
+        language: "es",
       },
     });
     directorySettingsMock = createDirectorySettingsMock();
@@ -203,7 +203,7 @@ describe("useSettings hook", () => {
     settingsFormMock = createSettingsFormMock({
       settings: {
         ...serverSettings,
-        language: "zh",
+        language: "es",
         skipClaudeOnboarding: false,
       },
     });
@@ -231,7 +231,7 @@ describe("useSettings hook", () => {
     settingsFormMock = createSettingsFormMock({
       settings: {
         ...serverSettings,
-        language: "zh",
+        language: "es",
         skipClaudeOnboarding: true,
       },
     });
@@ -322,9 +322,9 @@ describe("useSettings hook", () => {
         ...serverSettings,
         enableClaudePluginIntegration: false, // 状态未变
         launchOnStartup: false, // 状态未变
-        language: "zh",
+        language: "es",
       },
-      initialLanguage: "zh",
+      initialLanguage: "es",
     });
 
     directorySettingsMock = createDirectorySettingsMock({
@@ -363,7 +363,7 @@ describe("useSettings hook", () => {
       settings: {
         ...serverSettings,
         enableClaudePluginIntegration: true, // 状态改变
-        language: "zh",
+        language: "es",
       },
     });
     directorySettingsMock = createDirectorySettingsMock({
@@ -381,7 +381,7 @@ describe("useSettings hook", () => {
 
     expect(toastErrorMock).toHaveBeenCalled();
     const message = toastErrorMock.mock.calls.at(-1)?.[0] as string;
-    expect(message).toContain("同步 Claude 插件失败");
+    expect(message).toContain("Error al sincronizar plugin Claude");
     expect(metadataMock.setRequiresRestart).toHaveBeenCalledWith(true);
   });
 
@@ -402,7 +402,7 @@ describe("useSettings hook", () => {
       settings: {
         ...serverSettings,
         enableClaudePluginIntegration: false,
-        language: "zh",
+        language: "es",
       },
     });
     directorySettingsMock = createDirectorySettingsMock();
@@ -429,7 +429,7 @@ describe("useSettings hook", () => {
       ...serverSettings,
       claudeConfigDir: "  /server/claude  ",
       codexConfigDir: "   ",
-      language: "zh",
+      language: "es",
     };
     useSettingsQueryMock.mockReturnValue({
       data: serverSettings,
@@ -439,9 +439,9 @@ describe("useSettings hook", () => {
     settingsFormMock = createSettingsFormMock({
       settings: {
         ...serverSettings,
-        language: "zh",
+        language: "es",
       },
-      initialLanguage: "zh",
+      initialLanguage: "es",
     });
     directorySettingsMock = createDirectorySettingsMock();
 

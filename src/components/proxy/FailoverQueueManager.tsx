@@ -1,9 +1,9 @@
 /**
- * 故障转移队列管理组件
+ * Componente de gestión de cola de conmutación por fallo
  *
- * 允许用户管理代理模式下的故障转移队列，支持：
- * - 添加/移除供应商
- * - 队列顺序基于首页供应商列表的 sort_index
+ * Permite al usuario gestionar la cola de conmutación por fallo en modo proxy, soporta:
+ * - Agregar/eliminar proveedores
+ * - Orden de cola basado en sort_index de la lista de proveedores de la página principal
  */
 
 import { useState } from "react";
@@ -44,11 +44,11 @@ export function FailoverQueueManager({
   const { t } = useTranslation();
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
 
-  // 故障转移开关状态（每个应用独立）
+  // Estado del switch de conmutación por fallo (independiente por app)
   const { data: isFailoverEnabled = false } = useAutoFailoverEnabled(appType);
   const setFailoverEnabled = useSetAutoFailoverEnabled();
 
-  // 查询数据
+  // Consultar datos
   const {
     data: queue,
     isLoading: isQueueLoading,
@@ -61,12 +61,12 @@ export function FailoverQueueManager({
   const addToQueue = useAddToFailoverQueue();
   const removeFromQueue = useRemoveFromFailoverQueue();
 
-  // 切换故障转移开关
+  // Cambiar switch de conmutación por fallo
   const handleToggleFailover = (enabled: boolean) => {
     setFailoverEnabled.mutate({ appType, enabled });
   };
 
-  // 添加供应商到队列
+  // Agregar proveedor a la cola
   const handleAddProvider = async () => {
     if (!selectedProviderId) return;
 
@@ -77,27 +77,27 @@ export function FailoverQueueManager({
       });
       setSelectedProviderId("");
       toast.success(
-        t("proxy.failoverQueue.addSuccess", "已添加到故障转移队列"),
+        t("proxy.failoverQueue.addSuccess", "Agregado a la cola de conmutación por fallo"),
         { closeButton: true },
       );
     } catch (error) {
       toast.error(
-        t("proxy.failoverQueue.addFailed", "添加失败") + ": " + String(error),
+        t("proxy.failoverQueue.addFailed", "Error al agregar") + ": " + String(error),
       );
     }
   };
 
-  // 从队列移除供应商
+  // Eliminar proveedor de la cola
   const handleRemoveProvider = async (providerId: string) => {
     try {
       await removeFromQueue.mutateAsync({ appType, providerId });
       toast.success(
-        t("proxy.failoverQueue.removeSuccess", "已从故障转移队列移除"),
+        t("proxy.failoverQueue.removeSuccess", "Eliminado de la cola de conmutación por fallo"),
         { closeButton: true },
       );
     } catch (error) {
       toast.error(
-        t("proxy.failoverQueue.removeFailed", "移除失败") +
+        t("proxy.failoverQueue.removeFailed", "Error al eliminar") +
           ": " +
           String(error),
       );
@@ -123,25 +123,25 @@ export function FailoverQueueManager({
 
   return (
     <div className="space-y-4">
-      {/* 自动故障转移开关 */}
+      {/* Switch de conmutación automática por fallo */}
       <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border/50">
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">
               {t("proxy.failover.autoSwitch", {
-                defaultValue: "自动故障转移",
+                defaultValue: "Conmutación automática por fallo",
               })}
             </span>
             {isFailoverEnabled && (
               <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-                {t("common.enabled", { defaultValue: "已开启" })}
+                {t("common.enabled", { defaultValue: "Activado" })}
               </span>
             )}
           </div>
           <p className="text-xs text-muted-foreground">
             {t("proxy.failover.autoSwitchDescription", {
               defaultValue:
-                "开启后将立即切换到队列 P1，并在请求失败时自动切换到队列中的下一个供应商",
+                "Una vez activado cambiará inmediatamente a cola P1, y automáticamente al siguiente proveedor en caso de fallo de solicitud",
             })}
           </p>
         </div>
@@ -152,18 +152,18 @@ export function FailoverQueueManager({
         />
       </div>
 
-      {/* 说明信息 */}
+      {/* Información explicativa */}
       <Alert className="border-blue-500/40 bg-blue-500/10">
         <Info className="h-4 w-4" />
         <AlertDescription className="text-sm">
           {t(
             "proxy.failoverQueue.info",
-            "队列顺序与首页供应商列表顺序一致。当请求失败时，系统会按顺序依次尝试队列中的供应商。",
+            "El orden de la cola coincide con el orden de la lista de proveedores de la página principal. Cuando una solicitud falla, el sistema intentará los proveedores en la cola en orden.",
           )}
         </AlertDescription>
       </Alert>
 
-      {/* 添加供应商 */}
+      {/* Agregar proveedor */}
       <div className="flex items-center gap-2">
         <Select
           value={selectedProviderId}
@@ -174,7 +174,7 @@ export function FailoverQueueManager({
             <SelectValue
               placeholder={t(
                 "proxy.failoverQueue.selectProvider",
-                "选择供应商添加到队列",
+                "Seleccionar proveedor para agregar a la cola",
               )}
             />
           </SelectTrigger>
@@ -193,7 +193,7 @@ export function FailoverQueueManager({
               <div className="px-2 py-4 text-center text-sm text-muted-foreground">
                 {t(
                   "proxy.failoverQueue.noAvailableProviders",
-                  "没有可添加的供应商",
+                  "No hay proveedores disponibles para agregar",
                 )}
               </div>
             )}
@@ -213,13 +213,13 @@ export function FailoverQueueManager({
         </Button>
       </div>
 
-      {/* 队列列表 */}
+      {/* Lista de cola */}
       {!queue || queue.length === 0 ? (
         <div className="rounded-lg border border-dashed border-muted-foreground/40 p-8 text-center">
           <p className="text-sm text-muted-foreground">
             {t(
               "proxy.failoverQueue.empty",
-              "故障转移队列为空。添加供应商以启用自动故障转移。",
+              "Cola de conmutación por fallo vacía. Agregue proveedores para habilitar la conmutación automática.",
             )}
           </p>
         </div>
@@ -238,12 +238,12 @@ export function FailoverQueueManager({
         </div>
       )}
 
-      {/* 队列说明 */}
+      {/* Explicación de la cola */}
       {queue && queue.length > 0 && (
         <p className="text-xs text-muted-foreground">
           {t(
             "proxy.failoverQueue.orderHint",
-            "队列顺序与首页供应商列表顺序一致，可在首页拖拽调整顺序。",
+            "El orden de la cola coincide con el orden de la lista de proveedores de la página principal, puede ajustar el orden arrastrando en la página principal.",
           )}
         </p>
       )}
@@ -274,12 +274,12 @@ function QueueItem({
         "flex items-center gap-3 rounded-lg border bg-card p-3 transition-colors",
       )}
     >
-      {/* 序号 */}
+      {/* Número de secuencia */}
       <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
         {index + 1}
       </div>
 
-      {/* 供应商名称 */}
+      {/* Nombre del proveedor */}
       <div className="flex-1 min-w-0">
         <span className="text-sm font-medium truncate block">
           {item.providerName}
@@ -291,14 +291,14 @@ function QueueItem({
         </span>
       </div>
 
-      {/* 删除按钮 */}
+      {/* Botón de eliminar */}
       <Button
         variant="ghost"
         size="icon"
         className="h-8 w-8 text-muted-foreground hover:text-destructive"
         onClick={() => onRemove(item.providerId)}
         disabled={disabled || isRemoving}
-        aria-label={t("common.delete", "删除")}
+        aria-label={t("common.delete", "Eliminar")}
       >
         {isRemoving ? (
           <Loader2 className="h-4 w-4 animate-spin" />

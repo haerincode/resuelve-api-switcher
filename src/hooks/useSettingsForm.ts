@@ -3,16 +3,16 @@ import { useTranslation } from "react-i18next";
 import { useSettingsQuery } from "@/lib/query";
 import type { Settings } from "@/types";
 
-type Language = "zh" | "en" | "ja";
+type Language = "es" | "en";
 
 export type SettingsFormState = Omit<Settings, "language"> & {
   language: Language;
 };
 
 const normalizeLanguage = (lang?: string | null): Language => {
-  if (!lang) return "zh";
-  const normalized = lang.toLowerCase();
-  return normalized === "en" || normalized === "ja" ? normalized : "zh";
+  if (!lang) return "es";
+  // Cualquier valor que no sea inglés cae al predeterminado (español).
+  return lang.toLowerCase().startsWith("en") ? "en" : "es";
 };
 
 const sanitizeDir = (value?: string | null): string | undefined => {
@@ -32,12 +32,12 @@ export interface UseSettingsFormResult {
 }
 
 /**
- * useSettingsForm - 表单状态管理
- * 负责：
- * - 表单数据状态
- * - 表单字段更新
- * - 语言同步
- * - 表单重置
+ * useSettingsForm - gestión del estado del formulario
+ * Responsable de:
+ * - el estado de los datos del formulario
+ * - la actualización de campos
+ * - la sincronización del idioma
+ * - el reinicio del formulario
  */
 export function useSettingsForm(): UseSettingsFormResult {
   const { i18n } = useTranslation();
@@ -47,12 +47,12 @@ export function useSettingsForm(): UseSettingsFormResult {
     null,
   );
 
-  const initialLanguageRef = useRef<Language>("zh");
+  const initialLanguageRef = useRef<Language>("es");
 
   const readPersistedLanguage = useCallback((): Language => {
     if (typeof window !== "undefined") {
       const stored = window.localStorage.getItem("language");
-      if (stored === "en" || stored === "zh" || stored === "ja") {
+      if (stored === "es" || stored === "en") {
         return stored as Language;
       }
     }

@@ -264,7 +264,7 @@ pub async fn send_request(
             ),
         )
         .await
-        .map_err(|_| ProxyError::Timeout(format!("请求超时: {}s", timeout.as_secs())))?;
+        .map_err(|_| ProxyError::Timeout(format!("solicitudtimeout: {}s", timeout.as_secs())))?;
 
         match result {
             Ok(resp) => return Ok(resp),
@@ -292,8 +292,8 @@ pub async fn send_request(
     let client = global_hyper_client();
     let resp = tokio::time::timeout(timeout, client.request(req))
         .await
-        .map_err(|_| ProxyError::Timeout(format!("请求超时: {}s", timeout.as_secs())))?
-        .map_err(|e| ProxyError::ForwardFailed(format!("上游请求失败: {e}")))?;
+        .map_err(|_| ProxyError::Timeout(format!("solicitudtimeout: {}s", timeout.as_secs())))?
+        .map_err(|e| ProxyError::ForwardFailed(format!("upstreamsolicitudfalló: {e}")))?;
 
     Ok(ProxyResponse::Hyper(resp))
 }

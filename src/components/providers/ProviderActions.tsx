@@ -73,13 +73,13 @@ export function ProviderActions({
   const { t } = useTranslation();
   const iconButtonClass = "h-8 w-8 p-1";
 
-  // 累加模式应用（OpenCode 非 OMO / OpenClaw / Hermes）
+  // Aplicaciones en modo acumulativo (OpenCode no OMO / OpenClaw / Hermes)
   const isAdditiveMode =
     (appId === "opencode" && !isOmo) ||
     appId === "openclaw" ||
     appId === "hermes";
 
-  // 故障转移模式下的按钮逻辑（累加模式和 OMO 应用不支持故障转移）
+  // Lógica de botón bajo modo de failover (modo acumulativo y aplicaciones OMO no soportan failover)
   const isFailoverMode =
     !isAdditiveMode && !isOmo && isAutoFailoverEnabled && onToggleFailover;
 
@@ -91,7 +91,7 @@ export function ProviderActions({
         onSwitch();
       }
     } else if (isAdditiveMode) {
-      // 累加模式：切换配置状态（添加/移除）
+      // Modo acumulativo: cambiar estado de configuración (agregar/remover)
       if (isInConfig) {
         if (onRemoveFromConfig) {
           onRemoveFromConfig();
@@ -99,7 +99,7 @@ export function ProviderActions({
           onDelete();
         }
       } else {
-        onSwitch(); // 添加到配置
+        onSwitch(); // Agregar a configuración
       }
     } else if (isFailoverMode) {
       onToggleFailover(!isInFailoverQueue);
@@ -129,7 +129,7 @@ export function ProviderActions({
       };
     }
 
-    // 累加模式（OpenCode 非 OMO / OpenClaw）
+    // Modo acumulativo (OpenCode no OMO / OpenClaw)
     if (isAdditiveMode) {
       if (isInConfig) {
         return {
@@ -140,7 +140,7 @@ export function ProviderActions({
             isDefaultModel && "opacity-40 cursor-not-allowed",
           ),
           icon: <Minus className="h-4 w-4" />,
-          text: t("provider.removeFromConfig", { defaultValue: "移除" }),
+          text: t("provider.removeFromConfig", { defaultValue: "Remover" }),
         };
       }
       return {
@@ -149,7 +149,7 @@ export function ProviderActions({
         className:
           "bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700",
         icon: <Plus className="h-4 w-4" />,
-        text: t("provider.addToConfig", { defaultValue: "添加" }),
+        text: t("provider.addToConfig", { defaultValue: "Agregar" }),
       };
     }
 
@@ -161,7 +161,7 @@ export function ProviderActions({
           className:
             "bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-400 dark:hover:bg-blue-900/70",
           icon: <Check className="h-4 w-4" />,
-          text: t("failover.inQueue", { defaultValue: "已加入" }),
+          text: t("failover.inQueue", { defaultValue: "Ya añadido" }),
         };
       }
       return {
@@ -170,7 +170,7 @@ export function ProviderActions({
         className:
           "bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700",
         icon: <Plus className="h-4 w-4" />,
-        text: t("failover.addQueue", { defaultValue: "加入" }),
+        text: t("failover.addQueue", { defaultValue: "Añadir" }),
       };
     }
 
@@ -180,7 +180,7 @@ export function ProviderActions({
         variant: "secondary" as const,
         className: "opacity-40 cursor-not-allowed",
         icon: <ShieldAlert className="h-4 w-4" />,
-        text: t("provider.blockedByProxy", { defaultValue: "已拦截" }),
+        text: t("provider.blockedByProxy", { defaultValue: "Bloqueado" }),
       };
     }
 
@@ -211,7 +211,7 @@ export function ProviderActions({
   const canDelete =
     !isReadOnly && (isOmo || isAdditiveMode ? true : !isCurrent);
   const readOnlyHint = t("provider.managedByHermesHint", {
-    defaultValue: "由 Hermes 管理，请在 Hermes Web UI 中编辑",
+    defaultValue: "Gestionado por Hermes, edite en la interfaz web de Hermes",
   });
 
   return (
@@ -222,12 +222,12 @@ export function ProviderActions({
         (() => {
           const activeLabel =
             appId === "hermes"
-              ? t("provider.inUse", { defaultValue: "已在用" })
-              : t("provider.isDefault", { defaultValue: "当前默认" });
+              ? t("provider.inUse", { defaultValue: "En uso" })
+              : t("provider.isDefault", { defaultValue: "Actual predeterminado" });
           const inactiveLabel =
             appId === "hermes"
-              ? t("provider.enable", { defaultValue: "启用" })
-              : t("provider.setAsDefault", { defaultValue: "设为默认" });
+              ? t("provider.enable", { defaultValue: "Activar" })
+              : t("provider.setAsDefault", { defaultValue: "Establecer como predeterminado" });
           return (
             <Button
               size="sm"
@@ -288,7 +288,7 @@ export function ProviderActions({
           variant="ghost"
           onClick={onTest || undefined}
           disabled={isTesting}
-          title={t("modelTest.testProvider", "测试模型")}
+          title={t("modelTest.testProvider", "Probar modelo")}
           className={cn(
             iconButtonClass,
             !onTest && "opacity-40 cursor-not-allowed text-muted-foreground",
@@ -320,7 +320,7 @@ export function ProviderActions({
             size="icon"
             variant="ghost"
             onClick={onOpenTerminal}
-            title={t("provider.openTerminal", "打开终端")}
+            title={t("provider.openTerminal", "Abrir terminal")}
             className={cn(
               iconButtonClass,
               "hover:text-emerald-600 dark:hover:text-emerald-400",

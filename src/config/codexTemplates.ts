@@ -1,6 +1,6 @@
 /**
- * Codex 配置模板
- * 用于新建自定义供应商时的默认配置
+ * Plantillas de configuración de Codex
+ * Se usan como configuración por defecto al crear un proveedor personalizado
  */
 
 export interface CodexTemplate {
@@ -9,8 +9,9 @@ export interface CodexTemplate {
 }
 
 /**
- * 获取 Codex 自定义模板
- * @returns Codex 模板配置
+ * Devuelve la plantilla personalizada de Codex.
+ * La clave se escribe en auth.json (OPENAI_API_KEY); config.toml la referencia
+ * mediante api_key, que el formulario rellena al guardar.
  */
 export function getCodexCustomTemplate(): CodexTemplate {
   const config = `model_provider = "custom"
@@ -21,7 +22,7 @@ disable_response_storage = true
 [model_providers.custom]
 name = "custom"
 wire_api = "responses"
-requires_openai_auth = true`;
+api_key = ""`;
 
   return {
     auth: { OPENAI_API_KEY: "" },

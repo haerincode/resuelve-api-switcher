@@ -1,17 +1,17 @@
-//! 统一供应商 (Universal Provider) DAO
+//! DAO de proveedores universales (Universal Provider)
 //!
-//! 提供统一供应商的 CRUD 操作。
+//! Provee operaciones CRUD para proveedores universales.
 
 use crate::database::{lock_conn, to_json_string, Database};
 use crate::error::AppError;
 use crate::provider::UniversalProvider;
 use std::collections::HashMap;
 
-/// 统一供应商的 Settings Key
+/// Clave de Settings para proveedores universales
 const UNIVERSAL_PROVIDERS_KEY: &str = "universal_providers";
 
 impl Database {
-    /// 获取所有统一供应商
+    /// Obtener todos los proveedores universales
     pub fn get_all_universal_providers(
         &self,
     ) -> Result<HashMap<String, UniversalProvider>, AppError> {
@@ -27,25 +27,25 @@ impl Database {
 
         match result {
             Some(json) => serde_json::from_str(&json)
-                .map_err(|e| AppError::Database(format!("解析统一供应商数据失败: {e}"))),
+                .map_err(|e| AppError::Database(format!("Error al analizar datos de proveedores universales: {e}"))),
             None => Ok(HashMap::new()),
         }
     }
 
-    /// 获取单个统一供应商
+    /// Obtener un proveedor universal individual
     pub fn get_universal_provider(&self, id: &str) -> Result<Option<UniversalProvider>, AppError> {
         let providers = self.get_all_universal_providers()?;
         Ok(providers.get(id).cloned())
     }
 
-    /// 保存统一供应商（添加或更新）
+    /// Guardar proveedor universal (agregar o actualizar)
     pub fn save_universal_provider(&self, provider: &UniversalProvider) -> Result<(), AppError> {
         let mut providers = self.get_all_universal_providers()?;
         providers.insert(provider.id.clone(), provider.clone());
         self.save_all_universal_providers(&providers)
     }
 
-    /// 删除统一供应商
+    /// Eliminar proveedor universal
     pub fn delete_universal_provider(&self, id: &str) -> Result<bool, AppError> {
         let mut providers = self.get_all_universal_providers()?;
         let existed = providers.remove(id).is_some();
@@ -55,7 +55,7 @@ impl Database {
         Ok(existed)
     }
 
-    /// 保存所有统一供应商（内部方法）
+    /// Guardar todos los proveedores universales (método interno)
     fn save_all_universal_providers(
         &self,
         providers: &HashMap<String, UniversalProvider>,

@@ -1,7 +1,7 @@
 /**
- * 故障转移切换开关组件
+ * Componente de interruptor de conmutación por fallo
  *
- * 放置在主界面头部，用于一键启用/关闭自动故障转移
+ * Se coloca en el encabezado de la interfaz principal para habilitar/deshabilitar la conmutación automática por fallo con un clic
  */
 
 import { Shuffle, Loader2 } from "lucide-react";
@@ -43,16 +43,16 @@ export function FailoverToggle({ className, activeApp }: FailoverToggleProps) {
   const tooltipText = !takeoverEnabled
     ? t("failover.tooltip.takeoverRequired", {
         app: appLabel,
-        defaultValue: `请先接管 ${appLabel}，再启用故障转移`,
+        defaultValue: `Por favor tome primero ${appLabel}, luego habilite la conmutación por fallo`,
       })
     : isEnabled
       ? t("failover.tooltip.enabled", {
           app: appLabel,
-          defaultValue: `${appLabel} 故障转移已启用\n按队列优先级（P1→P2→...）选择供应商`,
+          defaultValue: `Conmutación por fallo de ${appLabel} habilitada\nSelecciona proveedor por prioridad de cola (P1→P2→...)`,
         })
       : t("failover.tooltip.disabled", {
           app: appLabel,
-          defaultValue: `启用 ${appLabel} 故障转移\n将立即切换到队列 P1，并在失败时自动切换到下一个`,
+          defaultValue: `Habilitar conmutación por fallo de ${appLabel}\nCambiará inmediatamente a cola P1 y automáticamente al siguiente en caso de fallo`,
         });
 
   return (

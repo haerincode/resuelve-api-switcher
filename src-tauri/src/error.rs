@@ -5,11 +5,11 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum AppError {
-    #[error("配置错误: {0}")]
+    #[error("Error de configuración: {0}")]
     Config(String),
-    #[error("无效输入: {0}")]
+    #[error("Entrada no válida: {0}")]
     InvalidInput(String),
-    #[error("IO 错误: {path}: {source}")]
+    #[error("Error de E/S: {path}: {source}")]
     Io {
         path: String,
         #[source]
@@ -21,44 +21,44 @@ pub enum AppError {
         #[source]
         source: std::io::Error,
     },
-    #[error("JSON 解析错误: {path}: {source}")]
+    #[error("Error al analizar JSON: {path}: {source}")]
     Json {
         path: String,
         #[source]
         source: serde_json::Error,
     },
-    #[error("JSON 序列化失败: {source}")]
+    #[error("Error al serializar JSON: {source}")]
     JsonSerialize {
         #[source]
         source: serde_json::Error,
     },
-    #[error("TOML 解析错误: {path}: {source}")]
+    #[error("Error al analizar TOML: {path}: {source}")]
     Toml {
         path: String,
         #[source]
         source: toml::de::Error,
     },
-    #[error("锁获取失败: {0}")]
+    #[error("No se pudo obtener el bloqueo: {0}")]
     Lock(String),
-    #[error("MCP 校验失败: {0}")]
+    #[error("Error de validación MCP: {0}")]
     McpValidation(String),
     #[error("{0}")]
     Message(String),
     #[error("HTTP {status}: {body}")]
     HttpStatus { status: u16, body: String },
-    #[error("{zh} ({en})")]
+    #[error("{zh}")]
     Localized {
         key: &'static str,
         zh: String,
         en: String,
     },
-    #[error("数据库错误: {0}")]
+    #[error("Error de base de datos: {0}")]
     Database(String),
-    #[error("OMO 配置文件不存在")]
+    #[error("El archivo de configuración de OMO no existe")]
     OmoConfigNotFound,
-    #[error("所有供应商已熔断，无可用渠道")]
+    #[error("Todos los proveedores están en corte de circuito: no hay canales disponibles")]
     AllProvidersCircuitOpen,
-    #[error("未配置供应商")]
+    #[error("No hay proveedores configurados")]
     NoProvidersConfigured,
 }
 

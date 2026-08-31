@@ -1,11 +1,11 @@
-//! 请求处理器
+//! solicitudprocesar器
 //!
-//! 处理各种API端点的HTTP请求
+//! procesar各种APIendpointdeHTTPsolicitud
 //!
-//! 重构后的结构：
-//! - 通用逻辑提取到 `handler_context` 和 `response_processor` 模块
-//! - 各 handler 只保留独特的业务逻辑
-//! - Claude 的格式转换逻辑保留在此文件（用于 OpenRouter 旧接口回退）
+//! 重构后de结构：
+//! - 通usar逻辑提取a `handler_context` y `response_processor` 模块
+//! - 各 handler 只保留独特de业务逻辑
+//! - Claude deformatoconvertir逻辑保留en此文件（usar/ OpenRouter 旧接口回退）
 
 use super::{
     error_mapper::{get_error_message, map_proxy_error_to_status},
@@ -41,10 +41,10 @@ use http_body_util::BodyExt;
 use serde_json::{json, Value};
 
 // ============================================================================
-// 健康检查和状态查询（简单端点）
+// 健康verificaryestado查询（简单endpoint）
 // ============================================================================
 
-/// 健康检查
+/// 健康verificar
 pub async fn health_check() -> (StatusCode, Json<Value>) {
     (
         StatusCode::OK,
@@ -55,21 +55,21 @@ pub async fn health_check() -> (StatusCode, Json<Value>) {
     )
 }
 
-/// 获取服务状态
+/// obtener服务estado
 pub async fn get_status(State(state): State<ProxyState>) -> Result<Json<ProxyStatus>, ProxyError> {
     let status = state.status.read().await.clone();
     Ok(Json(status))
 }
 
 // ============================================================================
-// Claude API 处理器（包含格式转换逻辑）
+// Claude API procesar器（包含formatoconvertir逻辑）
 // ============================================================================
 
-/// 处理 /v1/messages 请求（Claude API）
+/// procesar /v1/messages solicitud（Claude API）
 ///
-/// Claude 处理器包含独特的格式转换逻辑：
-/// - 过去用于 OpenRouter 的 OpenAI Chat Completions 兼容接口（Anthropic ↔ OpenAI 转换）
-/// - 现在 OpenRouter 已推出 Claude Code 兼容接口，默认不再启用该转换（逻辑保留以备回退）
+/// Claude procesar器包含独特deformatoconvertir逻辑：
+/// - 过去usar/ OpenRouter de OpenAI Chat Completions 兼容接口（Anthropic ↔ OpenAI convertir）
+/// - 现en OpenRouter ya推出 Claude Code 兼容接口，predeterminado不再habilitar该convertir（逻辑保留以备回退）
 pub async fn handle_messages(
     State(state): State<ProxyState>,
     request: axum::extract::Request,
@@ -146,7 +146,7 @@ async fn handle_messages_for_app(
         .and_then(|s| s.as_bool())
         .unwrap_or(false);
 
-    // 转发请求
+    // 转发solicitud
     let forwarder = ctx.create_forwarder(&state);
     let mut result = match forwarder
         .forward_with_retry(
@@ -179,11 +179,11 @@ async fn handle_messages_for_app(
         .to_string();
     let response = result.response;
 
-    // 检查是否需要格式转换（OpenRouter 等中转服务）
+    // verificar是否需要formatoconvertir（OpenRouter 等中转服务）
     let adapter = get_adapter(&app_type);
     let needs_transform = adapter.needs_transform(&ctx.provider);
 
-    // Claude 特有：格式转换处理
+    // Claude 特有：formatoconvertirprocesar
     if needs_transform {
         return handle_claude_transform(
             response,
@@ -197,7 +197,7 @@ async fn handle_messages_for_app(
         .await;
     }
 
-    // 通用响应处理（透传模式）
+    // 通usarrespuestaprocesar（透传模式）
     process_response(
         response,
         &ctx,
@@ -221,7 +221,7 @@ fn validate_claude_desktop_gateway_auth(
     };
     let value = value
         .to_str()
-        .map_err(|_| ProxyError::AuthError("Authorization 头格式无效".to_string()))?;
+        .map_err(|_| ProxyError::AuthError("Authorization 头formatoinválido".to_string()))?;
     let token = value
         .strip_prefix("Bearer ")
         .or_else(|| value.strip_prefix("bearer "))
@@ -229,15 +229,15 @@ fn validate_claude_desktop_gateway_auth(
         .trim();
     if token != expected {
         return Err(ProxyError::AuthError(
-            "Claude Desktop gateway token 无效".to_string(),
+            "Claude Desktop gateway token inválido".to_string(),
         ));
     }
     Ok(())
 }
 
-/// Claude 格式转换处理（独有逻辑）
+/// Claude formatoconvertirprocesar（独有逻辑）
 ///
-/// 支持 OpenAI Chat Completions 和 Responses API 两种格式的转换
+/// soportar OpenAI Chat Completions y Responses API 两种formatodeconvertir
 async fn handle_claude_transform(
     response: super::hyper_client::ProxyResponse,
     ctx: &RequestContext,
@@ -254,11 +254,11 @@ async fn handle_claude_transform(
         .as_ref()
         .and_then(|meta| meta.provider_type.as_deref())
         == Some("codex_oauth");
-    // Codex OAuth 会把 openai_responses 响应强制升级为 SSE，即使客户端发的是 stream:false。
-    // should_use_claude_transform_streaming 默认会把这个组合路由到流式转换器——虽然能避免
-    // JSON parse 报 422，但会让非流客户端收到 text/event-stream，违反 Anthropic 非流语义。
-    // 这里为这个特定组合打开 override：把上游 SSE 聚合成 Anthropic JSON 回给客户端，其它
-    // 场景（任意上游 is_sse、非 Codex OAuth 等）仍沿用原有流式兜底。
+    // Codex OAuth 会把 openai_responses respuesta强制升级para SSE，即使cliente发de是 stream:false。
+    // should_use_claude_transform_streaming predeterminado会把这个组合rutaastreamingconvertir器——虽然能避免
+    // JSON parse 报 422，pero会让非流cliente收a text/event-stream，违反 Anthropic 非流语义。
+    // 这里para这个特定组合打开 override：把upstream SSE 聚合成 Anthropic JSON 回给cliente，其它
+    // 场景（任意upstream is_sse、非 Codex OAuth 等）仍沿usar原有streaming兜底。
     let aggregate_codex_oauth_responses_sse =
         !is_stream && is_codex_oauth && api_format == "openai_responses";
     let use_streaming = if aggregate_codex_oauth_responses_sse {
@@ -275,7 +275,7 @@ async fn handle_claude_transform(
     let tool_schema_hints = (!tool_schema_hints.is_empty()).then_some(tool_schema_hints);
 
     if use_streaming {
-        // 根据 api_format 选择流式转换器
+        // según api_format 选择streamingconvertir器
         let stream = response.bytes_stream();
         let sse_stream: Box<
             dyn futures::Stream<Item = Result<Bytes, std::io::Error>> + Send + Unpin,
@@ -293,7 +293,7 @@ async fn handle_claude_transform(
             Box::new(Box::pin(create_anthropic_sse_stream(stream)))
         };
 
-        // 创建使用量收集器；关闭 usage logging 时不要再解析转换后的 SSE。
+        // crear使usar量收集器；关闭 usage logging /不要再analizarconvertir后de SSE。
         let usage_collector = if usage_logging_enabled(state) {
             let state = state.clone();
             let provider_id = ctx.provider.id.clone();
@@ -330,7 +330,7 @@ async fn handle_claude_transform(
                             .await;
                         });
                     } else {
-                        log::debug!("[Claude] OpenRouter 流式响应缺少 usage 统计，跳过消费记录");
+                        log::debug!("[Claude] OpenRouter streamingrespuesta缺少 usage 统计，跳过消费registrar");
                     }
                 },
             ))
@@ -338,7 +338,7 @@ async fn handle_claude_transform(
             None
         };
 
-        // 获取流式超时配置
+        // obtenerstreamingtimeoutconfiguración
         let timeout_config = ctx.streaming_timeout_config();
 
         let logged_stream = create_logged_passthrough_stream(
@@ -363,7 +363,7 @@ async fn handle_claude_transform(
         return Ok((headers, body).into_response());
     }
 
-    // 非流式响应转换 (OpenAI/Responses → Anthropic)
+    // 非streamingrespuestaconvertir (OpenAI/Responses → Anthropic)
     let body_timeout =
         if ctx.app_config.auto_failover_enabled && ctx.app_config.non_streaming_timeout > 0 {
             std::time::Duration::from_secs(ctx.app_config.non_streaming_timeout as u64)
@@ -379,12 +379,12 @@ async fn handle_claude_transform(
         responses_sse_to_response_value(&body_str)?
     } else {
         serde_json::from_slice(&body_bytes).map_err(|e| {
-            log::error!("[Claude] 解析上游响应失败: {e}, body: {body_str}");
+            log::error!("[Claude] analizarupstreamrespuestafalló: {e}, body: {body_str}");
             ProxyError::TransformError(format!("Failed to parse upstream response: {e}"))
         })?
     };
 
-    // 根据 api_format 选择非流式转换器
+    // según api_format 选择非streamingconvertir器
     let anthropic_response = if api_format == "openai_responses" {
         transform_responses::responses_to_anthropic(upstream_response)
     } else if api_format == "gemini_native" {
@@ -399,11 +399,11 @@ async fn handle_claude_transform(
         transform::openai_to_anthropic(upstream_response)
     }
     .map_err(|e| {
-        log::error!("[Claude] 转换响应失败: {e}");
+        log::error!("[Claude] convertirrespuestafalló: {e}");
         e
     })?;
 
-    // 记录使用量
+    // registrar使usar量
     if let Some(usage) = TokenUsage::from_claude_response(&anthropic_response) {
         let model = anthropic_response
             .get("model")
@@ -436,7 +436,7 @@ async fn handle_claude_transform(
         });
     }
 
-    // 构建响应
+    // construirrespuesta
     let mut builder = axum::response::Response::builder().status(status);
     strip_entity_headers_for_rebuilt_body(&mut response_headers);
     strip_hop_by_hop_response_headers(&mut response_headers);
@@ -448,13 +448,13 @@ async fn handle_claude_transform(
     builder = builder.header("content-type", "application/json");
 
     let response_body = serde_json::to_vec(&anthropic_response).map_err(|e| {
-        log::error!("[Claude] 序列化响应失败: {e}");
+        log::error!("[Claude] serializarrespuestafalló: {e}");
         ProxyError::TransformError(format!("Failed to serialize response: {e}"))
     })?;
 
     let body = axum::body::Body::from(response_body);
     builder.body(body).map_err(|e| {
-        log::error!("[Claude] 构建响应失败: {e}");
+        log::error!("[Claude] construirrespuestafalló: {e}");
         ProxyError::Internal(format!("Failed to build response: {e}"))
     })
 }
@@ -467,10 +467,10 @@ fn endpoint_with_query(uri: &axum::http::Uri, endpoint: &str) -> String {
 }
 
 // ============================================================================
-// Codex API 处理器
+// Codex API procesar器
 // ============================================================================
 
-/// 处理 /v1/chat/completions 请求（OpenAI Chat Completions API - Codex CLI）
+/// procesar /v1/chat/completions solicitud（OpenAI Chat Completions API - Codex CLI）
 pub async fn handle_chat_completions(
     State(state): State<ProxyState>,
     request: axum::extract::Request,
@@ -534,7 +534,7 @@ pub async fn handle_chat_completions(
     .await
 }
 
-/// 处理 /v1/responses 请求（OpenAI Responses API - Codex CLI 透传）
+/// procesar /v1/responses solicitud（OpenAI Responses API - Codex CLI 透传）
 pub async fn handle_responses(
     State(state): State<ProxyState>,
     request: axum::extract::Request,
@@ -609,7 +609,7 @@ pub async fn handle_responses(
     .await
 }
 
-/// 处理 /v1/responses/compact 请求（OpenAI Responses Compact API - Codex CLI 透传）
+/// procesar /v1/responses/compact solicitud（OpenAI Responses Compact API - Codex CLI 透传）
 pub async fn handle_responses_compact(
     State(state): State<ProxyState>,
     request: axum::extract::Request,
@@ -778,12 +778,12 @@ async fn handle_codex_chat_to_responses_transform(
         read_decoded_body(response, ctx.tag, body_timeout).await?;
     let body_str = String::from_utf8_lossy(&body_bytes);
     let chat_response: Value = serde_json::from_slice(&body_bytes).map_err(|e| {
-        log::error!("[Codex] 解析 Chat 上游响应失败: {e}, body: {body_str}");
+        log::error!("[Codex] analizar Chat upstreamrespuestafalló: {e}, body: {body_str}");
         ProxyError::TransformError(format!("Failed to parse upstream chat response: {e}"))
     })?;
     let responses_response = transform_codex_chat::chat_completion_to_response(chat_response)
         .map_err(|e| {
-            log::error!("[Codex] Chat → Responses 响应转换失败: {e}");
+            log::error!("[Codex] Chat → Responses respuestaconvertirfalló: {e}");
             e
         })?;
 
@@ -828,23 +828,23 @@ async fn handle_codex_chat_to_responses_transform(
     builder = builder.header("content-type", "application/json");
 
     let response_body = serde_json::to_vec(&responses_response).map_err(|e| {
-        log::error!("[Codex] 序列化 Responses 响应失败: {e}");
+        log::error!("[Codex] serializar Responses respuestafalló: {e}");
         ProxyError::TransformError(format!("Failed to serialize responses response: {e}"))
     })?;
 
     builder
         .body(axum::body::Body::from(response_body))
         .map_err(|e| {
-            log::error!("[Codex] 构建 Responses 响应失败: {e}");
+            log::error!("[Codex] construir Responses respuestafalló: {e}");
             ProxyError::Internal(format!("Failed to build response: {e}"))
         })
 }
 
 // ============================================================================
-// Gemini API 处理器
+// Gemini API procesar器
 // ============================================================================
 
-/// 处理 Gemini API 请求（透传，包括查询参数）
+/// procesar Gemini API solicitud（透传，包括查询parámetro）
 pub async fn handle_gemini(
     State(state): State<ProxyState>,
     uri: axum::http::Uri,
@@ -859,8 +859,8 @@ pub async fn handle_gemini(
         .await
         .map_err(|e| ProxyError::Internal(format!("Failed to read request body: {e}")))?
         .to_bytes();
-    // GET 类只读端点（/v1beta/models、/v1beta/models/<model> 等）没有请求体，
-    // 不能强制 parse 为 JSON —— 否则空 body 会被拒绝。
+    // GET 类只读endpoint（/v1beta/models、/v1beta/models/<model> 等）没有solicitud体，
+    // 不能强制 parse para JSON —— 否entonces空 body 会/rechazar。
     let body: Value = if body_bytes.is_empty() {
         Value::Null
     } else {
@@ -868,12 +868,12 @@ pub async fn handle_gemini(
             .map_err(|e| ProxyError::Internal(format!("Failed to parse request body: {e}")))?
     };
 
-    // Gemini 的模型名称在 URI 中
+    // Gemini demodelo名称en URI 中
     let mut ctx = RequestContext::new(&state, &body, &headers, AppType::Gemini, "Gemini", "gemini")
         .await?
         .with_model_from_uri(&uri);
 
-    // 提取完整的路径和查询参数
+    // 提取完整de路径y查询parámetro
     let endpoint = uri
         .path_and_query()
         .map(|pq| pq.as_str())
@@ -930,11 +930,11 @@ fn should_use_claude_transform_streaming(
     requested_streaming || upstream_is_sse || (is_codex_oauth && api_format == "openai_responses")
 }
 
-/// 把 OpenAI Responses SSE 流聚合成一个完整的 Responses JSON 对象，供下游转成 Anthropic
-/// 非流响应。仅在 Codex OAuth 把 `stream:false` 强制升级为 SSE 的场景下调用。
+/// 把 OpenAI Responses SSE 流聚合成一个完整de Responses JSON /象，供downstream转成 Anthropic
+/// 非流respuesta。仅en Codex OAuth 把 `stream:false` 强制升级para SSE de场景下调usar。
 ///
-/// 复用 `proxy::sse` 的 `take_sse_block`/`strip_sse_field`：`take_sse_block` 同时支持
-/// `\n\n` 与 `\r\n\r\n` 两种分隔符，`strip_sse_field` 兼容带/不带空格的字段写法。
+/// 复usar `proxy::sse` de `take_sse_block`/`strip_sse_field`：`take_sse_block` 同/soportar
+/// `\n\n` con `\r\n\r\n` 两种分隔符，`strip_sse_field` 兼容带/不带空格de字段写法。
 fn responses_sse_to_response_value(body: &str) -> Result<Value, ProxyError> {
     let mut buffer = body.to_string();
     let mut completed_response: Option<Value> = None;
@@ -1003,7 +1003,7 @@ fn responses_sse_to_response_value(body: &str) -> Result<Value, ProxyError> {
 }
 
 // ============================================================================
-// 使用量记录（保留用于 Claude 转换逻辑）
+// 使usar量registrar（保留usar/ Claude convertir逻辑）
 // ============================================================================
 
 fn log_forward_error(
@@ -1031,11 +1031,11 @@ fn log_forward_error(
         Some(ctx.session_id.clone()),
         None,
     ) {
-        log::warn!("记录失败请求日志失败: {e}");
+        log::warn!("registrarfallósolicitud日志falló: {e}");
     }
 }
 
-/// 记录请求使用量
+/// registrarsolicitud使usar量
 #[allow(clippy::too_many_arguments)]
 async fn log_usage(
     state: &ProxyState,
@@ -1084,7 +1084,7 @@ async fn log_usage(
         None, // provider_type
         is_streaming,
     ) {
-        log::warn!("[USG-001] 记录使用量失败: {e}");
+        log::warn!("[USG-001] registrar使usar量falló: {e}");
     }
 }
 
@@ -1142,8 +1142,8 @@ data: {"type":"response.completed","response":{"id":"resp_1","status":"completed
 
     #[test]
     fn responses_sse_to_response_value_handles_crlf_delimiters() {
-        // 真实 HTTP SSE 按规范使用 \r\n\r\n 分隔事件；take_sse_block 必须同时处理两种分隔符，
-        // 否则此路径在任何标准上游（含 Codex OAuth HTTPS 后端）下都会 TransformError。
+        // 真实 HTTP SSE 按规范使usar \r\n\r\n 分隔事件；take_sse_block 必须同/procesar两种分隔符，
+        // 否entonces此路径en任何标准upstream（含 Codex OAuth HTTPS 后端）下都会 TransformError。
         let sse = "event: response.output_item.done\r\n\
 data: {\"type\":\"response.output_item.done\",\"item\":{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"hi\"}]}}\r\n\
 \r\n\

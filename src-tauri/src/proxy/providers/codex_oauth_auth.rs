@@ -1,19 +1,19 @@
 //! Codex OAuth Authentication Module
 //!
-//! 实现 OpenAI ChatGPT Plus/Pro 订阅的 OAuth Device Code 流程。
-//! 支持多账号管理，每个 Provider 可关联不同的 ChatGPT 账号。
+//! 实现 OpenAI ChatGPT Plus/Pro 订阅de OAuth Device Code 流程。
+//! soportar多账号管理，每个 Provider 可关联不同de ChatGPT 账号。
 //!
-//! ## 认证流程
-//! 1. 启动 Device Code 流程，获取 device_auth_id 和 user_code
-//! 2. 用户在浏览器中完成 ChatGPT 授权
-//! 3. 轮询获取 authorization_code 和 code_verifier（注意：verifier 由服务端返回）
-//! 4. 使用 code + verifier 换取 access_token + refresh_token + id_token
-//! 5. 自动刷新 access_token（到期前 60 秒）
+//! ## autenticación流程
+//! 1. 启动 Device Code 流程，obtener device_auth_id y user_code
+//! 2. usar户en浏览器中完成 ChatGPT autorización
+//! 3. 轮询obtener authorization_code y code_verifier（注意：verifier por服务端retornar）
+//! 4. 使usar code + verifier 换取 access_token + refresh_token + id_token
+//! 5. 自动刷新 access_token（a期前 60 秒）
 //!
-//! ## 多账号支持
+//! ## 多账号soportar
 //! - 每个 ChatGPT 账号独立存储 refresh_token
-//! - Provider 通过 meta.authBinding 关联账号（auth_provider = "codex_oauth"）
-//! - 通过 JWT id_token 提取 chatgpt_account_id 作为账号唯一标识
+//! - Provider mediante meta.authBinding 关联账号（auth_provider = "codex_oauth"）
+//! - mediante JWT id_token 提取 chatgpt_account_id 作para账号唯一标识
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use reqwest::Client;
@@ -27,7 +27,7 @@ use tokio::sync::{Mutex, RwLock};
 
 use super::copilot_auth::{GitHubAccount, GitHubDeviceCodeResponse};
 
-/// OpenAI OAuth 客户端 ID（OpenCode 使用，与官方 Codex CLI 相同）
+/// OpenAI OAuth cliente ID（OpenCode 使usar，con官方 Codex CLI 相同）
 const CODEX_CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
 
 /// Device Code 启动 URL
@@ -36,19 +36,19 @@ const DEVICE_AUTH_USERCODE_URL: &str = "https://auth.openai.com/api/accounts/dev
 /// Device Code 轮询 URL
 const DEVICE_AUTH_TOKEN_URL: &str = "https://auth.openai.com/api/accounts/deviceauth/token";
 
-/// OAuth Token URL（用于 code 换 token 和 refresh token）
+/// OAuth Token URL（usar/ code 换 token y refresh token）
 const OAUTH_TOKEN_URL: &str = "https://auth.openai.com/oauth/token";
 
-/// Device Code 验证 URL（向用户展示）
+/// Device Code validar URL（向usar户展示）
 const DEVICE_VERIFICATION_URL: &str = "https://auth.openai.com/codex/device";
 
-/// Device Code 流程的 redirect_uri（OpenAI 服务端约定）
+/// Device Code 流程de redirect_uri（OpenAI 服务端约定）
 const DEVICE_REDIRECT_URI: &str = "https://auth.openai.com/deviceauth/callback";
 
 /// Token 刷新提前量（毫秒）
 const TOKEN_REFRESH_BUFFER_MS: i64 = 60_000;
 
-/// Device Code 默认有效时长（秒），OpenAI 文档约定 15 分钟
+/// Device Code predeterminadoválido/长（秒），OpenAI 文档约定 15 分钟
 const DEVICE_CODE_DEFAULT_EXPIRES_IN: u64 = 900;
 
 /// 轮询间隔安全余量（秒）
@@ -57,34 +57,34 @@ const POLLING_SAFETY_MARGIN_SECS: u64 = 3;
 /// User-Agent
 const CODEX_USER_AGENT: &str = "cc-switch-codex-oauth";
 
-/// Codex OAuth 错误
+/// Codex OAuth error
 #[derive(Debug, thiserror::Error)]
 pub enum CodexOAuthError {
-    #[error("等待用户授权中")]
+    #[error("esperarusar户autorización中")]
     AuthorizationPending,
 
-    #[error("用户拒绝授权")]
+    #[error("usar户rechazarautorización")]
     AccessDenied,
 
-    #[error("Device Code 已过期")]
+    #[error("Device Code ya过期")]
     ExpiredToken,
 
-    #[error("OAuth Token 获取失败: {0}")]
+    #[error("OAuth Token obtenerfalló: {0}")]
     TokenFetchFailed(String),
 
-    #[error("Refresh Token 失效或已过期")]
+    #[error("Refresh Token 失效oya过期")]
     RefreshTokenInvalid,
 
-    #[error("网络错误: {0}")]
+    #[error("网络error: {0}")]
     NetworkError(String),
 
-    #[error("解析错误: {0}")]
+    #[error("analizarerror: {0}")]
     ParseError(String),
 
-    #[error("IO 错误: {0}")]
+    #[error("IO error: {0}")]
     IoError(String),
 
-    #[error("账号不存在: {0}")]
+    #[error("账号no existe: {0}")]
     AccountNotFound(String),
 }
 
@@ -100,7 +100,7 @@ impl From<std::io::Error> for CodexOAuthError {
     }
 }
 
-/// OpenAI Device Code 响应
+/// OpenAI Device Code respuesta
 #[derive(Debug, Clone, Deserialize)]
 struct DeviceCodeResponse {
     device_auth_id: String,
@@ -111,14 +111,14 @@ struct DeviceCodeResponse {
     expires_in: Option<u64>,
 }
 
-/// OpenAI Device Code 轮询响应（成功）
+/// OpenAI Device Code 轮询respuesta（éxito）
 #[derive(Debug, Clone, Deserialize)]
 struct DevicePollSuccess {
     authorization_code: String,
     code_verifier: String,
 }
 
-/// OAuth Token 响应
+/// OAuth Token respuesta
 #[derive(Debug, Clone, Deserialize)]
 struct OAuthTokenResponse {
     access_token: String,
@@ -129,7 +129,7 @@ struct OAuthTokenResponse {
     expires_in: Option<i64>,
 }
 
-/// 解析后的 JWT claims（仅关心 chatgpt_account_id 等字段）
+/// analizar后de JWT claims（仅关心 chatgpt_account_id 等字段）
 #[derive(Debug, Clone, Default, Deserialize)]
 struct IdTokenClaims {
     #[serde(default)]
@@ -154,11 +154,11 @@ struct OpenAiAuthClaim {
     chatgpt_account_id: Option<String>,
 }
 
-/// 缓存的 access_token（含过期时间）
+/// cachéde access_token（含过期/间）
 #[derive(Debug, Clone)]
 struct CachedAccessToken {
     token: String,
-    /// 过期时间戳（毫秒）
+    /// 过期/间戳（毫秒）
     expires_at_ms: i64,
 }
 
@@ -169,34 +169,34 @@ impl CachedAccessToken {
     }
 }
 
-/// 进行中的 Device Code 条目，带过期时间以便清理放弃的登录流程
+/// 进行中de Device Code 条目，带过期/间以便清理放弃de登录流程
 #[derive(Debug, Clone)]
 struct PendingDeviceCode {
     user_code: String,
-    /// Unix 毫秒时间戳，超时后可清理
+    /// Unix 毫秒/间戳，timeout后可清理
     expires_at_ms: i64,
 }
 
-/// 持久化的账号数据
+/// 持久化de账号数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct CodexAccountData {
-    /// chatgpt_account_id（同时作为 HashMap 的 key）
+    /// chatgpt_account_id（同/作para HashMap de key）
     pub account_id: String,
-    /// 账号邮箱（如果可获取）
+    /// 账号邮箱（si可obtener）
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
     /// Refresh Token（持久化）
     pub refresh_token: String,
-    /// 认证时间戳（秒）
+    /// autenticación/间戳（秒）
     pub authenticated_at: i64,
 }
 
-/// 公开的账号信息（返回给前端，复用 GitHubAccount 结构）
+/// 公开de账号信息（retornar给前端，复usar GitHubAccount 结构）
 impl From<&CodexAccountData> for GitHubAccount {
     fn from(data: &CodexAccountData) -> Self {
         GitHubAccount {
             id: data.account_id.clone(),
-            // 用 email 作为显示名（若无则用 account_id）
+            // usar email 作para显示名（若sinentoncesusar account_id）
             login: data
                 .email
                 .clone()
@@ -219,16 +219,16 @@ struct CodexOAuthStore {
     default_account_id: Option<String>,
 }
 
-/// Codex OAuth 认证管理器（多账号）
+/// Codex OAuth autenticación管理器（多账号）
 pub struct CodexOAuthManager {
     accounts: Arc<RwLock<HashMap<String, CodexAccountData>>>,
     default_account_id: Arc<RwLock<Option<String>>>,
-    /// 内存缓存的 access_token（不持久化）
+    /// 内存cachéde access_token（不持久化）
     access_tokens: Arc<RwLock<HashMap<String, CachedAccessToken>>>,
-    /// 每个账号的刷新锁
+    /// 每个账号de刷新锁
     refresh_locks: Arc<RwLock<HashMap<String, Arc<Mutex<()>>>>>,
-    /// 进行中的 Device Code 流程：device_auth_id -> {user_code, expires_at_ms}
-    /// 过期条目会在 start_device_flow 时被清理，防止放弃的登录流程导致无界增长
+    /// 进行中de Device Code 流程：device_auth_id -> {user_code, expires_at_ms}
+    /// 过期条目会en start_device_flow //清理，防止放弃de登录流程导致sin界增长
     pending_device_codes: Arc<RwLock<HashMap<String, PendingDeviceCode>>>,
     http_client: Client,
     storage_path: PathBuf,
@@ -249,7 +249,7 @@ impl CodexOAuthManager {
         };
 
         if let Err(e) = manager.load_from_disk_sync() {
-            log::warn!("[CodexOAuth] 加载存储失败: {e}");
+            log::warn!("[CodexOAuth] cargar存储falló: {e}");
         }
 
         manager
@@ -259,7 +259,7 @@ impl CodexOAuthManager {
 
     /// 启动 Device Code 流程
     ///
-    /// 返回 GitHubDeviceCodeResponse 复用现有前端结构，但字段含义对应 OpenAI 的字段：
+    /// retornar GitHubDeviceCodeResponse 复usar现有前端结构，pero字段含义/应 OpenAI de字段：
     /// - device_code = device_auth_id
     /// - user_code = user_code
     /// - verification_uri = https://auth.openai.com/codex/device
@@ -279,7 +279,7 @@ impl CodexOAuthManager {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();
             return Err(CodexOAuthError::NetworkError(format!(
-                "Device Code 请求失败: {status} - {text}"
+                "Device Code solicitudfalló: {status} - {text}"
             )));
         }
 
@@ -292,8 +292,8 @@ impl CodexOAuthManager {
         let expires_in = device.expires_in.unwrap_or(DEVICE_CODE_DEFAULT_EXPIRES_IN);
         let expires_at_ms = chrono::Utc::now().timestamp_millis() + (expires_in as i64) * 1000;
 
-        // 记录 device_auth_id -> 用户码映射；同时清理所有已过期的条目，
-        // 避免用户放弃登录流程导致 HashMap 无界增长
+        // registrar device_auth_id -> usar户码mapeo；同/清理所有ya过期de条目，
+        // 避免usar户放弃登录流程导致 HashMap sin界增长
         {
             let mut pending = self.pending_device_codes.write().await;
             let now_ms = chrono::Utc::now().timestamp_millis();
@@ -308,7 +308,7 @@ impl CodexOAuthManager {
         }
 
         log::info!(
-            "[CodexOAuth] 获取 Device Code 成功，user_code: {}",
+            "[CodexOAuth] obtener Device Code éxito，user_code: {}",
             device.user_code
         );
 
@@ -321,9 +321,9 @@ impl CodexOAuthManager {
         })
     }
 
-    /// 轮询 Device Code 状态
+    /// 轮询 Device Code estado
     ///
-    /// 接收 device_code（即 device_auth_id），返回 Some(account) 表示授权成功
+    /// recibir device_code（即 device_auth_id），retornar Some(account) 表示autorizaciónéxito
     pub async fn poll_for_token(
         &self,
         device_code: &str,
@@ -335,7 +335,7 @@ impl CodexOAuthManager {
 
         let entry = entry.ok_or_else(|| {
             CodexOAuthError::TokenFetchFailed(
-                "未找到对应的 user_code，请重新启动登录流程".to_string(),
+                "no encontrado/应de user_code，请重新启动登录流程".to_string(),
             )
         })?;
 
@@ -363,7 +363,7 @@ impl CodexOAuthManager {
 
         let status = poll_response.status();
 
-        // 403/404 表示用户未完成授权，继续轮询
+        // 403/404 表示usar户no完成autorización，continuar轮询
         if status == reqwest::StatusCode::FORBIDDEN || status == reqwest::StatusCode::NOT_FOUND {
             return Err(CodexOAuthError::AuthorizationPending);
         }
@@ -384,9 +384,9 @@ impl CodexOAuthManager {
             .await
             .map_err(|e| CodexOAuthError::ParseError(e.to_string()))?;
 
-        log::info!("[CodexOAuth] 用户已授权，正在换取 OAuth Token");
+        log::info!("[CodexOAuth] usar户yaautorización，正en换取 OAuth Token");
 
-        // 用 authorization_code + code_verifier 换 token
+        // usar authorization_code + code_verifier 换 token
         let tokens = self
             .exchange_code_for_tokens(&success.authorization_code, &success.code_verifier)
             .await?;
@@ -398,15 +398,15 @@ impl CodexOAuthManager {
         }
 
         let refresh_token = tokens.refresh_token.clone().ok_or_else(|| {
-            CodexOAuthError::TokenFetchFailed("响应缺少 refresh_token".to_string())
+            CodexOAuthError::TokenFetchFailed("respuesta缺少 refresh_token".to_string())
         })?;
 
         let (account_id, email) = extract_identity_from_tokens(&tokens);
         let account_id = account_id.ok_or_else(|| {
-            CodexOAuthError::ParseError("无法从 token 中提取 account_id".to_string())
+            CodexOAuthError::ParseError("sin法desde token 中提取 account_id".to_string())
         })?;
 
-        // 缓存 access_token
+        // caché access_token
         {
             let mut tokens_cache = self.access_tokens.write().await;
             tokens_cache.insert(
@@ -425,7 +425,7 @@ impl CodexOAuthManager {
         Ok(Some(account))
     }
 
-    /// 用 authorization_code + code_verifier 换取 tokens
+    /// usar authorization_code + code_verifier 换取 tokens
     async fn exchange_code_for_tokens(
         &self,
         code: &str,
@@ -450,7 +450,7 @@ impl CodexOAuthManager {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();
             return Err(CodexOAuthError::TokenFetchFailed(format!(
-                "Token 交换失败: {status} - {text}"
+                "Token 交换falló: {status} - {text}"
             )));
         }
 
@@ -460,7 +460,7 @@ impl CodexOAuthManager {
             .map_err(|e| CodexOAuthError::ParseError(e.to_string()))
     }
 
-    /// 用 refresh_token 刷新 access_token
+    /// usar refresh_token 刷新 access_token
     async fn refresh_with_token(
         &self,
         refresh_token: &str,
@@ -487,7 +487,7 @@ impl CodexOAuthManager {
         if !status.is_success() {
             let text = response.text().await.unwrap_or_default();
             return Err(CodexOAuthError::TokenFetchFailed(format!(
-                "Refresh 失败: {status} - {text}"
+                "Refresh falló: {status} - {text}"
             )));
         }
 
@@ -497,14 +497,14 @@ impl CodexOAuthManager {
             .map_err(|e| CodexOAuthError::ParseError(e.to_string()))
     }
 
-    // ==================== Token 获取（含自动刷新） ====================
+    // ==================== Token obtener（含自动刷新） ====================
 
-    /// 获取指定账号的有效 access_token（必要时自动刷新）
+    /// obtener指定账号deválido access_token（必要/自动刷新）
     pub async fn get_valid_token_for_account(
         &self,
         account_id: &str,
     ) -> Result<String, CodexOAuthError> {
-        // 先检查缓存
+        // 先verificarcaché
         {
             let tokens = self.access_tokens.read().await;
             if let Some(cached) = tokens.get(account_id) {
@@ -514,7 +514,7 @@ impl CodexOAuthManager {
             }
         }
 
-        log::info!("[CodexOAuth] 账号 {account_id} 的 access_token 需要刷新");
+        log::info!("[CodexOAuth] 账号 {account_id} de access_token 需要刷新");
 
         let refresh_lock = self.get_refresh_lock(account_id).await;
         let _guard = refresh_lock.lock().await;
@@ -539,7 +539,7 @@ impl CodexOAuthManager {
 
         let new_tokens = self.refresh_with_token(&refresh_token).await?;
 
-        // 如果服务端返回了新的 refresh_token，更新存储
+        // si服务端retornar了新de refresh_token，actualizar存储
         if let Some(new_refresh) = new_tokens.refresh_token.clone() {
             if new_refresh != refresh_token {
                 let mut accounts = self.accounts.write().await;
@@ -568,17 +568,17 @@ impl CodexOAuthManager {
         Ok(access_token)
     }
 
-    /// 获取默认账号的有效 token
+    /// obtenerpredeterminado账号deválido token
     pub async fn get_valid_token(&self) -> Result<String, CodexOAuthError> {
         match self.resolve_default_account_id().await {
             Some(id) => self.get_valid_token_for_account(&id).await,
             None => Err(CodexOAuthError::AccountNotFound(
-                "无可用的 ChatGPT 账号".to_string(),
+                "sindisponiblede ChatGPT 账号".to_string(),
             )),
         }
     }
 
-    /// 获取默认账号 ID（热路径使用，避免克隆整个账号 HashMap）
+    /// obtenerpredeterminado账号 ID（热路径使usar，避免克隆整个账号 HashMap）
     pub async fn default_account_id(&self) -> Option<String> {
         self.resolve_default_account_id().await
     }
@@ -640,7 +640,7 @@ impl CodexOAuthManager {
     }
 
     pub async fn clear_auth(&self) -> Result<(), CodexOAuthError> {
-        log::info!("[CodexOAuth] 清除所有认证");
+        log::info!("[CodexOAuth] 清除所有autenticación");
 
         {
             let mut accounts = self.accounts.write().await;
@@ -675,7 +675,7 @@ impl CodexOAuthManager {
         !accounts.is_empty()
     }
 
-    /// 获取认证状态摘要（与 Copilot 的格式保持一致，便于复用前端）
+    /// obtenerautenticaciónestado摘要（con Copilot deformato保持一致，便/复usar前端）
     pub async fn get_status(&self) -> CodexOAuthStatus {
         let accounts_map = self.accounts.read().await.clone();
         let default_id = self.resolve_default_account_id().await;
@@ -794,11 +794,11 @@ impl CodexOAuthManager {
         let parent = self
             .storage_path
             .parent()
-            .ok_or_else(|| CodexOAuthError::IoError("无效的存储路径".to_string()))?;
+            .ok_or_else(|| CodexOAuthError::IoError("inválidode存储路径".to_string()))?;
         let file_name = self
             .storage_path
             .file_name()
-            .ok_or_else(|| CodexOAuthError::IoError("无效的存储文件名".to_string()))?
+            .ok_or_else(|| CodexOAuthError::IoError("inválidode存储文件名".to_string()))?
             .to_string_lossy()
             .to_string();
         let ts = std::time::SystemTime::now()
@@ -852,7 +852,7 @@ impl CodexOAuthManager {
 
         if let Ok(mut accounts) = self.accounts.try_write() {
             *accounts = store.accounts;
-            log::info!("[CodexOAuth] 从磁盘加载 {} 个账号", accounts.len());
+            log::info!("[CodexOAuth] desde磁盘cargar {} 个账号", accounts.len());
         }
         if let Ok(mut default) = self.default_account_id.try_write() {
             *default = store.default_account_id;
@@ -882,7 +882,7 @@ impl CodexOAuthManager {
         self.write_store_atomic(&content)?;
 
         log::info!(
-            "[CodexOAuth] 保存到磁盘成功（{} 个账号）",
+            "[CodexOAuth] guardara磁盘éxito（{} 个账号）",
             store.accounts.len()
         );
 
@@ -890,7 +890,7 @@ impl CodexOAuthManager {
     }
 }
 
-/// Codex OAuth 状态摘要
+/// Codex OAuth estado摘要
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodexOAuthStatus {
     pub accounts: Vec<GitHubAccount>,
@@ -901,9 +901,9 @@ pub struct CodexOAuthStatus {
 
 // ==================== 工具函数 ====================
 
-/// 解析 OpenAI Device Code 响应中的 interval 字段
+/// analizar OpenAI Device Code respuesta中de interval 字段
 ///
-/// 服务端可能返回字符串或数字，需要兼容
+/// 服务端可能retornar字符串o数字，需要兼容
 fn parse_interval(value: Option<&serde_json::Value>) -> u64 {
     let raw = match value {
         Some(serde_json::Value::Number(n)) => n.as_u64().unwrap_or(5),
@@ -913,14 +913,14 @@ fn parse_interval(value: Option<&serde_json::Value>) -> u64 {
     raw.max(1) + POLLING_SAFETY_MARGIN_SECS
 }
 
-/// 从 expires_in（秒）计算过期时间戳（毫秒）
+/// desde expires_in（秒）计算过期/间戳（毫秒）
 fn compute_expires_at_ms(expires_in: Option<i64>) -> i64 {
     let now_ms = chrono::Utc::now().timestamp_millis();
     let secs = expires_in.unwrap_or(3600);
     now_ms + secs * 1000
 }
 
-/// 解析 JWT 中的 claims
+/// analizar JWT 中de claims
 fn parse_jwt_claims(token: &str) -> Option<IdTokenClaims> {
     let parts: Vec<&str> = token.split('.').collect();
     if parts.len() != 3 {
@@ -930,7 +930,7 @@ fn parse_jwt_claims(token: &str) -> Option<IdTokenClaims> {
     serde_json::from_slice(&decoded).ok()
 }
 
-/// 从 token 响应中提取 (account_id, email)
+/// desde token respuesta中提取 (account_id, email)
 fn extract_identity_from_tokens(tokens: &OAuthTokenResponse) -> (Option<String>, Option<String>) {
     let mut account_id: Option<String> = None;
     let mut email: Option<String> = None;
@@ -996,7 +996,7 @@ mod tests {
     #[test]
     fn test_parse_interval_min() {
         let v = serde_json::Value::Number(serde_json::Number::from(0));
-        // 0 应被提升到 1
+        // 0 应/提升a 1
         assert_eq!(parse_interval(Some(&v)), 1 + POLLING_SAFETY_MARGIN_SECS);
     }
 
@@ -1004,7 +1004,7 @@ mod tests {
     fn test_compute_expires_at_ms() {
         let result = compute_expires_at_ms(Some(3600));
         let now = chrono::Utc::now().timestamp_millis();
-        // 应在未来约 3600 秒处（允许少量误差）
+        // 应enno来约 3600 秒处（permitir少量误差）
         assert!(result > now + 3500 * 1000);
         assert!(result < now + 3700 * 1000);
     }
@@ -1019,14 +1019,14 @@ mod tests {
     #[test]
     fn test_cached_token_expiring_soon() {
         let now = chrono::Utc::now().timestamp_millis();
-        // 30 秒后过期 - 在缓冲期内
+        // 30 秒后过期 - en缓冲期内
         let expiring = CachedAccessToken {
             token: "t".to_string(),
             expires_at_ms: now + 30_000,
         };
         assert!(expiring.is_expiring_soon());
 
-        // 1 小时后过期 - 不在缓冲期内
+        // 1 小/后过期 - 不en缓冲期内
         let valid = CachedAccessToken {
             token: "t".to_string(),
             expires_at_ms: now + 3_600_000,

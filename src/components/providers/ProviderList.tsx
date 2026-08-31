@@ -64,9 +64,9 @@ interface ProviderListProps {
   onOpenTerminal?: (provider: Provider) => void;
   onCreate?: () => void;
   isLoading?: boolean;
-  isProxyRunning?: boolean; // 代理服务运行状态
-  isProxyTakeover?: boolean; // 代理接管模式（Live配置已被接管）
-  activeProviderId?: string; // 代理当前实际使用的供应商 ID（用于故障转移模式下标注绿色边框）
+  isProxyRunning?: boolean; // Estado de ejecución del servicio proxy
+  isProxyTakeover?: boolean; // Modo proxy takeover (configuración Live tomada)
+  activeProviderId?: string; // ID del proveedor que el proxy usa actualmente (marcar borde verde en modo failover)
   onSetAsDefault?: (provider: Provider) => void; // OpenClaw: set as default model
 }
 
@@ -104,19 +104,19 @@ export function ProviderList({
     enabled: appId === "opencode",
   });
 
-  // OpenClaw: 查询 live 配置中的供应商 ID 列表，用于判断 isInConfig
+  // OpenClaw: consultar lista de IDs de proveedores en config live, para determinar isInConfig
   const { data: openclawLiveIds } = useOpenClawLiveProviderIds(
     appId === "openclaw",
   );
 
-  // Hermes: 查询 live 配置中的供应商 ID 列表，用于判断 isInConfig
+  // Hermes: consultar lista de IDs de proveedores en config live, para determinar isInConfig
   const { data: hermesLiveIds } = useHermesLiveProviderIds(appId === "hermes");
 
-  // Hermes: 读取当前 model.provider，用于判断哪个供应商是"当前激活"（高亮）
+  // Hermes: leer model.provider actual, para determinar cuál proveedor está "activo" (resaltar)
   const { data: hermesModelConfig } = useHermesModelConfig(appId === "hermes");
   const hermesCurrentProviderId = hermesModelConfig?.provider;
 
-  // 判断供应商是否已添加到配置（累加模式应用：OpenCode/OpenClaw/Hermes）
+  // Determinar si proveedor ya fue agregado a configuración (aplicaciones modo acumulativo: OpenCode/OpenClaw/Hermes)
   const isProviderInConfig = useCallback(
     (providerId: string): boolean => {
       if (appId === "opencode") {
@@ -128,7 +128,7 @@ export function ProviderList({
       if (appId === "hermes") {
         return hermesLiveIds?.includes(providerId) ?? false;
       }
-      return true; // 其他应用始终返回 true
+      return true; // Otras aplicaciones siempre devuelven true
     },
     [appId, opencodeLiveIds, openclawLiveIds, hermesLiveIds],
   );
@@ -146,7 +146,7 @@ export function ProviderList({
     [appId, openclawDefaultModel],
   );
 
-  // 故障转移相关
+  // Failover relacionado
   const { data: isAutoFailoverEnabled } = useAutoFailoverEnabled(appId);
   const { data: failoverQueue } = useFailoverQueue(appId);
   const addToQueue = useAddToFailoverQueue();
@@ -321,7 +321,7 @@ export function ProviderList({
     if (!claudeDesktopStatus.supported) {
       messages.push(
         t("claudeDesktop.statusUnsupported", {
-          defaultValue: "当前平台暂不支持 Claude Desktop 3P 配置写入。",
+          defaultValue: "La plataforma actual no soporta escritura de configuración 3P en Claude Desktop.",
         }),
       );
       return messages;
@@ -331,7 +331,7 @@ export function ProviderList({
       messages.push(
         t("claudeDesktop.statusStaleRawModels", {
           defaultValue:
-            "Claude Desktop profile 中存在非 claude-* 模型名，新版 Claude Desktop 可能拒绝加载；重新切换当前供应商可修复。",
+            "Perfil de Claude Desktop contiene nombres de modelo no claude-*, la nueva versión de Claude Desktop puede rechazar la carga; cambiar proveedor actual nuevamente puede corregirlo.",
         }),
       );
     }
@@ -339,7 +339,7 @@ export function ProviderList({
       messages.push(
         t("claudeDesktop.statusMissingRouteMappings", {
           defaultValue:
-            "当前供应商启用了模型映射，但没有有效路由；请编辑供应商并补全至少一个模型映射。",
+            "Proveedor actual tiene mapeo de modelo habilitado, pero sin enrutamiento válido; edite el proveedor y complete al menos un mapeo de modelo.",
         }),
       );
     }
@@ -350,7 +350,7 @@ export function ProviderList({
       messages.push(
         t("claudeDesktop.statusGatewayTokenMissing", {
           defaultValue:
-            "当前本地路由 token 尚未生成；重新切换该供应商会写入新的本地 token。",
+            "Token de enrutamiento local aún no generado; cambiar a este proveedor nuevamente escribirá nuevo token local.",
         }),
       );
     }
@@ -363,7 +363,7 @@ export function ProviderList({
           expected,
           actual,
           defaultValue:
-            "Claude Desktop profile 指向的地址与当前供应商不一致；当前为 {{actual}}，应为 {{expected}}。重新切换当前供应商可修复。",
+            "Dirección en perfil de Claude Desktop no coincide con proveedor actual; actual es {{actual}}, debería ser {{expected}}. Cambiar proveedor actual nuevamente puede corregirlo.",
         }),
       );
     }
@@ -475,7 +475,7 @@ export function ProviderList({
           <div className="flex items-center gap-2 font-medium">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             {t("claudeDesktop.statusTitle", {
-              defaultValue: "Claude Desktop 配置需要检查",
+              defaultValue: "Configuración de Claude Desktop requiere revisión",
             })}
           </div>
           <ul className="mt-2 space-y-1 text-xs leading-relaxed">

@@ -191,7 +191,7 @@ pub async fn download(
         .ok_or_else(|| {
             localized(
                 "webdav.sync.remote_empty",
-                "远端没有可下载的同步数据",
+                "Remoto no tiene datos de sincronización descargables",
                 "No downloadable sync data found on the remote.",
             )
         })?;
@@ -310,7 +310,7 @@ fn build_local_snapshot(
     let tmp = tempdir().map_err(|e| {
         io_context_localized(
             "webdav.sync.snapshot_tmpdir_failed",
-            "创建 WebDAV 快照临时目录失败",
+            "Falló crear directorio temporal de snapshot WebDAV",
             "Failed to create temporary directory for WebDAV snapshot",
             e,
         )
@@ -431,7 +431,7 @@ fn validate_manifest_compat(manifest: &SyncManifest, layout: RemoteLayout) -> Re
     if manifest.format != PROTOCOL_FORMAT {
         return Err(localized(
             "webdav.sync.manifest_format_incompatible",
-            format!("远端 manifest 格式不兼容: {}", manifest.format),
+            format!("Formato de manifest remoto incompatible: {}", manifest.format),
             format!(
                 "Remote manifest format is incompatible: {}",
                 manifest.format
@@ -442,7 +442,7 @@ fn validate_manifest_compat(manifest: &SyncManifest, layout: RemoteLayout) -> Re
         return Err(localized(
             "webdav.sync.manifest_version_incompatible",
             format!(
-                "远端 manifest 协议版本不兼容: v{} (本地 v{PROTOCOL_VERSION})",
+                "Versión de protocolo de manifest remoto incompatible: v{} (local v{PROTOCOL_VERSION})",
                 manifest.version
             ),
             format!(
@@ -454,7 +454,7 @@ fn validate_manifest_compat(manifest: &SyncManifest, layout: RemoteLayout) -> Re
     let Some(db_compat_version) = effective_db_compat_version(manifest, layout) else {
         return Err(localized(
             "webdav.sync.manifest_db_version_missing",
-            "远端 manifest 缺少数据库兼容版本",
+            "Manifest remoto carece de versión compatible de base de datos",
             "Remote manifest is missing the database compatibility version.",
         ));
     };
@@ -463,7 +463,7 @@ fn validate_manifest_compat(manifest: &SyncManifest, layout: RemoteLayout) -> Re
             return Err(localized(
                 "webdav.sync.manifest_db_version_incompatible",
                 format!(
-                    "远端数据库快照版本不兼容: db-v{db_compat_version} (本地 db-v{DB_COMPAT_VERSION})"
+                    "Versión de snapshot de base de datos remota incompatible: db-v{db_compat_version} (local db-v{DB_COMPAT_VERSION})"
                 ),
                 format!(
                     "Remote database snapshot version is incompatible: db-v{db_compat_version} (local db-v{DB_COMPAT_VERSION})"
@@ -474,7 +474,7 @@ fn validate_manifest_compat(manifest: &SyncManifest, layout: RemoteLayout) -> Re
             return Err(localized(
                 "webdav.sync.manifest_db_version_incompatible",
                 format!(
-                    "远端数据库快照版本不兼容: db-v{db_compat_version} (本地最高支持 db-v{DB_COMPAT_VERSION})"
+                    "Versión de snapshot de base de datos remota incompatible: db-v{db_compat_version} (local soporta máximo db-v{DB_COMPAT_VERSION})"
                 ),
                 format!(
                     "Remote database snapshot version is incompatible: db-v{db_compat_version} (local supports up to db-v{DB_COMPAT_VERSION})"
@@ -534,7 +534,7 @@ async fn download_and_verify(
     let meta = artifacts.get(artifact_name).ok_or_else(|| {
         localized(
             "webdav.sync.manifest_missing_artifact",
-            format!("manifest 中缺少 artifact: {artifact_name}"),
+            format!("Artifact faltante en manifest: {artifact_name}"),
             format!("Manifest missing artifact: {artifact_name}"),
         )
     })?;
@@ -546,7 +546,7 @@ async fn download_and_verify(
         .ok_or_else(|| {
             localized(
                 "webdav.sync.remote_missing_artifact",
-                format!("远端缺少 artifact 文件: {artifact_name}"),
+                format!("Remoto carece de archivo artifact: {artifact_name}"),
                 format!("Remote artifact file missing: {artifact_name}"),
             )
         })?;
@@ -556,7 +556,7 @@ async fn download_and_verify(
         return Err(localized(
             "webdav.sync.artifact_size_mismatch",
             format!(
-                "artifact {artifact_name} 大小不匹配 (expected: {}, got: {})",
+                "Tamaño de artifact {artifact_name} no coincide (esperado: {}, obtenido: {})",
                 meta.size,
                 bytes.len(),
             ),
@@ -573,7 +573,7 @@ async fn download_and_verify(
         return Err(localized(
             "webdav.sync.artifact_hash_mismatch",
             format!(
-                "artifact {artifact_name} SHA256 校验失败 (expected: {}..., got: {}...)",
+                "Verificación SHA256 de artifact {artifact_name} falló (esperado: {}..., obtenido: {}...)",
                 meta.sha256.get(..8).unwrap_or(&meta.sha256),
                 actual_hash.get(..8).unwrap_or(&actual_hash),
             ),
@@ -595,20 +595,20 @@ fn apply_snapshot(
     let sql_str = std::str::from_utf8(db_sql).map_err(|e| {
         localized(
             "webdav.sync.sql_not_utf8",
-            format!("SQL 非 UTF-8: {e}"),
+            format!("SQL no UTF-8: {e}"),
             format!("SQL is not valid UTF-8: {e}"),
         )
     })?;
     let skills_backup = backup_current_skills()?;
 
-    // 先替换 skills，再导入数据库；若导入失败则回滚 skills，避免“半恢复”。
+    // Primero se reemplazan las skills y luego se importa la base de datos; si la importación falla se revierten las skills para no dejar una restauración a medias.
     restore_skills_zip(skills_zip)?;
 
     if let Err(db_err) = db.import_sql_string_for_sync(sql_str) {
         if let Err(rollback_err) = restore_skills_from_backup(&skills_backup) {
             return Err(localized(
                 "webdav.sync.db_import_and_rollback_failed",
-                format!("导入数据库失败: {db_err}; 同时回滚 Skills 失败: {rollback_err}"),
+                format!("Falló importar base de datos: {db_err}; además falló revertir Skills: {rollback_err}"),
                 format!(
                     "Database import failed: {db_err}; skills rollback also failed: {rollback_err}"
                 ),
@@ -657,7 +657,7 @@ fn validate_artifact_size_limit(artifact_name: &str, size: u64) -> Result<(), Ap
         let max_mb = MAX_SYNC_ARTIFACT_BYTES / 1024 / 1024;
         return Err(localized(
             "webdav.sync.artifact_too_large",
-            format!("artifact {artifact_name} 超过下载上限（{max_mb} MB）"),
+            format!("Artifact {artifact_name} excede límite de descarga ({max_mb} MB)"),
             format!("Artifact {artifact_name} exceeds download limit ({max_mb} MB)"),
         ));
     }
@@ -872,7 +872,7 @@ mod tests {
         let err = validate_artifact_size_limit("skills.zip", MAX_SYNC_ARTIFACT_BYTES + 1)
             .expect_err("artifact larger than limit should be rejected");
         assert!(
-            err.to_string().contains("too large") || err.to_string().contains("超过"),
+            err.to_string().contains("too large") || err.to_string().contains("excede"),
             "unexpected error: {err}"
         );
     }

@@ -2,13 +2,13 @@ import { invoke } from "@tauri-apps/api/core";
 import type { EnvConflict, BackupInfo } from "@/types/env";
 
 /**
- * 环境变量管理 API
+ * API de gestión de variables de entorno
  */
 
 /**
- * 检查指定应用的环境变量冲突
- * @param appType 应用类型 ("claude" | "codex" | "gemini")
- * @returns 环境变量冲突列表
+ * Verifica conflictos de variables de entorno para la aplicación especificada
+ * @param appType Tipo de aplicación ("claude" | "codex" | "gemini")
+ * @returns Lista de conflictos de variables de entorno
  */
 export async function checkEnvConflicts(
   appType: string,
@@ -17,9 +17,9 @@ export async function checkEnvConflicts(
 }
 
 /**
- * 删除指定的环境变量 (会自动备份)
- * @param conflicts 要删除的环境变量冲突列表
- * @returns 备份信息
+ * Elimina las variables de entorno especificadas (se hace backup automático)
+ * @param conflicts Lista de conflictos de variables de entorno a eliminar
+ * @returns Información del backup
  */
 export async function deleteEnvVars(
   conflicts: EnvConflict[],
@@ -28,16 +28,16 @@ export async function deleteEnvVars(
 }
 
 /**
- * 从备份文件恢复环境变量
- * @param backupPath 备份文件路径
+ * Restaura variables de entorno desde archivo de backup
+ * @param backupPath Ruta del archivo de backup
  */
 export async function restoreEnvBackup(backupPath: string): Promise<void> {
   return invoke<void>("restore_env_backup", { backupPath });
 }
 
 /**
- * 检查所有应用的环境变量冲突
- * @returns 按应用类型分组的环境变量冲突
+ * Verifica conflictos de variables de entorno en todas las aplicaciones
+ * @returns Conflictos de variables de entorno agrupados por tipo de aplicación
  */
 export async function checkAllEnvConflicts(): Promise<
   Record<string, EnvConflict[]>
@@ -50,7 +50,7 @@ export async function checkAllEnvConflicts(): Promise<
       try {
         results[app] = await checkEnvConflicts(app);
       } catch (error) {
-        console.error(`检查 ${app} 环境变量失败:`, error);
+        console.error(`Error al verificar variables de entorno de ${app}:`, error);
         results[app] = [];
       }
     }),

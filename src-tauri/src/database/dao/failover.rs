@@ -1,13 +1,13 @@
-//! 故障转移队列 DAO
+//! DAO de cola de conmutación por error (failover)
 //!
-//! 管理代理模式下的故障转移队列（基于 providers 表的 in_failover_queue 字段）
+//! Gestiona la cola de failover en modo proxy (basada en el campo in_failover_queue de la tabla providers)
 
 use crate::database::{lock_conn, Database};
 use crate::error::AppError;
 use crate::provider::Provider;
 use serde::{Deserialize, Serialize};
 
-/// 故障转移队列条目（简化版，用于前端展示）
+/// Entrada de cola de failover (versión simplificada para mostrar en frontend)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FailoverQueueItem {
@@ -19,7 +19,7 @@ pub struct FailoverQueueItem {
 }
 
 impl Database {
-    /// 获取故障转移队列（按 sort_index 排序）
+    /// Obtener cola de failover (ordenada por sort_index)
     pub fn get_failover_queue(&self, app_type: &str) -> Result<Vec<FailoverQueueItem>, AppError> {
         let conn = lock_conn!(self.conn);
 
@@ -48,7 +48,7 @@ impl Database {
         Ok(items)
     }
 
-    /// 获取故障转移队列中的供应商（完整 Provider 信息，按顺序）
+    /// Obtener proveedores en la cola de failover (información completa de Provider, en orden)
     pub fn get_failover_providers(&self, app_type: &str) -> Result<Vec<Provider>, AppError> {
         let all_providers = self.get_all_providers(app_type)?;
 
@@ -60,7 +60,7 @@ impl Database {
         Ok(result)
     }
 
-    /// 添加供应商到故障转移队列
+    /// Agregar proveedor a la cola de failover
     pub fn add_to_failover_queue(&self, app_type: &str, provider_id: &str) -> Result<(), AppError> {
         let conn = lock_conn!(self.conn);
 
@@ -73,7 +73,7 @@ impl Database {
         Ok(())
     }
 
-    /// 从故障转移队列中移除供应商
+    /// Eliminar proveedor de la cola de failover
     pub fn remove_from_failover_queue(
         &self,
         app_type: &str,
@@ -81,26 +81,26 @@ impl Database {
     ) -> Result<(), AppError> {
         let conn = lock_conn!(self.conn);
 
-        // 1. 从队列中移除
+        // 1. Eliminar de la cola
         conn.execute(
             "UPDATE providers SET in_failover_queue = 0 WHERE id = ?1 AND app_type = ?2",
             rusqlite::params![provider_id, app_type],
         )
         .map_err(|e| AppError::Database(e.to_string()))?;
 
-        // 2. 清除该供应商的健康状态（退出队列后不再需要健康监控）
+        // 2. Limpiar el estado de salud del proveedor (ya no se necesita monitoreo tras salir de la cola)
         conn.execute(
             "DELETE FROM provider_health WHERE provider_id = ?1 AND app_type = ?2",
             rusqlite::params![provider_id, app_type],
         )
         .map_err(|e| AppError::Database(e.to_string()))?;
 
-        log::info!("已从故障转移队列移除供应商 {provider_id} ({app_type}), 并清除其健康状态");
+        log::info!("Proveedor {provider_id} ({app_type}) eliminado de la cola de failover y su estado de salud limpiado");
 
         Ok(())
     }
 
-    /// 清空故障转移队列
+    /// Vaciar cola de failover
     pub fn clear_failover_queue(&self, app_type: &str) -> Result<(), AppError> {
         let conn = lock_conn!(self.conn);
 
@@ -113,7 +113,7 @@ impl Database {
         Ok(())
     }
 
-    /// 检查供应商是否在故障转移队列中
+    /// Verificar si el proveedor está en la cola de failover
     pub fn is_in_failover_queue(
         &self,
         app_type: &str,
@@ -132,7 +132,7 @@ impl Database {
         Ok(in_queue)
     }
 
-    /// 获取可添加到故障转移队列的供应商（不在队列中的）
+    /// Obtener proveedores disponibles para agregar a la cola de failover (los que no están en la cola)
     pub fn get_available_providers_for_failover(
         &self,
         app_type: &str,

@@ -22,7 +22,7 @@ interface UseTemplateValuesProps {
 }
 
 /**
- * 收集配置中包含模板占位符的路径
+ * Recopilar rutas que contienen marcadores de posición de plantilla en la configuración
  */
 const collectTemplatePaths = (
   source: unknown,
@@ -57,7 +57,7 @@ const collectTemplatePaths = (
 };
 
 /**
- * 根据路径获取值
+ * Obtener valor según ruta
  */
 const getValueAtPath = (source: any, path: TemplatePath) => {
   return path.reduce<any>((acc, key) => {
@@ -69,7 +69,7 @@ const getValueAtPath = (source: any, path: TemplatePath) => {
 };
 
 /**
- * 根据路径设置值
+ * Establecer valor según ruta
  */
 const setValueAtPath = (
   target: any,
@@ -110,7 +110,7 @@ const setValueAtPath = (
 };
 
 /**
- * 应用模板值到配置字符串（只更新模板占位符所在的字段）
+ * Aplicar valores de plantilla a cadena de configuración (actualizar solo campos con marcadores de posición)
  */
 const applyTemplateValuesToConfigString = (
   presetConfig: any,
@@ -160,7 +160,7 @@ const applyTemplateValuesToConfigString = (
 };
 
 /**
- * 管理模板变量的状态和逻辑
+ * Gestionar estado y lógica de variables de plantilla
  */
 export function useTemplateValues({
   selectedPresetId,
@@ -170,20 +170,20 @@ export function useTemplateValues({
 }: UseTemplateValuesProps) {
   const [templateValues, setTemplateValues] = useState<TemplateValueMap>({});
 
-  // 获取当前选中的预设
+  // Obtener preset seleccionado actualmente
   const selectedPreset = useMemo(() => {
     if (!selectedPresetId || selectedPresetId === "custom") {
       return null;
     }
     const entry = presetEntries.find((item) => item.id === selectedPresetId);
-    // 只处理 ProviderPreset (Claude 预设)
+    // Procesar solo ProviderPreset (presets de Claude)
     if (entry && "settingsConfig" in entry.preset) {
       return entry.preset as ProviderPreset;
     }
     return null;
   }, [selectedPresetId, presetEntries]);
 
-  // 获取模板变量条目
+  // Obtener entradas de variables de plantilla
   const templateValueEntries = useMemo(() => {
     if (!selectedPreset?.templateValues) {
       return [];
@@ -193,7 +193,7 @@ export function useTemplateValues({
     >;
   }, [selectedPreset]);
 
-  // 当选择预设时，初始化模板值
+  // Al seleccionar preset, inicializar valores de plantilla
   useEffect(() => {
     if (selectedPreset?.templateValues) {
       const initialValues = Object.fromEntries(
@@ -211,7 +211,7 @@ export function useTemplateValues({
     }
   }, [selectedPreset]);
 
-  // 处理模板值变化
+  // Manejar cambio de valor de plantilla
   const handleTemplateValueChange = useCallback(
     (key: string, value: string) => {
       if (!selectedPreset?.templateValues) {
@@ -235,7 +235,7 @@ export function useTemplateValues({
           [key]: nextEntry,
         };
 
-        // 应用模板值到配置
+        // Aplicar valores de plantilla a configuración
         try {
           const configString = applyTemplateValuesToConfigString(
             selectedPreset.settingsConfig,
@@ -244,7 +244,7 @@ export function useTemplateValues({
           );
           onConfigChange(configString);
         } catch (err) {
-          console.error("更新模板值失败:", err);
+          console.error("Fallo al actualizar valor de plantilla:", err);
         }
 
         return nextValues;
@@ -253,7 +253,7 @@ export function useTemplateValues({
     [selectedPreset, settingsConfig, onConfigChange],
   );
 
-  // 验证所有模板值是否已填写
+  // Verificar si todos los valores de plantilla están completos
   const validateTemplateValues = useCallback((): {
     isValid: boolean;
     missingField?: { key: string; label: string };

@@ -34,7 +34,7 @@ interface UsageScriptModalProps {
   onSave: (script: UsageScript) => void;
 }
 
-// 生成预设模板的函数（支持国际化）
+// Función para generar plantillas predefinidas (con soporte de internacionalización)
 const generatePresetTemplates = (
   t: (key: string) => string,
 ): Record<string, string> => ({
@@ -98,17 +98,17 @@ const generatePresetTemplates = (
   },
 })`,
 
-  // GitHub Copilot 模板不需要脚本，使用专用 API
+  // La plantilla de GitHub Copilot no necesita script, usa una API dedicada
   [TEMPLATE_TYPES.GITHUB_COPILOT]: "",
 
-  // Coding Plan 模板不需要脚本，使用专用 Rust 查询
+  // La plantilla de Coding Plan no necesita script, usa consultas nativas de Rust
   [TEMPLATE_TYPES.TOKEN_PLAN]: "",
 
-  // 官方余额查询模板不需要脚本，使用专用 Rust 查询
+  // La plantilla de consulta de saldo oficial no necesita script, usa consultas nativas de Rust
   [TEMPLATE_TYPES.BALANCE]: "",
 });
 
-// 模板名称国际化键映射
+// Mapeo de claves de internacionalización para nombres de plantillas
 const TEMPLATE_NAME_KEYS: Record<string, string> = {
   [TEMPLATE_TYPES.CUSTOM]: "usageScript.templateCustom",
   [TEMPLATE_TYPES.GENERAL]: "usageScript.templateGeneral",
@@ -118,7 +118,7 @@ const TEMPLATE_NAME_KEYS: Record<string, string> = {
   [TEMPLATE_TYPES.BALANCE]: "usageScript.templateBalance",
 };
 
-/** 官方余额查询供应商检测 */
+/** Detección de proveedores de consulta de saldo oficial */
 const BALANCE_PROVIDERS = [
   { id: "deepseek", label: "DeepSeek", pattern: /api\.deepseek\.com/i },
   { id: "stepfun", label: "StepFun", pattern: /api\.stepfun\.(ai|com)/i },
@@ -131,7 +131,7 @@ const BALANCE_PROVIDERS = [
   { id: "novita", label: "Novita AI", pattern: /api\.novita\.ai/i },
 ] as const;
 
-/** 根据 Base URL 自动检测余额查询供应商 */
+/** Detectar automáticamente el proveedor de consulta de saldo según la Base URL */
 function detectBalanceProvider(baseUrl: string | undefined): boolean {
   if (!baseUrl) return false;
   return BALANCE_PROVIDERS.some((bp) => bp.pattern.test(baseUrl));
@@ -149,10 +149,10 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
   const { data: settingsData } = useSettingsQuery();
   const [showUsageConfirm, setShowUsageConfirm] = useState(false);
 
-  // 生成带国际化的预设模板
+  // Generar plantillas predefinidas con internacionalización
   const PRESET_TEMPLATES = generatePresetTemplates(t);
 
-  // 从 provider 的 settingsConfig 中提取 API Key 和 Base URL
+  // Extraer API Key y Base URL del settingsConfig del proveedor
   const getProviderCredentials = (): {
     apiKey: string | undefined;
     baseUrl: string | undefined;
@@ -161,7 +161,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
       const config = provider.settingsConfig;
       if (!config) return { apiKey: undefined, baseUrl: undefined };
 
-      // 处理不同应用的配置格式
+      // Manejar diferentes formatos de configuración según la aplicación
       if (appId === "claude") {
         // Claude: { env: { ANTHROPIC_AUTH_TOKEN | ANTHROPIC_API_KEY, ANTHROPIC_BASE_URL } }
         const env = (config as any).env || {};
@@ -170,7 +170,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
           baseUrl: env.ANTHROPIC_BASE_URL,
         };
       } else if (appId === "codex") {
-        // Codex: { auth: { OPENAI_API_KEY }, config: TOML string with base_url }
+        // Codex: { auth: { OPENAI_API_KEY }, config: TOML string con base_url }
         const auth = (config as any).auth || {};
         const configToml = (config as any).config || "";
         return {
@@ -185,13 +185,13 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
           baseUrl: env.GOOGLE_GEMINI_BASE_URL,
         };
       } else if (appId === "hermes") {
-        // Hermes: settingsConfig 顶层扁平（snake_case，对应 config.yaml）
+        // Hermes: settingsConfig de nivel superior plano (snake_case, corresponde a config.yaml)
         return {
           apiKey: (config as any).api_key,
           baseUrl: (config as any).base_url,
         };
       } else if (appId === "openclaw") {
-        // OpenClaw: settingsConfig 顶层扁平（camelCase，对应 openclaw.json）
+        // OpenClaw: settingsConfig de nivel superior plano (camelCase, corresponde a openclaw.json)
         return {
           apiKey: (config as any).apiKey,
           baseUrl: (config as any).baseUrl,
@@ -209,7 +209,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
   const [script, setScript] = useState<UsageScript>(() => {
     const savedScript = provider.meta?.usage_script;
     if (savedScript) {
-      // 已有配置：如果是 coding_plan 但没有 codingPlanProvider，自动检测填充
+      // Configuración existente: si es coding_plan pero no tiene codingPlanProvider, detectar y completar automáticamente
       if (
         savedScript.templateType === TEMPLATE_TYPES.TOKEN_PLAN &&
         !savedScript.codingPlanProvider
@@ -239,7 +239,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
 
   const [testing, setTesting] = useState(false);
 
-  // 🔧 失焦时的验证（严格）- 仅确保有效整数
+  // 🔧 Validación al perder el foco (estricta) - solo asegurar entero válido
   const validateTimeout = (value: string): number => {
     const num = Number(value);
     if (isNaN(num) || value.trim() === "") {
@@ -259,7 +259,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
     return Math.floor(num);
   };
 
-  // 🔧 失焦时的验证（严格）- 自动查询间隔
+  // 🔧 Validación al perder el foco (estricta) - intervalo de consulta automática
   const validateAndClampInterval = (value: string): number => {
     const num = Number(value);
     if (isNaN(num) || value.trim() === "") {
@@ -289,32 +289,32 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(
     () => {
       const existingScript = provider.meta?.usage_script;
-      // Copilot 供应商默认使用 Copilot 模板
+      // Los proveedores Copilot usan la plantilla Copilot por defecto
       if (provider.meta?.providerType === PROVIDER_TYPES.GITHUB_COPILOT) {
         return TEMPLATE_TYPES.GITHUB_COPILOT;
       }
-      // 优先使用保存的 templateType
+      // Priorizar el templateType guardado
       if (existingScript?.templateType) {
         return existingScript.templateType as string;
       }
-      // 向后兼容：根据字段推断模板类型
-      // 检测 NEW_API 模板（有 accessToken 或 userId）
+      // Compatibilidad hacia atrás: inferir tipo de plantilla según los campos
+      // Detectar plantilla NEW_API (tiene accessToken o userId)
       if (existingScript?.accessToken || existingScript?.userId) {
         return TEMPLATE_TYPES.NEW_API;
       }
-      // 检测 GENERAL 模板（有 apiKey 或 baseUrl）
+      // Detectar plantilla GENERAL (tiene apiKey o baseUrl)
       if (existingScript?.apiKey || existingScript?.baseUrl) {
         return TEMPLATE_TYPES.GENERAL;
       }
-      // 新配置：如果 URL 匹配 Coding Plan 供应商，自动选择 Coding Plan 模板
+      // Nueva configuración: si la URL coincide con proveedores Coding Plan, seleccionar automáticamente la plantilla Coding Plan
       if (detectCodingPlanProvider(providerCredentials.baseUrl)) {
         return TEMPLATE_TYPES.TOKEN_PLAN;
       }
-      // 新配置：如果 URL 匹配官方余额查询供应商，自动选择 Balance 模板
+      // Nueva configuración: si la URL coincide con proveedores de consulta de saldo oficial, seleccionar automáticamente la plantilla Balance
       if (detectBalanceProvider(providerCredentials.baseUrl)) {
         return TEMPLATE_TYPES.BALANCE;
       }
-      // 默认使用 GENERAL（与默认代码模板一致）
+      // Usar GENERAL por defecto (consistente con la plantilla de código por defecto)
       return TEMPLATE_TYPES.GENERAL;
     },
   );
@@ -345,7 +345,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
   };
 
   const handleSave = () => {
-    // Copilot、Coding Plan、Balance 模板不需要脚本验证
+    // Las plantillas Copilot, Coding Plan y Balance no necesitan validación de script
     if (
       selectedTemplate !== TEMPLATE_TYPES.GITHUB_COPILOT &&
       selectedTemplate !== TEMPLATE_TYPES.TOKEN_PLAN &&
@@ -360,7 +360,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
         return;
       }
     }
-    // 保存时记录当前选择的模板类型
+    // Guardar registrando el tipo de plantilla seleccionado actualmente
     const scriptWithTemplate = {
       ...script,
       templateType: selectedTemplate as
@@ -379,7 +379,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
   const handleTest = async () => {
     setTesting(true);
     try {
-      // 官方余额查询模板使用专用 API
+      // La plantilla de consulta de saldo oficial usa una API dedicada
       if (selectedTemplate === TEMPLATE_TYPES.BALANCE) {
         const baseUrl = providerCredentials.baseUrl ?? "";
         const apiKey = providerCredentials.apiKey ?? "";
@@ -406,7 +406,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
         return;
       }
 
-      // Coding Plan 模板使用专用 API
+      // La plantilla Coding Plan usa una API dedicada
       if (selectedTemplate === TEMPLATE_TYPES.TOKEN_PLAN) {
         const baseUrl = providerCredentials.baseUrl ?? "";
         const apiKey = providerCredentials.apiKey ?? "";
@@ -420,7 +420,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
             duration: 3000,
             closeButton: true,
           });
-          // 将结果转换为 UsageResult 格式更新缓存
+          // Convertir el resultado al formato UsageResult y actualizar la caché
           const usageData = quota.tiers.map((tier) => ({
             planName: tier.name,
             remaining: 100 - tier.utilization,
@@ -441,7 +441,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
         return;
       }
 
-      // Copilot 模板使用专用 API
+      // La plantilla Copilot usa una API dedicada
       if (selectedTemplate === TEMPLATE_TYPES.GITHUB_COPILOT) {
         const accountId = resolveManagedAccountId(
           provider.meta,
@@ -457,7 +457,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
           duration: 3000,
           closeButton: true,
         });
-        // 更新缓存
+        // Actualizar caché
         queryClient.setQueryData(["usage", provider.id, appId], {
           success: true,
           data: [
@@ -496,7 +496,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
           closeButton: true,
         });
 
-        // 🔧 测试成功后，更新主界面列表的用量查询缓存
+        // 🔧 Después de una prueba exitosa, actualizar la caché de consulta de uso en la lista de la interfaz principal
         queryClient.setQueryData(["usage", provider.id, appId], result);
       } else {
         toast.error(
@@ -547,13 +547,14 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
     const preset = PRESET_TEMPLATES[presetName];
     if (preset !== undefined) {
       if (presetName === TEMPLATE_TYPES.CUSTOM) {
-        // 🔧 自定义模式：用户应该在脚本中直接写完整 URL 和凭证，而不是依赖变量替换
-        // 这样可以避免同源检查导致的问题
-        // 如果用户想使用变量，需要手动在配置中设置 baseUrl/apiKey
+        // 🔧 Modo personalizado: el usuario debe escribir la URL completa y las credenciales directamente en el script,
+        // en lugar de depender de la sustitución de variables
+        // Esto evita problemas causados por la verificación de origen
+        // Si el usuario quiere usar variables, necesita configurar manualmente baseUrl/apiKey en la configuración
         setScript({
           ...script,
           code: preset,
-          // 清除凭证，用户可选择手动输入或保持空
+          // Limpiar credenciales, el usuario puede elegir ingresarlas manualmente o mantenerlas vacías
           apiKey: undefined,
           baseUrl: undefined,
           accessToken: undefined,
@@ -573,7 +574,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
           apiKey: undefined,
         });
       } else if (presetName === TEMPLATE_TYPES.GITHUB_COPILOT) {
-        // Copilot 模板不需要脚本和凭证，使用专用 API
+        // La plantilla Copilot no necesita script ni credenciales, usa una API dedicada
         setScript({
           ...script,
           code: "",
@@ -583,7 +584,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
           userId: undefined,
         });
       } else if (presetName === TEMPLATE_TYPES.TOKEN_PLAN) {
-        // Coding Plan 模板不需要脚本，使用 Rust 原生查询
+        // La plantilla Coding Plan no necesita script, usa consultas nativas de Rust
         const autoDetected = detectCodingPlanProvider(
           providerCredentials.baseUrl,
         );
@@ -598,7 +599,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
             script.codingPlanProvider || autoDetected || "kimi",
         });
       } else if (presetName === TEMPLATE_TYPES.BALANCE) {
-        // 官方余额查询模板不需要脚本，使用 Rust 原生查询
+        // La plantilla de consulta de saldo oficial no necesita script, usa consultas nativas de Rust
         setScript({
           ...script,
           code: "",
@@ -679,7 +680,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
 
       {script.enabled && (
         <div className="space-y-6">
-          {/* 预设模板选择 */}
+          {/* Selección de plantilla predefinida */}
           <div className="space-y-4 glass rounded-xl border border-white/10 p-6">
             <Label className="text-base font-medium">
               {t("usageScript.presetTemplate")}
@@ -687,7 +688,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
             <div className="flex gap-2 flex-wrap">
               {Object.keys(PRESET_TEMPLATES)
                 .filter((name) => {
-                  // Plantillas específicas de proveedores externos: no se ofrecen.
+                  // Plantillas específicas de proveedores externos: no se ofrecen
                   if (
                     name === TEMPLATE_TYPES.TOKEN_PLAN ||
                     name === TEMPLATE_TYPES.BALANCE
@@ -696,11 +697,11 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
                   }
                   const isCopilotProvider =
                     provider.meta?.providerType === "github_copilot";
-                  // Copilot 供应商只显示 copilot 模板
+                  // Los proveedores Copilot solo muestran la plantilla copilot
                   if (isCopilotProvider) {
                     return name === TEMPLATE_TYPES.GITHUB_COPILOT;
                   }
-                  // 非 Copilot 供应商不显示 copilot 模板
+                  // Los proveedores no Copilot no muestran la plantilla copilot
                   return name !== TEMPLATE_TYPES.GITHUB_COPILOT;
                 })
                 .map((name) => {
@@ -725,7 +726,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
                 })}
             </div>
 
-            {/* 自定义模式：变量提示和具体值 */}
+            {/* Modo personalizado: aviso de variables y valores específicos */}
             {selectedTemplate === TEMPLATE_TYPES.CUSTOM && (
               <div className="space-y-2 border-t border-white/10 pt-3">
                 <h4 className="text-sm font-medium text-foreground">
@@ -793,7 +794,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
               </div>
             )}
 
-            {/* Copilot 模式：自动认证提示 */}
+            {/* Modo Copilot: aviso de autenticación automática */}
             {selectedTemplate === TEMPLATE_TYPES.GITHUB_COPILOT && (
               <div className="space-y-2 border-t border-white/10 pt-3">
                 <p className="text-sm text-muted-foreground">
@@ -802,7 +803,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
               </div>
             )}
 
-            {/* 官方余额查询模式：自动提示 */}
+            {/* Modo de consulta de saldo oficial: aviso automático */}
             {selectedTemplate === TEMPLATE_TYPES.BALANCE && (
               <div className="space-y-3 border-t border-white/10 pt-3">
                 <p className="text-sm text-muted-foreground">
@@ -823,7 +824,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
               </div>
             )}
 
-            {/* Coding Plan 模式：供应商选择 */}
+            {/* Modo Coding Plan: selección de proveedor */}
             {selectedTemplate === TEMPLATE_TYPES.TOKEN_PLAN && (
               <div className="space-y-3 border-t border-white/10 pt-3">
                 <p className="text-sm text-muted-foreground">
@@ -860,7 +861,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
               </div>
             )}
 
-            {/* 凭证配置 */}
+            {/* Configuración de credenciales */}
             {shouldShowCredentialsConfig && (
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
@@ -1022,9 +1023,9 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
               </div>
             )}
 
-            {/* 通用配置（始终显示） */}
+            {/* Configuración general (siempre visible) */}
             <div className="grid gap-4 md:grid-cols-2 pt-4 border-t border-white/10">
-              {/* 超时时间 */}
+              {/* Tiempo de espera */}
               <div className="space-y-2">
                 <Label htmlFor="usage-timeout">
                   {t("usageScript.timeoutSeconds")}
@@ -1053,7 +1054,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
                 />
               </div>
 
-              {/* 自动查询间隔 */}
+              {/* Intervalo de consulta automática */}
               <div className="space-y-2">
                 <Label htmlFor="usage-interval">
                   {t("usageScript.autoIntervalMinutes")}
@@ -1089,7 +1090,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
             </div>
           </div>
 
-          {/* 提取器代码 - Copilot 模板不需要 */}
+          {/* Código del extractor - La plantilla Copilot no lo necesita */}
           {selectedTemplate !== TEMPLATE_TYPES.GITHUB_COPILOT &&
             selectedTemplate !== TEMPLATE_TYPES.TOKEN_PLAN && (
               <div className="space-y-4 glass rounded-xl border border-white/10 p-6">
@@ -1114,7 +1115,7 @@ const UsageScriptModal: React.FC<UsageScriptModalProps> = ({
               </div>
             )}
 
-          {/* 帮助信息 - Copilot 模板不需要 */}
+          {/* Información de ayuda - La plantilla Copilot no la necesita */}
           {selectedTemplate !== TEMPLATE_TYPES.GITHUB_COPILOT &&
             selectedTemplate !== TEMPLATE_TYPES.TOKEN_PLAN && (
               <div className="glass rounded-xl border border-white/10 p-6 text-sm text-foreground/90">

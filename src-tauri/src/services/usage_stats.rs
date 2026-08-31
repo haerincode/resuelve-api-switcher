@@ -1,6 +1,6 @@
-//! 使用统计服务
+//! Servicio de estadísticas de uso
 //!
-//! 提供使用量数据的聚合查询功能
+//! Provee funcionalidad de consulta agregada de datos de uso
 
 use crate::database::{lock_conn, Database};
 use crate::error::AppError;
@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::str::FromStr;
 
-/// 使用量汇总
+/// Resumen de uso
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UsageSummary {
@@ -58,7 +58,7 @@ fn derive_real_total_and_hit_rate(
     (real_total, hit_rate)
 }
 
-/// 每日统计
+/// Estadísticas diarias
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DailyStats {
@@ -72,7 +72,7 @@ pub struct DailyStats {
     pub total_cache_read_tokens: u64,
 }
 
-/// Provider 统计
+/// Estadísticas de Provider
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderStats {
@@ -85,7 +85,7 @@ pub struct ProviderStats {
     pub avg_latency_ms: u64,
 }
 
-/// 模型统计
+/// Estadísticas de modelo
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelStats {
@@ -96,7 +96,7 @@ pub struct ModelStats {
     pub avg_cost_per_request: String,
 }
 
-/// 请求日志过滤器
+/// Filtro de log de solicitudes
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LogFilters {
@@ -108,7 +108,7 @@ pub struct LogFilters {
     pub end_date: Option<i64>,
 }
 
-/// 分页请求日志响应
+/// Respuesta de log de solicitudes paginado
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaginatedLogs {
@@ -118,7 +118,7 @@ pub struct PaginatedLogs {
     pub page_size: u32,
 }
 
-/// 请求日志详情
+/// Detalle de log de solicitudes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RequestLogDetail {
@@ -151,9 +151,9 @@ pub struct RequestLogDetail {
     pub data_source: Option<String>,
 }
 
-/// 把 24 列的查询结果映射为 `RequestLogDetail`。
+/// Mapea resultado de consulta de 24 columnas a `RequestLogDetail`.
 ///
-/// 调用方的 SELECT **必须**按以下顺序返回 24 列：
+/// SELECT del llamador **debe** devolver 24 columnas en el siguiente orden:
 /// `request_id, provider_id, provider_name, app_type, model, request_model,
 ///  cost_multiplier, input_tokens, output_tokens, cache_read_tokens,
 ///  cache_creation_tokens, input_cost_usd, output_cost_usd, cache_read_cost_usd,
@@ -161,7 +161,7 @@ pub struct RequestLogDetail {
 ///  first_token_ms, duration_ms, status_code, error_message, created_at,
 ///  data_source`
 ///
-/// 不需要 provider_name 时（如 backfill）SELECT `NULL AS provider_name` 占位即可。
+/// Cuando no necesita provider_name (como backfill) SELECT `NULL AS provider_name` como placeholder.
 fn row_to_request_log_detail(row: &rusqlite::Row<'_>) -> rusqlite::Result<RequestLogDetail> {
     Ok(RequestLogDetail {
         request_id: row.get(0)?,
@@ -209,11 +209,11 @@ fn provider_name_coalesce(log_alias: &str, provider_alias: &str) -> String {
 
 pub(crate) const SESSION_PROXY_DEDUP_WINDOW_SECONDS: i64 = 10 * 60;
 
-/// SQL 片段：把指定别名的 `data_source` 包成 COALESCE，NULL 视作 'proxy'。
+/// Fragmento SQL: envuelve `data_source` de alias especificado en COALESCE, NULL se trata como 'proxy'.
 ///
-/// 防御 schema v9 之前可能写入的 NULL data_source 行（见
-/// `tests::create_legacy_nullable_logs_table`）。所有用到 data_source 的查询
-/// 都应通过此 helper 生成片段，避免遗漏。
+/// Defiende contra filas data_source NULL que pudieron escribirse antes de schema v9 (ver
+/// `tests::create_legacy_nullable_logs_table`). Todas las consultas que usan data_source
+/// deben generar fragmento mediante este helper, evita omisiones.
 fn data_source_expr(log_alias: &str) -> String {
     format!("COALESCE({log_alias}.data_source, 'proxy')")
 }
@@ -254,10 +254,10 @@ pub(crate) fn effective_usage_log_filter(log_alias: &str) -> String {
     )
 }
 
-/// 跨源去重指纹键。
+/// Clave de huella de deduplicación entre fuentes.
 ///
-/// `cache_creation_tokens`：Codex/Gemini session 日志不暴露该字段，调用方传 0
-/// 表示"未知"，匹配器会放行 proxy 侧任意 cache_creation_tokens 值。
+/// `cache_creation_tokens`: log de sesión Codex/Gemini no expone este campo, llamador pasa 0
+/// indica "desconocido", comparador permitirá cualquier valor cache_creation_tokens del lado proxy.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct DedupKey<'a> {
     pub app_type: &'a str,
@@ -269,10 +269,10 @@ pub(crate) struct DedupKey<'a> {
     pub created_at: i64,
 }
 
-/// session 日志写入前的统一去重判定。
+/// Determinación de deduplicación unificada antes de escribir log de sesión.
 ///
-/// 命中以下任一条件即跳过插入：① `request_id` 已存在；② 时间窗口内存在
-/// 与 `key` 匹配的 proxy 日志（指纹去重）。
+/// Omite inserción si cumple cualquiera de las siguientes condiciones: ① `request_id` ya existe; ② existe dentro de ventana de tiempo
+/// log proxy que coincide con `key` (deduplicación por huella).
 pub(crate) fn should_skip_session_insert(
     conn: &Connection,
     request_id: &str,
@@ -290,7 +290,7 @@ fn proxy_request_id_exists(conn: &Connection, request_id: &str) -> Result<bool, 
         params![request_id],
         |row| row.get::<_, bool>(0),
     )
-    .map_err(|e| AppError::Database(format!("查询 request_id 失败: {e}")))
+    .map_err(|e| AppError::Database(format!("Falló consultar request_id: {e}")))
 }
 
 pub(crate) fn has_matching_proxy_usage_log(
@@ -337,7 +337,7 @@ pub(crate) fn has_matching_proxy_usage_log(
         ],
         |row| row.get::<_, bool>(0),
     )
-    .map_err(|e| AppError::Database(format!("查询重复代理用量日志失败: {e}")))
+    .map_err(|e| AppError::Database(format!("Falló consultar log de uso de proxy duplicado: {e}")))
 }
 
 #[derive(Debug, Clone, Default)]
@@ -351,7 +351,7 @@ fn local_datetime_from_timestamp(ts: i64) -> Result<chrono::DateTime<Local>, App
     Local
         .timestamp_opt(ts, 0)
         .single()
-        .ok_or_else(|| AppError::Database(format!("无法解析本地时间戳: {ts}")))
+        .ok_or_else(|| AppError::Database(format!("No se puede parsear timestamp local: {ts}")))
 }
 
 fn compute_rollup_date_bounds(
@@ -431,7 +431,7 @@ fn local_day_start_rfc3339(day: NaiveDate) -> String {
 }
 
 impl Database {
-    /// 获取使用量汇总
+    /// Obtiene resumen de uso
     pub fn get_usage_summary(
         &self,
         start_date: Option<i64>,
@@ -560,8 +560,8 @@ impl Database {
         Ok(result)
     }
 
-    /// 按 app_type 维度拆分的使用量汇总，用于 Dashboard 的分应用展示条。
-    /// 返回所有有数据的 app_type，按 real_total_tokens 降序。
+    /// Resumen de uso dividido por dimensión app_type, usado para barra de visualización por aplicación en Dashboard.
+    /// Devuelve todos los app_type con datos, ordenados descendentemente por real_total_tokens.
     ///
     /// Single SQL with `GROUP BY app_type` — avoids the N+1 round-trip that
     /// would result from invoking `get_usage_summary` once per app_type.
@@ -696,7 +696,7 @@ impl Database {
         Ok(summaries)
     }
 
-    /// 获取每日趋势（滑动窗口，<=24h 按小时，>24h 按天，窗口与汇总一致）
+    /// Obtiene tendencia diaria (ventana deslizante, <=24h por hora, >24h por día, ventana consistente con resumen)
     pub fn get_daily_trends(
         &self,
         start_date: Option<i64>,
@@ -867,7 +867,7 @@ impl Database {
         for row in detail_rows {
             let (bucket_date, stat) = row?;
             let date = NaiveDate::parse_from_str(&bucket_date, "%Y-%m-%d")
-                .map_err(|err| AppError::Database(format!("解析趋势日期失败: {err}")))?;
+                .map_err(|err| AppError::Database(format!("Falló parsear fecha de tendencia: {err}")))?;
             map.insert(date, stat);
         }
 
@@ -930,7 +930,7 @@ impl Database {
         for row in rollup_rows {
             let (bucket_date, (req, cost, tok, inp, out, cc, cr)) = row?;
             let date = NaiveDate::parse_from_str(&bucket_date, "%Y-%m-%d")
-                .map_err(|err| AppError::Database(format!("解析 rollup 趋势日期失败: {err}")))?;
+                .map_err(|err| AppError::Database(format!("Falló parsear fecha de tendencia rollup: {err}")))?;
             let entry = map.entry(date).or_insert_with(|| DailyStats {
                 date: String::new(),
                 request_count: 0,
@@ -978,7 +978,7 @@ impl Database {
         Ok(stats)
     }
 
-    /// 获取 Provider 统计
+    /// Obtiene estadísticas de Provider
     pub fn get_provider_stats(
         &self,
         start_date: Option<i64>,
@@ -1104,7 +1104,7 @@ impl Database {
         Ok(stats)
     }
 
-    /// 获取模型统计
+    /// Obtiene estadísticas de modelo
     pub fn get_model_stats(
         &self,
         start_date: Option<i64>,
@@ -1214,7 +1214,7 @@ impl Database {
         Ok(stats)
     }
 
-    /// 获取请求日志列表（分页）
+    /// Obtiene lista de log de solicitudes (paginado)
     pub fn get_request_logs(
         &self,
         filters: &LogFilters,
@@ -1257,7 +1257,7 @@ impl Database {
             format!("WHERE {}", conditions.join(" AND "))
         };
 
-        // 获取总数
+        // Obtiene total
         let count_sql = format!(
             "SELECT COUNT(*) FROM proxy_request_logs l
              LEFT JOIN providers p ON l.provider_id = p.id AND l.app_type = p.app_type
@@ -1268,7 +1268,7 @@ impl Database {
             row.get::<_, i64>(0).map(|v| v as u32)
         })?;
 
-        // 获取数据
+        // Obtiene datos
         let offset = page * page_size;
         params.push(Box::new(page_size as i64));
         params.push(Box::new(offset as i64));
@@ -1309,7 +1309,7 @@ impl Database {
         })
     }
 
-    /// 获取单个请求详情
+    /// Obtiene detalle de solicitud única
     pub fn get_request_detail(
         &self,
         request_id: &str,
@@ -1341,7 +1341,7 @@ impl Database {
         }
     }
 
-    /// 检查 Provider 使用限额
+    /// Verifica límite de uso de Provider
     pub fn check_provider_limits(
         &self,
         provider_id: &str,
@@ -1349,7 +1349,7 @@ impl Database {
     ) -> Result<ProviderLimitStatus, AppError> {
         let conn = lock_conn!(self.conn);
 
-        // 获取 provider 的限额设置
+        // Obtiene configuración de límite de provider
         let (limit_daily, limit_monthly) = conn
             .query_row(
                 "SELECT meta FROM providers WHERE id = ? AND app_type = ?",
@@ -1374,7 +1374,7 @@ impl Database {
             })
             .unwrap_or((None, None));
 
-        // 计算今日使用量 (detail logs + rollup)
+        // Calcula uso de hoy (detail logs + rollup)
         let daily_usage: f64 = conn
             .query_row(
                 "SELECT COALESCE(SUM(cost), 0) FROM (
@@ -1393,7 +1393,7 @@ impl Database {
             )
             .unwrap_or(0.0);
 
-        // 计算本月使用量 (detail logs + rollup)
+        // Calcula uso de este mes (detail logs + rollup)
         let monthly_usage: f64 = conn
             .query_row(
                 "SELECT COALESCE(SUM(cost), 0) FROM (
@@ -1431,7 +1431,7 @@ impl Database {
     }
 }
 
-/// Provider 限额状态
+/// Estado de límite de Provider
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderLimitStatus {
@@ -1459,7 +1459,7 @@ impl Database {
         Self::backfill_missing_usage_costs_on_conn(&conn, None)
     }
 
-    /// 仅回填指定 model_id 相关的零成本行；用于单条定价更新后的精准回填。
+    /// Solo rellena filas de costo cero relacionadas con model_id especificado; usado para relleno preciso después de actualización de precio único.
     pub(crate) fn backfill_missing_usage_costs_for_model(
         &self,
         model_id: &str,
@@ -1507,7 +1507,7 @@ impl Database {
 
         let tx = conn
             .unchecked_transaction()
-            .map_err(|e| AppError::Database(format!("启动用量成本回填事务失败: {e}")))?;
+            .map_err(|e| AppError::Database(format!("Falló iniciar transacción de relleno de costo de uso: {e}")))?;
 
         let mut updated = 0u64;
         let mut pricing_cache = HashMap::new();
@@ -1517,16 +1517,16 @@ impl Database {
             }
         }
         tx.commit()
-            .map_err(|e| AppError::Database(format!("提交用量成本回填事务失败: {e}")))?;
+            .map_err(|e| AppError::Database(format!("Falló commit de transacción de relleno de costo de uso: {e}")))?;
 
         if updated > 0 {
-            log::info!("已回填 {updated} 条缺失的用量成本");
+            log::info!("Rellenó {updated} costos de uso faltantes");
         }
 
         Ok(updated)
     }
 
-    /// 尝试为单条 log 回填成本字段。返回是否实际写入（true=已 UPDATE，false=跳过）。
+    /// Intenta rellenar campo de costo para log único. Devuelve si realmente escribió (true=UPDATE realizado, false=omitido).
     fn maybe_backfill_log_costs(
         conn: &Connection,
         log: &mut RequestLogDetail,
@@ -1551,7 +1551,7 @@ impl Database {
         let multiplier =
             rust_decimal::Decimal::from_str(&log.cost_multiplier).unwrap_or_else(|e| {
                 log::warn!(
-                    "历史用量倍率解析失败 request_id={}: {} - {e}",
+                    "Falló parsear multiplicador de uso histórico request_id={}: {} - {e}",
                     log.request_id,
                     log.cost_multiplier
                 );
@@ -1560,10 +1560,10 @@ impl Database {
 
         let million = rust_decimal::Decimal::from(1_000_000u64);
 
-        // 与 CostCalculator::calculate_for_app 保持一致的计算逻辑：
-        // 1. Codex/Gemini 的 input_tokens 包含 cache_read_tokens，需要扣除后按输入价计费
-        // 2. Claude/Anthropic 的 input_tokens 已经是 fresh input，不能再次扣减
-        // 3. 各项成本是基础成本（不含倍率），倍率只作用于最终总价
+        // Lógica de cálculo consistente con CostCalculator::calculate_for_app:
+        // 1. input_tokens de Codex/Gemini incluye cache_read_tokens, necesita deducir antes de facturar a precio de entrada
+        // 2. input_tokens de Claude/Anthropic ya es fresh input, no puede deducir de nuevo
+        // 3. Cada costo es costo base (sin multiplicador), multiplicador solo actúa sobre precio total final
         let input_includes_cache_read = matches!(log.app_type.as_str(), "codex" | "gemini");
         let billable_input_tokens = if input_includes_cache_read {
             (log.input_tokens as u64).saturating_sub(log.cache_read_tokens as u64)
@@ -1580,7 +1580,7 @@ impl Database {
         let cache_creation_cost = rust_decimal::Decimal::from(log.cache_creation_tokens as u64)
             * pricing.cache_creation
             / million;
-        // 总成本 = 基础成本之和 × 倍率
+        // Costo total = suma de costos base × multiplicador
         let base_total = input_cost + output_cost + cache_read_cost + cache_creation_cost;
         let total_cost = base_total * multiplier;
 
@@ -1607,7 +1607,7 @@ impl Database {
                 log.request_id
             ],
         )
-        .map_err(|e| AppError::Database(format!("更新请求成本失败: {e}")))?;
+        .map_err(|e| AppError::Database(format!("Falló actualizar costo de solicitud: {e}")))?;
 
         Ok(true)
     }
@@ -1628,13 +1628,13 @@ impl Database {
 
         let pricing = PricingInfo {
             input: rust_decimal::Decimal::from_str(&input)
-                .map_err(|e| AppError::Database(format!("解析输入价格失败: {e}")))?,
+                .map_err(|e| AppError::Database(format!("Falló parsear precio de entrada: {e}")))?,
             output: rust_decimal::Decimal::from_str(&output)
-                .map_err(|e| AppError::Database(format!("解析输出价格失败: {e}")))?,
+                .map_err(|e| AppError::Database(format!("Falló parsear precio de salida: {e}")))?,
             cache_read: rust_decimal::Decimal::from_str(&cache_read)
-                .map_err(|e| AppError::Database(format!("解析缓存读取价格失败: {e}")))?,
+                .map_err(|e| AppError::Database(format!("Falló parsear precio de lectura de caché: {e}")))?,
             cache_creation: rust_decimal::Decimal::from_str(&cache_creation)
-                .map_err(|e| AppError::Database(format!("解析缓存写入价格失败: {e}")))?,
+                .map_err(|e| AppError::Database(format!("Falló parsear precio de escritura de caché: {e}")))?,
         };
 
         cache.insert(model.to_string(), pricing.clone());
@@ -1721,7 +1721,7 @@ fn query_model_pricing_exact(
         },
     )
     .optional()
-    .map_err(|e| AppError::Database(format!("查询模型定价失败: {e}")))
+    .map_err(|e| AppError::Database(format!("Falló consultar precio de modelo: {e}")))
 }
 
 fn query_model_pricing_prefix(
@@ -1747,7 +1747,7 @@ fn query_model_pricing_prefix(
         },
     )
     .optional()
-    .map_err(|e| AppError::Database(format!("查询模型前缀定价失败: {e}")))
+    .map_err(|e| AppError::Database(format!("Falló consultar precio de prefijo de modelo: {e}")))
 }
 
 fn model_pricing_candidates(model_id: &str) -> Vec<String> {
@@ -2232,7 +2232,7 @@ mod tests {
     fn test_get_usage_summary() -> Result<(), AppError> {
         let db = Database::memory()?;
 
-        // 插入测试数据
+        // Inserta datos de prueba
         {
             let conn = lock_conn!(db.conn);
             conn.execute(
@@ -2767,7 +2767,7 @@ mod tests {
     fn test_get_model_stats() -> Result<(), AppError> {
         let db = Database::memory()?;
 
-        // 插入测试数据
+        // Inserta datos de prueba
         {
             let conn = lock_conn!(db.conn);
             conn.execute(
@@ -3115,8 +3115,8 @@ mod tests {
     #[test]
     fn test_strip_model_date_suffix_is_utf8_safe() {
         assert_eq!(
-            strip_model_date_suffix("模型-2026-05-14").as_deref(),
-            Some("模型")
+            strip_model_date_suffix("modelo-2026-05-14").as_deref(),
+            Some("modelo")
         );
         assert_eq!(strip_model_date_suffix("abc🚀12345678"), None);
     }
@@ -3140,7 +3140,7 @@ mod tests {
         let result = find_model_pricing_row(&conn, "gpt-5")?;
         assert!(
             result.is_none(),
-            "缺少 gpt-5 基础定价时，不应前缀误匹配到 gpt-5-mini/gpt-5-pro"
+            "Cuando falta precio base gpt-5, no debería coincidir erróneamente por prefijo con gpt-5-mini/gpt-5-pro"
         );
 
         Ok(())
@@ -3151,7 +3151,7 @@ mod tests {
         let db = Database::memory()?;
         let conn = lock_conn!(db.conn);
 
-        // 准备额外定价数据，覆盖前缀/后缀清洗场景
+        // Prepara datos de precio adicionales, cubre escenarios de limpieza de prefijo/sufijo
         conn.execute(
             "INSERT OR REPLACE INTO model_pricing (
                 model_id, display_name, input_cost_per_million, output_cost_per_million,
@@ -3167,83 +3167,83 @@ mod tests {
             ],
         )?;
 
-        // 测试精确匹配（seed_model_pricing 已预置 claude-sonnet-4-5-20250929）
+        // Prueba coincidencia exacta (seed_model_pricing ya preinicializado con claude-sonnet-4-5-20250929)
         let result = find_model_pricing_row(&conn, "claude-sonnet-4-5-20250929")?;
         assert!(
             result.is_some(),
-            "应该能精确匹配 claude-sonnet-4-5-20250929"
+            "Debería poder coincidir exactamente con claude-sonnet-4-5-20250929"
         );
 
-        // 清洗：去除前缀和冒号后缀
+        // Limpieza: elimina prefijo y sufijo de dos puntos
         let result = find_model_pricing_row(&conn, "anthropic/claude-haiku-4.5")?;
         assert!(
             result.is_some(),
-            "带前缀的模型 anthropic/claude-haiku-4.5 应能匹配到 claude-haiku-4.5"
+            "Modelo con prefijo anthropic/claude-haiku-4.5 debería poder coincidir con claude-haiku-4.5"
         );
         let result = find_model_pricing_row(&conn, "moonshotai/kimi-k2-0905:exa")?;
         assert!(
             result.is_some(),
-            "带前缀+冒号后缀的模型应清洗后匹配到 kimi-k2-0905"
+            "Modelo con prefijo+sufijo de dos puntos debería coincidir con kimi-k2-0905 después de limpiar"
         );
 
-        // 清洗：@ 替换为 -（seed_model_pricing 已预置 gpt-5.2-codex-low）
+        // Normalización: @ se reemplaza por - (seed_model_pricing ya trae gpt-5.2-codex-low)
         let result = find_model_pricing_row(&conn, "gpt-5.2-codex@low")?;
         assert!(
             result.is_some(),
-            "带 @ 分隔符的模型 gpt-5.2-codex@low 应能匹配到 gpt-5.2-codex-low"
+            "Modelo con separador @ gpt-5.2-codex@low debería poder coincidir con gpt-5.2-codex-low"
         );
         let result = find_model_pricing_row(&conn, "OpenAI/GPT-5.5@HIGH")?;
         assert!(
             result.is_some(),
-            "大小写混合的 GPT-5.5 模型应能归一化匹配到 gpt-5.5-high"
+            "Modelo GPT-5.5 con mayúsculas/minúsculas mezcladas debería poder normalizar y coincidir con gpt-5.5-high"
         );
         let result = find_model_pricing_row(&conn, "OpenAI/GPT-5.5-2026-05-14")?;
         assert!(
             result.is_some(),
-            "OpenAI 日期后缀模型应能回退到 gpt-5.5 基础定价"
+            "Modelo con sufijo de fecha OpenAI debería poder volver a precio base gpt-5.5"
         );
         let result = find_model_pricing_row(&conn, "google/gemini-3-pro-preview-20260514")?;
         assert!(
             result.is_some(),
-            "Gemini 日期后缀模型应能回退到 gemini-3-pro-preview 基础定价"
+            "Modelo con sufijo de fecha Gemini debería poder volver a precio base gemini-3-pro-preview"
         );
 
-        // Claude Desktop route 短 ID：应通过前缀匹配到带日期的定价
+        // ID corto de ruta Claude Desktop: debería coincidir por prefijo con precio con fecha
         let result = find_model_pricing_row(&conn, "claude-haiku-4-5")?;
         assert!(
             result.is_some(),
-            "Claude Desktop 短路由 claude-haiku-4-5 应能匹配到 claude-haiku-4-5-20251001"
+            "Ruta corta Claude Desktop claude-haiku-4-5 debería poder coincidir con claude-haiku-4-5-20251001"
         );
 
-        // Claude Desktop 旧版/异常包装的非 Anthropic route：claude-gpt-5.5 → gpt-5.5
+        // Ruta no-Anthropic envuelta en versión antigua/anómala Claude Desktop: claude-gpt-5.5 → gpt-5.5
         let result = find_model_pricing_row(&conn, "claude-gpt-5.5")?;
         assert!(
             result.is_some(),
-            "带 claude- 包装的非 Anthropic 模型应能剥离后匹配到真实模型定价"
+            "Modelo no-Anthropic envuelto con claude- debería poder quitar envoltorio y coincidir con precio de modelo real"
         );
 
-        // Bedrock/Vertex 常见形态：provider 前缀 + -vN 后缀 + :0 修饰
+        // Forma común Bedrock/Vertex: prefijo provider + sufijo -vN + modificador :0
         let result =
             find_model_pricing_row(&conn, "global.anthropic.claude-haiku-4-5-20251001-v1:0")?;
         assert!(
             result.is_some(),
-            "Bedrock/Vertex 风格 Claude 模型 ID 应能归一化到基础 Claude 模型定价"
+            "ID de modelo Claude estilo Bedrock/Vertex debería poder normalizar a precio de modelo Claude base"
         );
 
-        // Reasoning effort 后缀：没有专门价格时回退到基础模型
+        // Sufijo Reasoning effort: cuando no hay precio especializado vuelve a modelo base
         let result = find_model_pricing_row(&conn, "gpt-5.4@low")?;
         assert!(
             result.is_some(),
-            "缺少专门 effort 价格时应回退到 gpt-5.4 基础模型定价"
+            "Cuando falta precio effort especializado debería volver a precio de modelo base gpt-5.4"
         );
 
-        // Kimi Code 是订阅/额度模型，不应伪装成公开按 token 计费模型
+        // Kimi Code es modelo de suscripción/cuota, no debería disfrazarse como modelo de facturación por token público
         let result = find_model_pricing_row(&conn, "kimi-for-coding")?;
-        assert!(result.is_none(), "kimi-for-coding 没有固定 token 单价");
+        assert!(result.is_none(), "kimi-for-coding no tiene precio unitario de token fijo");
 
-        // 测试不存在的模型
+        // Prueba modelo inexistente
         let result = find_model_pricing_row(&conn, "unknown-model-123")?;
-        assert!(result.is_none(), "不应该匹配不存在的模型");
+        assert!(result.is_none(), "No debería coincidir con modelo inexistente");
 
         Ok(())
     }

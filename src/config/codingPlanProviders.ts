@@ -1,20 +1,20 @@
 /**
- * Coding Plan 供应商的 base_url 路由表。
+ * Tabla de enrutamiento base_url para proveedores de Coding Plan.
  *
- * 与后端 `src-tauri/src/services/coding_plan.rs::detect_provider` 保持一致：
- * 后端靠 `url.contains(...)` 做子串判断，前端这里用 RegExp 做同效匹配。
- * 新增供应商时改这一处即可（UsageScriptModal 下拉 + useProviderActions
- * 新建自动注入 + 托盘识别全部复用）。
+ * Mantener consistencia con el backend `src-tauri/src/services/coding_plan.rs::detect_provider`:
+ * El backend usa `url.contains(...)` para comparación de subcadenas, el frontend usa RegExp para coincidencia equivalente.
+ * Al agregar un nuevo proveedor, cambiar solo este lugar (desplegable UsageScriptModal + useProviderActions
+ * inyección automática al crear + reconocimiento en bandeja del sistema, todo reutilizado).
  */
 import { createUsageScript } from "@/types";
 import { TEMPLATE_TYPES } from "@/config/constants";
 
 export interface CodingPlanProviderEntry {
-  /** 与后端 QuotaTier 的 `codingPlanProvider` 取值对齐 */
+  /** Alineado con el valor `codingPlanProvider` del QuotaTier del backend */
   id: "kimi" | "zhipu" | "minimax";
-  /** UsageScriptModal 下拉显示用 */
+  /** Usado para el desplegable en UsageScriptModal */
   label: string;
-  /** base_url 匹配规则 */
+  /** Regla de coincidencia base_url */
   pattern: RegExp;
 }
 
@@ -32,7 +32,7 @@ export const CODING_PLAN_PROVIDERS: readonly CodingPlanProviderEntry[] = [
   },
 ] as const;
 
-/** 根据 Base URL 自动检测 Coding Plan 供应商；未命中返回 null */
+/** Detecta automáticamente el proveedor de Coding Plan según la Base URL; retorna null si no hay coincidencia */
 export function detectCodingPlanProvider(
   baseUrl: string | undefined | null,
 ): CodingPlanProviderEntry["id"] | null {
@@ -44,13 +44,13 @@ export function detectCodingPlanProvider(
 }
 
 /**
- * 新建 Claude 供应商时，若 `ANTHROPIC_BASE_URL` 命中 Coding Plan 路由表，
- * 自动把 `meta.usage_script` 标记为 token_plan 并启用。
+ * Al crear un proveedor de Claude, si `ANTHROPIC_BASE_URL` coincide con la tabla de enrutamiento de Coding Plan,
+ * marca automáticamente `meta.usage_script` como token_plan y lo habilita.
  *
- * - 仅在 `meta.usage_script` 完全缺失时注入，不覆盖用户/UsageScriptModal 已有配置
- * - 仅对 Claude app 生效：后端 `commands/provider.rs` 的 token_plan 分支只处理 Claude
- *   supplier 的 `settings_config.env.ANTHROPIC_BASE_URL`
- * - code 置空：Rust 端走专用 `coding_plan::get_coding_plan_quota`，不执行 JS 脚本
+ * - Solo inyecta cuando `meta.usage_script` está completamente ausente, no sobrescribe configuración existente del usuario/UsageScriptModal
+ * - Solo aplica a la app Claude: la rama token_plan del backend `commands/provider.rs` solo procesa el supplier Claude
+ *   `settings_config.env.ANTHROPIC_BASE_URL`
+ * - code vacío: el lado Rust usa `coding_plan::get_coding_plan_quota` dedicado, no ejecuta script JS
  */
 export function injectCodingPlanUsageScript<
   T extends {

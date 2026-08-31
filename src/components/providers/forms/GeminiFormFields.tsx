@@ -103,13 +103,13 @@ export function GeminiFormFields({
       .finally(() => setIsFetchingModels(false));
   }, [baseUrl, apiKey, t]);
 
-  // 检测是否为 Google 官方（使用 OAuth）
+  // Detectar si es Google oficial (usar OAuth)
   const isGoogleOfficial =
     partnerPromotionKey?.toLowerCase() === "google-official";
 
   return (
     <>
-      {/* Google OAuth 提示 */}
+      {/* Aviso de OAuth de Google */}
       {isGoogleOfficial && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
           <div className="flex gap-3">
@@ -117,13 +117,13 @@ export function GeminiFormFields({
             <div className="space-y-1">
               <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
                 {t("provider.form.gemini.oauthTitle", {
-                  defaultValue: "OAuth 认证模式",
+                  defaultValue: "Modo de autenticación OAuth",
                 })}
               </p>
               <p className="text-sm text-blue-700 dark:text-blue-300">
                 {t("provider.form.gemini.oauthHint", {
                   defaultValue:
-                    "Google 官方使用 OAuth 个人认证，无需填写 API Key。首次使用时会自动打开浏览器进行登录。",
+                    "Google oficial usa autenticación personal OAuth, no requiere completar API Key. En el primer uso se abrirá automáticamente el navegador para iniciar sesión.",
                 })}
               </p>
             </div>
@@ -131,7 +131,7 @@ export function GeminiFormFields({
         </div>
       )}
 
-      {/* API Key 输入框 */}
+      {/* Campo de entrada API Key */}
       {shouldShowApiKey && !isGoogleOfficial && (
         <ApiKeySection
           value={apiKey}
@@ -144,11 +144,11 @@ export function GeminiFormFields({
         />
       )}
 
-      {/* Base URL 输入框（统一使用与 Codex 相同的样式与交互） */}
+      {/* Campo de entrada Base URL (usar mismo estilo e interacción que Codex) */}
       {shouldShowSpeedTest && (
         <EndpointField
           id="baseUrl"
-          label={t("providerForm.apiEndpoint", { defaultValue: "API 端点" })}
+          label={t("providerForm.apiEndpoint", { defaultValue: "Endpoint API" })}
           value={baseUrl}
           onChange={onBaseUrlChange}
           placeholder={t("providerForm.apiEndpointPlaceholder", {
@@ -158,12 +158,12 @@ export function GeminiFormFields({
         />
       )}
 
-      {/* Model 输入框 */}
+      {/* Campo de entrada de modelo */}
       {shouldShowModelField && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <FormLabel htmlFor="gemini-model">
-              {t("provider.form.gemini.model", { defaultValue: "模型" })}
+              {t("provider.form.gemini.model", { defaultValue: "Modelo" })}
             </FormLabel>
             <Button
               type="button"
@@ -192,7 +192,7 @@ export function GeminiFormFields({
         </div>
       )}
 
-      {/* 端点测速弹窗 */}
+      {/* Diálogo de prueba de velocidad de endpoint */}
       {shouldShowSpeedTest && isEndpointModalOpen && (
         <EndpointSpeedTest
           appId="gemini"

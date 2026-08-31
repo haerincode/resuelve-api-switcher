@@ -55,7 +55,7 @@ export function useOpenClawModelOptions(): {
 
     return Array.from(dedupedOptions.entries())
       .map(([value, label]) => ({ value, label }))
-      .sort((a, b) => a.label.localeCompare(b.label, "zh-CN"));
+      .sort((a, b) => a.label.localeCompare(b.label, "es-CL"));
   }, [providersData?.providers]);
 
   return { options, isLoading };

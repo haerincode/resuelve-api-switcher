@@ -1,8 +1,8 @@
 /**
- * 代理模式切换开关组件
+ * Componente de interruptor para modo proxy
  *
- * 放置在主界面头部，用于一键启用/关闭代理模式
- * 启用时自动接管 Live 配置，关闭时恢复原始配置
+ * Se coloca en el encabezado de la interfaz principal para habilitar/deshabilitar el modo proxy con un clic
+ * Cuando está habilitado, toma control de la configuración Live; cuando se deshabilita, restaura la configuración original
  */
 
 import { Radio, Loader2 } from "lucide-react";
@@ -47,15 +47,15 @@ export function ProxyToggle({ className, activeApp }: ProxyToggleProps) {
           appLabel,
           address: status?.address,
           port: status?.port,
-          defaultValue: `${appLabel} 已接管 - ${status?.address}:${status?.port}\n切换该应用供应商为热切换`,
+          defaultValue: `${appLabel} tomado - ${status?.address}:${status?.port}\nCambiar proveedor de esta app para cambio en caliente`,
         })
       : t("proxy.takeover.tooltip.broken", {
           appLabel,
-          defaultValue: `${appLabel} 已接管，但代理服务未运行`,
+          defaultValue: `${appLabel} tomado, pero el servicio proxy no está corriendo`,
         })
     : t("proxy.takeover.tooltip.inactive", {
         appLabel,
-        defaultValue: `接管 ${appLabel} 的 Live 配置，让该应用请求走本地代理`,
+        defaultValue: `Tomar la configuración Live de ${appLabel}, hacer que las solicitudes de esta app pasen por el proxy local`,
       });
 
   return (

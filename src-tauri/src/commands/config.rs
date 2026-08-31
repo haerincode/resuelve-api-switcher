@@ -20,24 +20,22 @@ use std::str::FromStr;
 fn invalid_json_format_error(error: serde_json::Error) -> String {
     let lang = settings::get_settings()
         .language
-        .unwrap_or_else(|| "zh".to_string());
+        .unwrap_or_else(|| "es".to_string());
 
     match lang.as_str() {
         "en" => format!("Invalid JSON format: {error}"),
-        "ja" => format!("JSON形式が無効です: {error}"),
-        _ => format!("无效的 JSON 格式: {error}"),
+        _ => format!("Formato JSON no válido: {error}"),
     }
 }
 
 fn invalid_toml_format_error(error: toml_edit::TomlError) -> String {
     let lang = settings::get_settings()
         .language
-        .unwrap_or_else(|| "zh".to_string());
+        .unwrap_or_else(|| "es".to_string());
 
     match lang.as_str() {
         "en" => format!("Invalid TOML format: {error}"),
-        "ja" => format!("TOML形式が無効です: {error}"),
-        _ => format!("无效的 TOML 格式: {error}"),
+        _ => format!("Formato TOML no válido: {error}"),
     }
 }
 

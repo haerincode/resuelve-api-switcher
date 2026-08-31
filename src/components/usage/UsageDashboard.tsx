@@ -109,7 +109,7 @@ export function UsageDashboard() {
                 variant="ghost"
                 size="sm"
                 className="h-8 px-2 text-xs text-muted-foreground"
-                title={t("common.refresh", "刷新")}
+                title={t("common.refresh", "Actualizar")}
                 onClick={changeRefreshInterval}
               >
                 <RefreshCw className="mr-1 h-3.5 w-3.5" />

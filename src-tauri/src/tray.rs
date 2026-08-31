@@ -1,6 +1,6 @@
-//! 托盘菜单管理模块
+//! Módulo de gestión del menú de la bandeja
 //!
-//! 负责系统托盘图标和菜单的创建、更新和事件处理。
+//! Responsable de la creación, actualización y manejo de eventos del ícono y menú de la bandeja del sistema.
 
 use once_cell::sync::Lazy;
 use tauri::menu::{CheckMenuItem, Menu, MenuBuilder, MenuItem, Submenu, SubmenuBuilder};
@@ -11,13 +11,15 @@ use crate::app_config::AppType;
 use crate::error::AppError;
 use crate::store::AppState;
 
-/// 每个 app 分区的子菜单句柄，用于 usage 更新时就地改 label 而非整菜单重建。
-/// `create_tray_menu` 每次重建都会整表覆盖写入，保证句柄始终指向当前活跃菜单。
+/// Manejadores de submenú de cada sección de app, usado para actualizar label in-situ durante actualizaciones de uso sin reconstruir todo el menú.
+/// `create_tray_menu` sobrescribe la tabla completa en cada reconstrucción, garantizando que los manejadores siempre apunten al menú activo actual.
 static TRAY_SECTION_SUBMENUS: Lazy<
     std::sync::Mutex<std::collections::HashMap<AppType, Submenu<tauri::Wry>>>,
 > = Lazy::new(|| std::sync::Mutex::new(std::collections::HashMap::new()));
 
-/// 托盘菜单文本（国际化）
+/// Textos del menú de la bandeja (internacionalización).
+/// Solo español e inglés: el idioma se toma de los ajustes y el español es el
+/// predeterminado, así que un valor desconocido nunca muestra otro idioma.
 #[derive(Clone, Copy)]
 pub struct TrayTexts {
     pub show_main: &'static str,
@@ -33,33 +35,25 @@ impl TrayTexts {
         match language {
             "en" => Self {
                 show_main: "Open main window",
-                open_website: "Open Official Website",
+                open_website: "Open official website",
                 no_providers_label: "(no providers)",
-                lightweight_mode: "Lightweight Mode",
+                lightweight_mode: "Lightweight mode",
                 quit: "Quit",
-                _auto_label: "Auto (Failover)",
-            },
-            "ja" => Self {
-                show_main: "メインウィンドウを開く",
-                open_website: "公式サイトを開く",
-                no_providers_label: "(プロバイダーなし)",
-                lightweight_mode: "軽量モード",
-                quit: "終了",
-                _auto_label: "自動 (フェイルオーバー)",
+                _auto_label: "Auto (failover)",
             },
             _ => Self {
-                show_main: "打开主界面",
-                open_website: "打开官方网站",
-                no_providers_label: "(无供应商)",
-                lightweight_mode: "轻量模式",
-                quit: "退出",
-                _auto_label: "自动 (故障转移)",
+                show_main: "Abrir ventana principal",
+                open_website: "Abrir sitio web oficial",
+                no_providers_label: "(sin proveedores)",
+                lightweight_mode: "Modo ligero",
+                quit: "Salir",
+                _auto_label: "Automático (conmutación por error)",
             },
         }
     }
 }
 
-/// 托盘应用分区配置
+/// Configuración de sección de aplicación de la bandeja
 pub struct TrayAppSection {
     pub app_type: AppType,
     pub prefix: &'static str,
@@ -469,7 +463,7 @@ pub fn create_tray_menu(
     app_state: &AppState,
 ) -> Result<Menu<tauri::Wry>, AppError> {
     let app_settings = crate::settings::get_settings();
-    let tray_texts = TrayTexts::from_language(app_settings.language.as_deref().unwrap_or("zh"));
+    let tray_texts = TrayTexts::from_language(app_settings.language.as_deref().unwrap_or("es"));
 
     // Get visible apps setting, default to all visible
     let visible_apps = app_settings.visible_apps.unwrap_or_default();

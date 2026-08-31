@@ -16,7 +16,6 @@ import {
 import {
   fmtUsd,
   formatTokensShort,
-  getResolvedLang,
   parseFiniteNumber,
 } from "./format";
 import {
@@ -57,12 +56,12 @@ const TITLE_THEMES: Record<AppType | "all", TitleTheme> = {
 };
 
 /**
- * Combine per-app summaries into a single rolled-up summary.
+ * Combinar resúmenes por app en un solo resumen consolidado.
  *
- * The backend's per-app rows already use fresh-input semantics (cache-inclusive
- * providers have been normalized in SQL), so plain addition is correct here.
- * `cacheHitRate` and `successRate` must be re-derived from the summed counts
- * rather than averaged across rows.
+ * Las filas por app del backend ya usan semántica de entrada fresca (proveedores
+ * inclusivos de caché fueron normalizados en SQL), así que suma simple es correcta.
+ * `cacheHitRate` y `successRate` deben re-derivarse de los conteos sumados
+ * en lugar de promediar entre filas.
  */
 function aggregateSummaries(items: UsageSummary[]): UsageSummary {
   let totalRequests = 0;
@@ -111,10 +110,10 @@ function pickSummary(
 type CacheWriteState = "ok" | "partial" | "na";
 
 /**
- * Anthropic-style protocols report cache creation; OpenAI-style protocols
- * (Codex/Gemini) do not — so a mix shows the number with a caveat, all-OpenAI
- * shows N/A. `appTypes` is the set actually contributing to the displayed
- * summary (a single app, or every app that participated in "all").
+ * Los protocolos estilo Anthropic reportan creación de caché; protocolos estilo
+ * OpenAI (Codex/Gemini) no lo hacen — así que una mezcla muestra el número con
+ * advertencia, todo-OpenAI muestra N/A. `appTypes` es el conjunto que realmente
+ * contribuye al resumen mostrado (una sola app, o cada app que participó en "all").
  */
 function deriveCacheWriteState(appTypes: string[]): CacheWriteState {
   if (appTypes.length === 0) return "ok";
@@ -131,17 +130,16 @@ export function UsageHero({
   appType,
   refreshIntervalMs,
 }: UsageHeroProps) {
-  const { t, i18n } = useTranslation();
-  const lang = getResolvedLang(i18n);
+  const { t } = useTranslation();
 
   const { data, isLoading } = useUsageSummaryByApp(range, {
     refetchInterval: refreshIntervalMs > 0 ? refreshIntervalMs : false,
   });
 
-  // No client-side filtering: Hero's totals must match the Trend/Logs/Stats
-  // below, which all go through the backend's full set of app_types. The
-  // KNOWN_APP_TYPES list only governs which filter buttons appear, not which
-  // rows participate in the "all" aggregate.
+  // Sin filtrado del lado del cliente: los totales de Hero deben coincidir con Trend/Logs/Stats
+  // abajo, que todos pasan por el conjunto completo de app_types del backend. La lista
+  // KNOWN_APP_TYPES solo gobierna qué botones de filtro aparecen, no qué
+  // filas participan en el agregado "all".
   const allApps = data ?? [];
   const summary = pickSummary(allApps, appType);
 
@@ -166,18 +164,18 @@ export function UsageHero({
 
   const cacheWriteDisplay = {
     value:
-      cacheWriteState === "na" ? "N/A" : formatTokensShort(cacheWrite, lang),
+      cacheWriteState === "na" ? "N/A" : formatTokensShort(cacheWrite),
     muted: cacheWriteState === "na",
     tooltip:
       cacheWriteState === "na"
         ? t(
             "usage.cacheWriteNotReported",
-            "OpenAI 协议不区分缓存写入，仅上报缓存命中",
+            "El protocolo OpenAI no distingue escritura de caché, solo reporta aciertos de caché",
           )
         : cacheWriteState === "partial"
           ? t(
               "usage.cacheWritePartial",
-              "部分协议（如 OpenAI）不上报缓存写入，数值可能偏低",
+              "Algunos protocolos (como OpenAI) no reportan escritura de caché, el valor puede ser bajo",
             )
           : undefined,
   };
@@ -203,7 +201,7 @@ export function UsageHero({
     >
       <Card className="relative overflow-hidden border border-border/50 bg-gradient-to-br from-primary/5 via-card/50 to-background/50 backdrop-blur-xl shadow-sm">
         <CardContent className="p-6 md:p-8">
-          {/* Header: title + cost */}
+          {/* Encabezado: título + costo */}
           <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
             <div className="flex items-center gap-2">
               <div className={cn("p-2 rounded-lg", titleTheme.iconBg)}>
@@ -218,7 +216,7 @@ export function UsageHero({
                     <span className="mx-1.5 text-muted-foreground/40">·</span>
                   </>
                 )}
-                {t("usage.realTotal", "真实消耗 Tokens")}
+                {t("usage.realTotal", "Tokens consumidos reales")}
               </span>
             </div>
             <div className="flex items-center gap-4 text-right">
@@ -242,7 +240,7 @@ export function UsageHero({
             </div>
           </div>
 
-          {/* Hero number */}
+          {/* Número principal */}
           <div className="flex flex-col items-start mb-6">
             <div
               className="text-4xl md:text-5xl font-bold tracking-tight tabular-nums leading-tight"
@@ -251,28 +249,28 @@ export function UsageHero({
               {realTotal.toLocaleString()}
             </div>
             <div className="text-sm text-muted-foreground mt-1">
-              ≈ {formatTokensShort(realTotal, lang, 2)}{" "}
+              ≈ {formatTokensShort(realTotal, 2)}{" "}
               {t("usage.tokensSuffix", "tokens")}
             </div>
           </div>
 
-          {/* Breakdown row: 4 mini stats */}
+          {/* Fila de desglose: 4 mini stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
             <MiniStat
               icon={<ArrowDownToLine className="h-3.5 w-3.5" />}
-              label={t("usage.freshInput", "新增输入")}
-              value={formatTokensShort(input, lang)}
+              label={t("usage.freshInput", "Nueva entrada")}
+              value={formatTokensShort(input)}
               accent="text-blue-500"
             />
             <MiniStat
               icon={<ArrowUpFromLine className="h-3.5 w-3.5" />}
               label={t("usage.output")}
-              value={formatTokensShort(output, lang)}
+              value={formatTokensShort(output)}
               accent="text-purple-500"
             />
             <MiniStat
               icon={<Database className="h-3.5 w-3.5" />}
-              label={t("usage.cacheWrite", "缓存写入")}
+              label={t("usage.cacheWrite", "Escritura de caché")}
               value={cacheWriteDisplay.value}
               accent="text-amber-500"
               muted={cacheWriteDisplay.muted}
@@ -280,17 +278,17 @@ export function UsageHero({
             />
             <MiniStat
               icon={<Sparkles className="h-3.5 w-3.5" />}
-              label={t("usage.cacheRead", "缓存命中")}
-              value={formatTokensShort(cacheRead, lang)}
+              label={t("usage.cacheRead", "Acierto de caché")}
+              value={formatTokensShort(cacheRead)}
               accent="text-emerald-500"
             />
           </div>
 
-          {/* Hit rate progress */}
+          {/* Barra de progreso de tasa de aciertos */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">
-                {t("usage.cacheHitRate", "缓存命中率")}
+                {t("usage.cacheHitRate", "Tasa de acierto de caché")}
               </span>
               <span className="font-semibold text-emerald-500 tabular-nums">
                 {hitPercentLabel}%
@@ -316,9 +314,9 @@ interface MiniStatProps {
   label: string;
   value: string;
   accent: string;
-  /** Optional hover tooltip — used to flag protocol-level caveats. */
+  /** Tooltip opcional al pasar el mouse — usado para señalar advertencias a nivel de protocolo. */
   tooltip?: string;
-  /** Visually de-emphasize the value (e.g. for "N/A" cases). */
+  /** Desenfatizar visualmente el valor (ej. para casos "N/A"). */
   muted?: boolean;
 }
 

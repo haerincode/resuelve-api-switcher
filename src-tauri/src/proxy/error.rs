@@ -8,71 +8,71 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ProxyError {
-    #[error("服务器已在运行")]
+    #[error("servidoryaen运行")]
     AlreadyRunning,
 
-    #[error("服务器未运行")]
+    #[error("servidorno运行")]
     NotRunning,
 
-    #[error("地址绑定失败: {0}")]
+    #[error("地址绑定falló: {0}")]
     BindFailed(String),
 
-    #[error("停止超时")]
+    #[error("detenertimeout")]
     StopTimeout,
 
-    #[error("停止失败: {0}")]
+    #[error("detenerfalló: {0}")]
     StopFailed(String),
 
-    #[error("请求转发失败: {0}")]
+    #[error("solicitud转发falló: {0}")]
     ForwardFailed(String),
 
-    #[error("无可用的Provider")]
+    #[error("sindisponibledeProvider")]
     NoAvailableProvider,
 
-    #[error("所有供应商已熔断，无可用渠道")]
+    #[error("所有proveedorya熔断，sindisponible渠道")]
     AllProvidersCircuitOpen,
 
-    #[error("未配置供应商")]
+    #[error("noconfiguraciónproveedor")]
     NoProvidersConfigured,
 
     #[allow(dead_code)]
     #[error("Provider不健康: {0}")]
     ProviderUnhealthy(String),
 
-    #[error("上游错误 (状态码 {status}): {body:?}")]
+    #[error("upstreamerror (estado码 {status}): {body:?}")]
     UpstreamError { status: u16, body: Option<String> },
 
-    #[error("超过最大重试次数")]
+    #[error("超过最大reintentar次数")]
     MaxRetriesExceeded,
 
-    #[error("数据库错误: {0}")]
+    #[error("数据库error: {0}")]
     DatabaseError(String),
 
-    #[error("配置错误: {0}")]
+    #[error("configuraciónerror: {0}")]
     ConfigError(String),
 
     #[allow(dead_code)]
-    #[error("格式转换错误: {0}")]
+    #[error("formatoconvertirerror: {0}")]
     TransformError(String),
 
     #[allow(dead_code)]
-    #[error("无效的请求: {0}")]
+    #[error("inválidodesolicitud: {0}")]
     InvalidRequest(String),
 
-    #[error("超时: {0}")]
+    #[error("timeout: {0}")]
     Timeout(String),
 
-    /// 流式响应空闲超时
+    /// streamingrespuesta空闲timeout
     #[allow(dead_code)]
-    #[error("流式响应空闲超时: {0}秒无数据")]
+    #[error("streamingrespuesta空闲timeout: {0}秒sin数据")]
     StreamIdleTimeout(u64),
 
-    /// 认证错误
-    #[error("认证失败: {0}")]
+    /// autenticaciónerror
+    #[error("autenticaciónfalló: {0}")]
     AuthError(String),
 
     #[allow(dead_code)]
-    #[error("内部错误: {0}")]
+    #[error("内部error: {0}")]
     Internal(String),
 }
 
@@ -86,13 +86,13 @@ impl IntoResponse for ProxyError {
                 let http_status =
                     StatusCode::from_u16(*upstream_status).unwrap_or(StatusCode::BAD_GATEWAY);
 
-                // 尝试解析上游响应体为 JSON，如果失败则包装为字符串
+                // 尝试analizarupstreamrespuesta体para JSON，sifallóentonces包装para字符串
                 let error_body = if let Some(body_str) = upstream_body {
                     if let Ok(json_body) = serde_json::from_str::<serde_json::Value>(body_str) {
-                        // 上游返回的是 JSON，直接透传
+                        // upstreamretornarde是 JSON，直接透传
                         json_body
                     } else {
-                        // 上游返回的不是 JSON，包装为错误消息
+                        // upstreamretornarde不是 JSON，包装paraerrormensaje
                         json!({
                             "error": {
                                 "message": body_str,
@@ -174,18 +174,18 @@ impl IntoResponse for ProxyError {
     }
 }
 
-/// 错误分类
+/// error分类
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorCategory {
-    /// 可重试错误（网络问题、5xx）
-    Retryable, // 网络超时、5xx 错误
-    /// 不可重试错误（4xx、认证失败）
-    NonRetryable, // 认证失败、参数错误、4xx 错误
+    /// 可reintentarerror（网络问题、5xx）
+    Retryable, // 网络timeout、5xx error
+    /// 不可reintentarerror（4xx、autenticaciónfalló）
+    NonRetryable, // autenticaciónfalló、parámetroerror、4xx error
     #[allow(dead_code)]
-    ClientAbort, // 客户端主动中断
+    ClientAbort, // cliente主动中断
 }
 
-/// 判断错误是否可重试
+/// 判断error是否可reintentar
 #[allow(dead_code)]
 pub fn categorize_error(error: &reqwest::Error) -> ErrorCategory {
     if error.is_timeout() || error.is_connect() {

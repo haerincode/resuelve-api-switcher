@@ -91,7 +91,7 @@ export const useAddProviderMutation = (appId: AppId) => {
 
       toast.success(
         t("notifications.providerAdded", {
-          defaultValue: "供应商已添加",
+          defaultValue: "Proveedor agregado",
         }),
         {
           closeButton: true,
@@ -102,7 +102,7 @@ export const useAddProviderMutation = (appId: AppId) => {
       const detail = extractErrorMessage(error) || t("common.unknown");
       toast.error(
         t("notifications.addFailed", {
-          defaultValue: "添加供应商失败: {{error}}",
+          defaultValue: "Error al agregar proveedor: {{error}}",
           error: detail,
         }),
       );
@@ -137,7 +137,7 @@ export const useUpdateProviderMutation = (appId: AppId) => {
       }
       toast.success(
         t("notifications.updateSuccess", {
-          defaultValue: "供应商更新成功",
+          defaultValue: "Proveedor actualizado exitosamente",
         }),
         {
           closeButton: true,
@@ -148,7 +148,7 @@ export const useUpdateProviderMutation = (appId: AppId) => {
       const detail = extractErrorMessage(error) || t("common.unknown");
       toast.error(
         t("notifications.updateFailed", {
-          defaultValue: "更新供应商失败: {{error}}",
+          defaultValue: "Error al actualizar proveedor: {{error}}",
           error: detail,
         }),
       );
@@ -203,7 +203,7 @@ export const useDeleteProviderMutation = (appId: AppId) => {
 
       toast.success(
         t("notifications.deleteSuccess", {
-          defaultValue: "供应商已删除",
+          defaultValue: "Proveedor eliminado",
         }),
         {
           closeButton: true,
@@ -214,7 +214,7 @@ export const useDeleteProviderMutation = (appId: AppId) => {
       const detail = extractErrorMessage(error) || t("common.unknown");
       toast.error(
         t("notifications.deleteFailed", {
-          defaultValue: "删除供应商失败: {{error}}",
+          defaultValue: "Error al eliminar proveedor: {{error}}",
           error: detail,
         }),
       );
@@ -279,15 +279,15 @@ export const useSwitchProviderMutation = (appId: AppId) => {
       const detail = extractErrorMessage(error) || t("common.unknown");
 
       toast.error(
-        t("notifications.switchFailedTitle", { defaultValue: "切换失败" }),
+        t("notifications.switchFailedTitle", { defaultValue: "Error al cambiar" }),
         {
           description: t("notifications.switchFailed", {
-            defaultValue: "切换失败：{{error}}",
+            defaultValue: "Error al cambiar: {{error}}",
             error: detail,
           }),
           duration: 6000,
           action: {
-            label: t("common.copy", { defaultValue: "复制" }),
+            label: t("common.copy", { defaultValue: "Copiar" }),
             onClick: () => {
               navigator.clipboard?.writeText(detail).catch(() => undefined);
             },
@@ -326,7 +326,7 @@ export const useDeleteSessionMutation = () => {
 
       toast.success(
         t("sessionManager.sessionDeleted", {
-          defaultValue: "会话已删除",
+          defaultValue: "Sesión eliminada",
         }),
       );
     },
@@ -334,7 +334,7 @@ export const useDeleteSessionMutation = () => {
       const detail = extractErrorMessage(error) || t("common.unknown");
       toast.error(
         t("sessionManager.deleteFailed", {
-          defaultValue: "删除会话失败: {{error}}",
+          defaultValue: "Error al eliminar sesión: {{error}}",
           error: detail,
         }),
       );

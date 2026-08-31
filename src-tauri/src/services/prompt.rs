@@ -7,7 +7,7 @@ use crate::prompt::Prompt;
 use crate::prompt_files::prompt_file_path;
 use crate::store::AppState;
 
-/// 安全地获取当前 Unix 时间戳
+/// Obtiene timestamp Unix actual de forma segura
 fn get_unix_timestamp() -> Result<i64, AppError> {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -31,22 +31,22 @@ impl PromptService {
         _id: &str,
         prompt: Prompt,
     ) -> Result<(), AppError> {
-        // 检查是否为已启用的提示词
+        // Verifica si es prompt habilitado
         let is_enabled = prompt.enabled;
 
         state.db.save_prompt(app.as_str(), &prompt)?;
 
         if is_enabled {
-            // 启用提示词：写入内容到文件
+            // Prompt habilitado: escribe contenido a archivo
             let target_path = prompt_file_path(&app)?;
             write_text_file(&target_path, &prompt.content)?;
         } else {
-            // 禁用提示词：检查是否还有其他已启用的提示词
+            // Prompt deshabilitado: verifica si hay otros prompts habilitados
             let prompts = state.db.get_prompts(app.as_str())?;
             let any_enabled = prompts.values().any(|p| p.enabled);
 
             if !any_enabled {
-                // 所有提示词都已禁用，清空文件
+                // Todos los prompts deshabilitados, vacía archivo
                 let target_path = prompt_file_path(&app)?;
                 if target_path.exists() {
                     write_text_file(&target_path, "")?;
@@ -62,7 +62,7 @@ impl PromptService {
 
         if let Some(prompt) = prompts.get(id) {
             if prompt.enabled {
-                return Err(AppError::InvalidInput("无法删除已启用的提示词".to_string()));
+                return Err(AppError::InvalidInput("No se puede eliminar prompt habilitado".to_string()));
             }
         }
 
@@ -71,14 +71,14 @@ impl PromptService {
     }
 
     pub fn enable_prompt(state: &AppState, app: AppType, id: &str) -> Result<(), AppError> {
-        // 回填当前 live 文件内容到已启用的提示词，或创建备份
+        // Rellena contenido de archivo live actual a prompt habilitado, o crea respaldo
         let target_path = prompt_file_path(&app)?;
         if target_path.exists() {
             if let Ok(live_content) = std::fs::read_to_string(&target_path) {
                 if !live_content.trim().is_empty() {
                     let mut prompts = state.db.get_prompts(app.as_str())?;
 
-                    // 尝试回填到当前已启用的提示词
+                    // Intenta rellenar a prompt habilitado actual
                     if let Some((enabled_id, enabled_prompt)) = prompts
                         .iter_mut()
                         .find(|(_, p)| p.enabled)
@@ -87,10 +87,10 @@ impl PromptService {
                         let timestamp = get_unix_timestamp()?;
                         enabled_prompt.content = live_content.clone();
                         enabled_prompt.updated_at = Some(timestamp);
-                        log::info!("回填 live 提示词内容到已启用项: {enabled_id}");
+                        log::info!("Rellenó contenido de prompt live a entrada habilitada: {enabled_id}");
                         state.db.save_prompt(app.as_str(), enabled_prompt)?;
                     } else {
-                        // 没有已启用的提示词，则创建一次备份（避免重复备份）
+                        // No hay prompt habilitado, crea un respaldo (evita respaldos duplicados)
                         let content_exists = prompts
                             .values()
                             .any(|p| p.content.trim() == live_content.trim());
@@ -103,16 +103,16 @@ impl PromptService {
                             let backup_prompt = Prompt {
                                 id: backup_id.clone(),
                                 name: format!(
-                                    "原始提示词 {}",
+                                    "Prompt original {}",
                                     chrono::Local::now().format("%Y-%m-%d %H:%M")
                                 ),
                                 content: live_content,
-                                description: Some("自动备份的原始提示词".to_string()),
+                                description: Some("Prompt original respaldado automáticamente".to_string()),
                                 enabled: false,
                                 created_at: Some(timestamp),
                                 updated_at: Some(timestamp),
                             };
-                            log::info!("回填 live 提示词内容，创建备份: {backup_id}");
+                            log::info!("Rellenó contenido de prompt live, creó respaldo: {backup_id}");
                             state.db.save_prompt(app.as_str(), &backup_prompt)?;
                         }
                     }
@@ -120,7 +120,7 @@ impl PromptService {
             }
         }
 
-        // 启用目标提示词并写入文件
+        // Habilita prompt objetivo y escribe a archivo
         let mut prompts = state.db.get_prompts(app.as_str())?;
 
         for prompt in prompts.values_mut() {
@@ -129,10 +129,10 @@ impl PromptService {
 
         if let Some(prompt) = prompts.get_mut(id) {
             prompt.enabled = true;
-            write_text_file(&target_path, &prompt.content)?; // 原子写入
+            write_text_file(&target_path, &prompt.content)?; // Escritura atómica
             state.db.save_prompt(app.as_str(), prompt)?;
         } else {
-            return Err(AppError::InvalidInput(format!("提示词 {id} 不存在")));
+            return Err(AppError::InvalidInput(format!("Prompt {id} no existe")));
         }
 
         // Save all prompts to disable others
@@ -147,7 +147,7 @@ impl PromptService {
         let file_path = prompt_file_path(&app)?;
 
         if !file_path.exists() {
-            return Err(AppError::Message("提示词文件不存在".to_string()));
+            return Err(AppError::Message("Archivo de prompt no existe".to_string()));
         }
 
         let content =
@@ -158,11 +158,11 @@ impl PromptService {
         let prompt = Prompt {
             id: id.clone(),
             name: format!(
-                "导入的提示词 {}",
+                "Prompt importado {}",
                 chrono::Local::now().format("%Y-%m-%d %H:%M")
             ),
             content,
-            description: Some("从现有配置文件导入".to_string()),
+            description: Some("Importado desde archivo de configuración existente".to_string()),
             enabled: false,
             created_at: Some(timestamp),
             updated_at: Some(timestamp),
@@ -182,13 +182,13 @@ impl PromptService {
         Ok(Some(content))
     }
 
-    /// 首次启动时从现有提示词文件自动导入（如果存在）
-    /// 返回导入的数量
+    /// Importa automáticamente desde archivo de prompt existente al primer inicio (si existe)
+    /// Devuelve cantidad importada
     pub fn import_from_file_on_first_launch(
         state: &AppState,
         app: AppType,
     ) -> Result<usize, AppError> {
-        // 幂等性保护：该应用已有提示词则跳过
+        // Protección de idempotencia: si aplicación ya tiene prompt se salta
         let existing = state.db.get_prompts(app.as_str())?;
         if !existing.is_empty() {
             return Ok(0);
@@ -196,28 +196,28 @@ impl PromptService {
 
         let file_path = prompt_file_path(&app)?;
 
-        // 检查文件是否存在
+        // Verifica si archivo existe
         if !file_path.exists() {
             return Ok(0);
         }
 
-        // 读取文件内容
+        // Lee contenido de archivo
         let content = match std::fs::read_to_string(&file_path) {
             Ok(c) => c,
             Err(e) => {
-                log::warn!("读取提示词文件失败: {file_path:?}, 错误: {e}");
+                log::warn!("Falló leer archivo de prompt: {file_path:?}, error: {e}");
                 return Ok(0);
             }
         };
 
-        // 检查内容是否为空
+        // Verifica si contenido está vacío
         if content.trim().is_empty() {
             return Ok(0);
         }
 
-        log::info!("发现提示词文件，自动导入: {file_path:?}");
+        log::info!("Descubrió archivo de prompt, importa automáticamente: {file_path:?}");
 
-        // 创建提示词对象
+        // Crea objeto prompt
         let timestamp = get_unix_timestamp()?;
         let id = format!("auto-imported-{timestamp}");
         let prompt = Prompt {
@@ -228,15 +228,15 @@ impl PromptService {
             ),
             content,
             description: Some("Automatically imported on first launch".to_string()),
-            enabled: true, // 首次导入时自动启用
+            enabled: true, // Habilita automáticamente en primera importación
             created_at: Some(timestamp),
             updated_at: Some(timestamp),
         };
 
-        // 保存到数据库
+        // Guarda a base de datos
         state.db.save_prompt(app.as_str(), &prompt)?;
 
-        log::info!("自动导入完成: {}", app.as_str());
+        log::info!("Importación automática completa: {}", app.as_str());
         Ok(1)
     }
 }

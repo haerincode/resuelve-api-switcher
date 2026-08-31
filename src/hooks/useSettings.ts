@@ -53,11 +53,11 @@ const sanitizeDir = (value?: string | null): string | undefined => {
 };
 
 /**
- * useSettings - 组合层
- * 负责：
- * - 组合 useSettingsForm、useDirectorySettings、useSettingsMetadata
- * - 保存设置逻辑
- * - 重置设置逻辑
+ * useSettings - Capa de composición
+ * Responsable de:
+ * - Componer useSettingsForm, useDirectorySettings, useSettingsMetadata
+ * - Lógica de guardar configuración
+ * - Lógica de resetear configuración
  */
 export function useSettings(): UseSettingsResult {
   const { t } = useTranslation();
@@ -65,7 +65,7 @@ export function useSettings(): UseSettingsResult {
   const saveMutation = useSaveSettingsMutation();
   const queryClient = useQueryClient();
 
-  // 1️⃣ 表单状态管理
+  // 1️⃣ Gestión de estado del formulario
   const {
     settings,
     isLoading: isFormLoading,
@@ -75,7 +75,7 @@ export function useSettings(): UseSettingsResult {
     syncLanguage,
   } = useSettingsForm();
 
-  // 2️⃣ 目录管理
+  // 2️⃣ Gestión de directorios
   const {
     appConfigDir,
     resolvedDirs,
@@ -93,7 +93,7 @@ export function useSettings(): UseSettingsResult {
     onUpdateSettings: updateSettings,
   });
 
-  // 3️⃣ 元数据管理
+  // 3️⃣ Gestión de metadatos
   const {
     isPortable,
     requiresRestart,
@@ -102,7 +102,7 @@ export function useSettings(): UseSettingsResult {
     setRequiresRestart,
   } = useSettingsMetadata();
 
-  // 重置设置
+  // Resetear configuración
   const resetSettings = useCallback(() => {
     resetForm(data ?? null);
     syncLanguage(initialLanguage);
@@ -124,10 +124,10 @@ export function useSettings(): UseSettingsResult {
     setRequiresRestart,
   ]);
 
-  // 同步 Claude 插件集成配置到 ~/.claude/settings.json
-  // 返回 true 表示已执行过 syncCurrentProvidersLiveSafe，调用方可跳过重复同步
-  // prevEnabled 必须由调用方在 saveMutation 之前从实时缓存（queryClient.getQueryData）捕获，
-  // 避免 useCallback closure 中 data 因未 re-render 而滞后导致的快速连切 race。
+  // Sincronizar configuración de integración del plugin Claude a ~/.claude/settings.json
+  // Retorna true indica que se ejecutó syncCurrentProvidersLiveSafe, el caller puede omitir sincronización duplicada
+  // prevEnabled debe ser capturado por el caller desde el caché en vivo (queryClient.getQueryData) antes de saveMutation,
+  // para evitar race de conmutación rápida causado por data retrasado en el closure useCallback que no se ha re-renderizado.
   const syncClaudePluginIfChanged = useCallback(
     async (
       enabled: boolean | undefined,
@@ -155,7 +155,7 @@ export function useSettings(): UseSettingsResult {
           );
           toast.error(
             t("notifications.syncClaudePluginFailed", {
-              defaultValue: "同步 Claude 插件失败",
+              defaultValue: "Error al sincronizar plugin Claude",
             }),
           );
         }
@@ -167,7 +167,7 @@ export function useSettings(): UseSettingsResult {
         );
         toast.error(
           t("notifications.syncClaudePluginFailed", {
-            defaultValue: "同步 Claude 插件失败",
+            defaultValue: "Error al sincronizar plugin Claude",
           }),
         );
         return false;
@@ -176,8 +176,8 @@ export function useSettings(): UseSettingsResult {
     [t],
   );
 
-  // 即时保存设置（用于 General 标签页的实时更新）
-  // 保存基础配置 + 独立的系统 API 调用（开机自启）
+  // Guardar configuración inmediata (para actualizaciones en tiempo real de la pestaña General)
+  // Guardar configuración básica + llamadas API del sistema independientes (inicio automático)
   const autoSaveSettings = useCallback(
     async (updates: Partial<SettingsFormState>): Promise<SaveResult | null> => {
       const mergedSettings = settings ? { ...settings, ...updates } : null;
@@ -206,16 +206,16 @@ export function useSettings(): UseSettingsResult {
           language: mergedSettings.language,
         };
 
-        // 在 mutate 之前从实时缓存捕获上一次持久化的插件集成状态，
-        // 避免 closure 里的 data 因 React 尚未 re-render 而滞后
+        // Capturar el estado de integración del plugin persistido previamente desde el caché en vivo antes de mutate,
+        // evitar que data en el closure se retrase porque React aún no ha re-renderizado
         const prevPluginEnabled = queryClient.getQueryData<Settings>([
           "settings",
         ])?.enableClaudePluginIntegration;
 
-        // 保存到配置文件
+        // Guardar en archivo de configuración
         await saveMutation.mutateAsync(payload);
 
-        // 如果开机自启状态改变，调用系统 API
+        // Si cambió el estado de inicio automático, llamar API del sistema
         if (
           payload.launchOnStartup !== undefined &&
           payload.launchOnStartup !== data?.launchOnStartup
@@ -226,14 +226,14 @@ export function useSettings(): UseSettingsResult {
             console.error("Failed to update auto-launch:", error);
             toast.error(
               t("settings.autoLaunchFailed", {
-                defaultValue: "设置开机自启失败",
+                defaultValue: "Error al configurar inicio automático",
               }),
             );
           }
         }
 
-        // Claude Code 初次安装确认：开=写入 hasCompletedOnboarding=true；关=删除该字段
-        // 仅在本次更新包含 skipClaudeOnboarding 时触发，避免其它自动保存误触发
+        // Confirmación de primera instalación Claude Code: activado=escribir hasCompletedOnboarding=true; desactivado=eliminar ese campo
+        // Solo se activa cuando esta actualización incluye skipClaudeOnboarding, evita activación errónea de otros guardados automáticos
         const nextSkipClaudeOnboarding = updates.skipClaudeOnboarding;
         if (
           nextSkipClaudeOnboarding !== undefined &&
@@ -253,10 +253,10 @@ export function useSettings(): UseSettingsResult {
             toast.error(
               nextSkipClaudeOnboarding
                 ? t("notifications.skipClaudeOnboardingFailed", {
-                    defaultValue: "跳过 Claude Code 初次安装确认失败",
+                    defaultValue: "Error al omitir confirmación de primera instalación de Claude Code",
                   })
                 : t("notifications.clearClaudeOnboardingSkipFailed", {
-                    defaultValue: "恢复 Claude Code 初次安装确认失败",
+                    defaultValue: "Error al restaurar confirmación de primera instalación de Claude Code",
                   }),
             );
           }
@@ -267,7 +267,7 @@ export function useSettings(): UseSettingsResult {
           prevPluginEnabled,
         );
 
-        // 持久化语言偏好
+        // Persistir preferencia de idioma
         try {
           if (typeof window !== "undefined" && updates.language) {
             window.localStorage.setItem("language", updates.language);
@@ -279,7 +279,7 @@ export function useSettings(): UseSettingsResult {
           );
         }
 
-        // 更新托盘菜单
+        // Actualizar menú de bandeja
         try {
           await providersApi.updateTrayMenu();
         } catch (error) {
@@ -291,7 +291,7 @@ export function useSettings(): UseSettingsResult {
         console.error("[useSettings] Failed to auto-save settings", error);
         toast.error(
           t("notifications.settingsSaveFailed", {
-            defaultValue: "保存设置失败: {{error}}",
+            defaultValue: "Error al guardar configuración: {{error}}",
             error: (error as Error)?.message ?? String(error),
           }),
         );
@@ -301,8 +301,8 @@ export function useSettings(): UseSettingsResult {
     [data, queryClient, saveMutation, settings, syncClaudePluginIfChanged, t],
   );
 
-  // 完整保存设置（用于 Advanced 标签页的手动保存）
-  // 包含所有系统 API 调用和完整的验证流程
+  // Guardar configuración completa (para guardado manual en pestaña Advanced)
+  // Incluye todas las llamadas API del sistema y proceso de validación completo
   const saveSettings = useCallback(
     async (
       overrides?: Partial<SettingsFormState>,
@@ -340,8 +340,8 @@ export function useSettings(): UseSettingsResult {
           language: mergedSettings.language,
         };
 
-        // 在 mutate 之前从实时缓存捕获上一次持久化的插件集成状态，
-        // 避免 closure 里的 data 因 React 尚未 re-render 而滞后
+        // Capturar el estado de integración del plugin persistido previamente desde el caché en vivo antes de mutate,
+        // evitar que data en el closure se retrase porque React aún no ha re-renderizado
         const prevPluginEnabled = queryClient.getQueryData<Settings>([
           "settings",
         ])?.enableClaudePluginIntegration;
@@ -350,7 +350,7 @@ export function useSettings(): UseSettingsResult {
 
         await settingsApi.setAppConfigDirOverride(sanitizedAppDir ?? null);
 
-        // 只在开机自启状态真正改变时调用系统 API
+        // Solo llamar API del sistema cuando el estado de inicio automático realmente cambió
         if (
           payload.launchOnStartup !== undefined &&
           payload.launchOnStartup !== data?.launchOnStartup
@@ -361,13 +361,13 @@ export function useSettings(): UseSettingsResult {
             console.error("Failed to update auto-launch:", error);
             toast.error(
               t("settings.autoLaunchFailed", {
-                defaultValue: "设置开机自启失败",
+                defaultValue: "Error al configurar inicio automático",
               }),
             );
           }
         }
 
-        // Claude Code 初次安装确认：开=写入 hasCompletedOnboarding=true；关=删除该字段
+        // Confirmación de primera instalación Claude Code: activado=escribir hasCompletedOnboarding=true; desactivado=eliminar ese campo
         const prevSkipClaudeOnboarding = data?.skipClaudeOnboarding ?? false;
         const nextSkipClaudeOnboarding = payload.skipClaudeOnboarding ?? false;
         if (nextSkipClaudeOnboarding !== prevSkipClaudeOnboarding) {
@@ -385,10 +385,10 @@ export function useSettings(): UseSettingsResult {
             toast.error(
               nextSkipClaudeOnboarding
                 ? t("notifications.skipClaudeOnboardingFailed", {
-                    defaultValue: "跳过 Claude Code 初次安装确认失败",
+                    defaultValue: "Error al omitir confirmación de primera instalación de Claude Code",
                   })
                 : t("notifications.clearClaudeOnboardingSkipFailed", {
-                    defaultValue: "恢复 Claude Code 初次安装确认失败",
+                    defaultValue: "Error al restaurar confirmación de primera instalación de Claude Code",
                   }),
             );
           }
@@ -416,8 +416,8 @@ export function useSettings(): UseSettingsResult {
           console.warn("[useSettings] Failed to refresh tray menu", error);
         }
 
-        // 如果 Claude/Codex/Gemini/OpenCode/OpenClaw 的目录覆盖发生变化，则立即将"当前使用的供应商"写回对应应用的 live 配置
-        // 如果插件同步已经执行过 syncCurrentProvidersLiveSafe，则跳过避免重复
+        // Si la sobrescritura de directorios Claude/Codex/Gemini/OpenCode/OpenClaw cambió, escribir inmediatamente "proveedor en uso actual" de vuelta a la config live de la app correspondiente
+        // Si la sincronización del plugin ya ejecutó syncCurrentProvidersLiveSafe, omitir para evitar duplicación
         const claudeDirChanged = sanitizedClaudeDir !== previousClaudeDir;
         const codexDirChanged = sanitizedCodexDir !== previousCodexDir;
         const geminiDirChanged = sanitizedGeminiDir !== previousGeminiDir;
@@ -446,7 +446,7 @@ export function useSettings(): UseSettingsResult {
         if (!options?.silent) {
           toast.success(
             t("notifications.settingsSaved", {
-              defaultValue: "设置已保存",
+              defaultValue: "Configuración guardada",
             }),
             { closeButton: true },
           );
@@ -457,7 +457,7 @@ export function useSettings(): UseSettingsResult {
         console.error("[useSettings] Failed to save settings", error);
         toast.error(
           t("notifications.settingsSaveFailed", {
-            defaultValue: "保存设置失败: {{error}}",
+            defaultValue: "Error al guardar configuración: {{error}}",
             error: (error as Error)?.message ?? String(error),
           }),
         );

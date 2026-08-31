@@ -1,6 +1,6 @@
-//! 数据库模块测试
+//! Pruebas del módulo de base de datos
 //!
-//! 包含 Schema 迁移和基本功能的测试。
+//! Incluye pruebas de migración de Schema y funcionalidad básica.
 
 use super::*;
 use crate::app_config::MultiAppConfig;
@@ -52,8 +52,8 @@ const LEGACY_SCHEMA_SQL: &str = r#"
     );
 "#;
 
-// v3.8.x（schema v1）的真实表结构快照：用于验证从 v3.8.* 升级到当前版本的迁移链路
-// 参考：tag v3.8.3 的 src-tauri/src/database/schema.rs
+// Instantánea de estructura real de tabla v3.8.x (schema v1): para verificar la cadena de migración desde v3.8.* a la versión actual
+// Referencia: tag v3.8.3 de src-tauri/src/database/schema.rs
 const V3_8_SCHEMA_V1_SQL: &str = r#"
     CREATE TABLE providers (
         id TEXT NOT NULL,
@@ -178,7 +178,7 @@ fn schema_migration_rejects_future_version() {
     let err =
         Database::apply_schema_migrations_on_conn(&conn).expect_err("should reject higher version");
     assert!(
-        err.to_string().contains("数据库版本过新"),
+        err.to_string().contains("La versión de la base de datos es demasiado nueva"),
         "unexpected error: {err}"
     );
 }
@@ -187,13 +187,13 @@ fn schema_migration_rejects_future_version() {
 fn schema_migration_adds_missing_columns_for_providers() {
     let conn = Connection::open_in_memory().expect("open memory db");
 
-    // 创建旧版 providers 表，缺少新增列
+    // Crear tabla providers antigua, faltan columnas nuevas
     conn.execute_batch(LEGACY_SCHEMA_SQL)
         .expect("seed old schema");
 
     Database::apply_schema_migrations_on_conn(&conn).expect("apply migrations");
 
-    // 验证关键新增列已补齐
+    // Verificar que columnas clave nuevas se han completado
     for (table, column) in [
         ("providers", "meta"),
         ("providers", "is_current"),
@@ -209,7 +209,7 @@ fn schema_migration_adds_missing_columns_for_providers() {
         );
     }
 
-    // 验证 meta 列约束保持一致
+    // Verificar que las restricciones de columna meta se mantienen consistentes
     let meta = get_column_info(&conn, "providers", "meta");
     assert_eq!(meta.notnull, 1, "meta should be NOT NULL");
     assert_eq!(
@@ -349,7 +349,7 @@ fn schema_migration_v4_adds_pricing_model_columns() {
 fn schema_create_tables_repairs_legacy_proxy_config_singleton_to_per_app() {
     let conn = Connection::open_in_memory().expect("open memory db");
 
-    // 模拟测试版 v2：user_version=2，但 proxy_config 仍是单例结构（无 app_type）
+    // Simular versión de prueba v2: user_version=2, pero proxy_config sigue siendo estructura singleton (sin app_type)
     Database::set_user_version(&conn, 2).expect("set user_version");
     conn.execute_batch(
         r#"
@@ -382,7 +382,7 @@ fn schema_create_tables_repairs_legacy_proxy_config_singleton_to_per_app() {
         .expect("count rows");
     assert_eq!(count, 3, "per-app proxy_config should have 3 rows");
 
-    // 新结构下应能按 app_type 查询
+    // Nueva estructura debe poder consultar por app_type
     let _: i32 = conn
         .query_row(
             "SELECT COUNT(*) FROM proxy_config WHERE app_type = 'claude'",
@@ -398,12 +398,12 @@ fn migration_from_v3_8_schema_v1_to_current_schema_v3() {
     conn.execute("PRAGMA foreign_keys = ON;", [])
         .expect("enable foreign keys");
 
-    // 模拟 v3.8.* 用户的数据库（schema v1）
+    // Simular base de datos de usuario v3.8.* (schema v1)
     conn.execute_batch(V3_8_SCHEMA_V1_SQL)
         .expect("seed v3.8 schema v1");
     Database::set_user_version(&conn, 1).expect("set user_version=1");
 
-    // 插入一条旧版 Provider + Skill（用于验证迁移不会破坏既有数据）
+    // Insertar Provider + Skill de versión antigua (para verificar que la migración no rompe datos existentes)
     conn.execute(
         "INSERT INTO providers (
             id, app_type, name, settings_config, website_url, category,
@@ -433,7 +433,7 @@ fn migration_from_v3_8_schema_v1_to_current_schema_v3() {
     )
     .expect("seed legacy skill");
 
-    // 按应用启动流程：先 create_tables（补齐新增表），再 apply_schema_migrations（按 user_version 迁移）
+    // Según flujo de inicio de aplicación: primero create_tables (completar tablas nuevas), luego apply_schema_migrations (migrar según user_version)
     Database::create_tables_on_conn(&conn).expect("create tables");
     Database::apply_schema_migrations_on_conn(&conn).expect("apply migrations");
 
@@ -442,7 +442,7 @@ fn migration_from_v3_8_schema_v1_to_current_schema_v3() {
         SCHEMA_VERSION
     );
 
-    // v1 -> v2：providers 新增字段必须补齐
+    // v1 -> v2: campos nuevos de providers deben completarse
     for column in [
         "cost_multiplier",
         "limit_daily_usd",
@@ -456,7 +456,7 @@ fn migration_from_v3_8_schema_v1_to_current_schema_v3() {
         );
     }
 
-    // 旧 provider 不应丢失，且新增字段应有默认值
+    // Proveedor antiguo no debe perderse, y campos nuevos deben tener valores predeterminados
     let provider_count: i64 = conn
         .query_row(
             "SELECT COUNT(*) FROM providers WHERE id = 'p1' AND app_type = 'claude'",
@@ -475,7 +475,7 @@ fn migration_from_v3_8_schema_v1_to_current_schema_v3() {
         .expect("read cost_multiplier");
     assert_eq!(cost_multiplier, "1.0");
 
-    // v2 -> v3：skills 表重建为统一结构，并设置 pending 标记（后续由启动时扫描文件系统重建数据）
+    // v2 -> v3: tabla skills se reconstruye con estructura unificada, y se establece bandera pending (posteriormente se reconstruyen datos escaneando el sistema de archivos al inicio)
     assert!(
         Database::has_column(&conn, "skills", "enabled_claude").expect("check skills v3 column"),
         "skills table should be migrated to v3 structure"
@@ -516,13 +516,13 @@ fn migration_from_v3_8_schema_v1_to_current_schema_v3() {
         "skills migration snapshot should preserve legacy app mapping"
     );
 
-    // v3.9+ 新增：proxy_config 三行 seed 必须存在（否则 UI 会查不到默认值）
+    // v3.9+ nuevo: seed de tres filas de proxy_config debe existir (si no, UI no podrá consultar valores predeterminados)
     let proxy_rows: i64 = conn
         .query_row("SELECT COUNT(*) FROM proxy_config", [], |r| r.get(0))
         .expect("count proxy_config rows");
     assert_eq!(proxy_rows, 3);
 
-    // model_pricing 应具备默认数据（迁移时会 seed）
+    // model_pricing debe tener datos predeterminados (se hace seed al migrar)
     let pricing_rows: i64 = conn
         .query_row("SELECT COUNT(*) FROM model_pricing", [], |r| r.get(0))
         .expect("count model_pricing rows");
@@ -615,11 +615,11 @@ fn schema_model_pricing_is_seeded_on_init() {
 
     assert!(
         count > 0,
-        "模型定价数据应该在初始化时自动填充，实际数量: {}",
+        "Los datos de tarificación de modelo deben llenarse automáticamente al inicializar, cantidad actual: {}",
         count
     );
 
-    // 验证包含 Claude 模型
+    // Verificar que incluye modelos Claude
     let claude_count: i64 = conn
         .query_row(
             "SELECT COUNT(*) FROM model_pricing WHERE model_id LIKE 'claude-%'",
@@ -629,11 +629,11 @@ fn schema_model_pricing_is_seeded_on_init() {
         .expect("check claude");
     assert!(
         claude_count > 0,
-        "应该包含 Claude 模型定价，实际数量: {}",
+        "Debe incluir tarificación de modelos Claude, cantidad actual: {}",
         claude_count
     );
 
-    // 验证包含 GPT 模型
+    // Verificar que incluye modelos GPT
     let gpt_count: i64 = conn
         .query_row(
             "SELECT COUNT(*) FROM model_pricing WHERE model_id LIKE 'gpt-%'",
@@ -643,11 +643,11 @@ fn schema_model_pricing_is_seeded_on_init() {
         .expect("check gpt");
     assert!(
         gpt_count > 0,
-        "应该包含 GPT 模型定价，实际数量: {}",
+        "Debe incluir tarificación de modelos GPT, cantidad actual: {}",
         gpt_count
     );
 
-    // 验证包含 Gemini 模型
+    // Verificar que incluye modelos Gemini
     let gemini_count: i64 = conn
         .query_row(
             "SELECT COUNT(*) FROM model_pricing WHERE model_id LIKE 'gemini-%'",
@@ -657,7 +657,7 @@ fn schema_model_pricing_is_seeded_on_init() {
         .expect("check gemini");
     assert!(
         gemini_count > 0,
-        "应该包含 Gemini 模型定价，实际数量: {}",
+        "Debe incluir tarificación de modelos Gemini, cantidad actual: {}",
         gemini_count
     );
 }

@@ -21,7 +21,7 @@ export function UniversalProviderCard({
 }: UniversalProviderCardProps) {
   const { t } = useTranslation();
 
-  // 获取启用的应用列表
+  // Obtener la lista de aplicaciones habilitadas
   const enabledApps: string[] = [
     provider.apps.claude ? "Claude" : null,
     provider.apps.codex ? "Codex" : null,
@@ -30,7 +30,7 @@ export function UniversalProviderCard({
 
   return (
     <div className="group relative rounded-xl border border-border/50 bg-card p-4 transition-all hover:border-border hover:shadow-md">
-      {/* 头部：图标和名称 */}
+      {/* Encabezado: icono y nombre */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
@@ -44,7 +44,7 @@ export function UniversalProviderCard({
           </div>
         </div>
 
-        {/* 操作按钮 */}
+        {/* Botones de acción */}
         <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <Button
             variant="ghost"
@@ -85,7 +85,7 @@ export function UniversalProviderCard({
         </div>
       </div>
 
-      {/* 配置信息 */}
+      {/* Información de configuración */}
       <div className="mt-4 space-y-2">
         {/* Base URL */}
         <div className="flex items-center gap-2 text-sm">
@@ -95,7 +95,7 @@ export function UniversalProviderCard({
           </span>
         </div>
 
-        {/* 启用的应用 */}
+        {/* Aplicaciones habilitadas */}
         <div className="flex flex-wrap gap-1.5">
           {enabledApps.map((app) => (
             <span
@@ -115,7 +115,7 @@ export function UniversalProviderCard({
         </div>
       </div>
 
-      {/* 备注 */}
+      {/* Notas */}
       {provider.notes && (
         <p className="mt-3 text-xs text-muted-foreground line-clamp-2">
           {provider.notes}

@@ -58,7 +58,7 @@ export const GeminiEnvSection: React.FC<GeminiEnvSectionProps> = ({
           htmlFor="geminiEnv"
           className="block text-sm font-medium text-foreground"
         >
-          {t("geminiConfig.envFile", { defaultValue: "环境变量 (.env)" })}
+          {t("geminiConfig.envFile", { defaultValue: "Variables de entorno (.env)" })}
         </label>
 
         <label className="inline-flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
@@ -69,7 +69,7 @@ export const GeminiEnvSection: React.FC<GeminiEnvSectionProps> = ({
             className="w-4 h-4 text-blue-500 bg-white dark:bg-gray-800 border-border-default rounded focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-2"
           />
           {t("geminiConfig.writeCommonConfig", {
-            defaultValue: "写入通用配置",
+            defaultValue: "Escribir configuración común",
           })}
         </label>
       </div>
@@ -81,7 +81,7 @@ export const GeminiEnvSection: React.FC<GeminiEnvSectionProps> = ({
           className="text-xs text-blue-500 dark:text-blue-400 hover:underline"
         >
           {t("geminiConfig.editCommonConfig", {
-            defaultValue: "编辑通用配置",
+            defaultValue: "Editar configuración común",
           })}
         </button>
       </div>
@@ -111,7 +111,7 @@ GEMINI_MODEL=gemini-3-pro-preview`}
       {!error && (
         <p className="text-xs text-muted-foreground">
           {t("geminiConfig.envFileHint", {
-            defaultValue: "使用 .env 格式配置 Gemini 环境变量",
+            defaultValue: "Usar formato .env para configurar variables de entorno de Gemini",
           })}
         </p>
       )}
@@ -158,7 +158,7 @@ export const GeminiConfigSection: React.FC<GeminiConfigSectionProps> = ({
         className="block text-sm font-medium text-foreground"
       >
         {t("geminiConfig.configJson", {
-          defaultValue: "配置文件 (config.json)",
+          defaultValue: "Archivo de configuración (config.json)",
         })}
       </label>
 
@@ -182,7 +182,7 @@ export const GeminiConfigSection: React.FC<GeminiConfigSectionProps> = ({
       {!configError && (
         <p className="text-xs text-muted-foreground">
           {t("geminiConfig.configJsonHint", {
-            defaultValue: "使用 JSON 格式配置 Gemini 扩展参数（可选）",
+            defaultValue: "Usar formato JSON para configurar parámetros extendidos de Gemini (opcional)",
           })}
         </p>
       )}

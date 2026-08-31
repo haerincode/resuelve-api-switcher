@@ -1,17 +1,17 @@
-//! Gemini CLI 会话日志使用追踪
+//! Seguimiento de uso de log de sesiones Gemini CLI
 //!
-//! 从 ~/.gemini/tmp/<project_hash>/chats/session-*.json 中提取精确 token 使用数据。
+//! Extrae datos precisos de uso de tokens desde ~/.gemini/tmp/<project_hash>/chats/session-*.json.
 //!
-//! ## 数据流
+//! ## Flujo de datos
 //! ```text
-//! ~/.gemini/tmp/*/chats/session-*.json → 全量解析 → 费用计算 → proxy_request_logs 表
+//! ~/.gemini/tmp/*/chats/session-*.json → parseo completo → cálculo de costos → tabla proxy_request_logs
 //! ```
 //!
-//! ## 与 Claude/Codex 解析器的差异
-//! - JSON 格式（非 JSONL）：每个文件是单个 JSON 对象，包含 messages 数组
-//! - 无需 delta 计算：tokens 字段是 per-message 独立值
-//! - 无需状态恢复：不依赖前一条消息的累计值
-//! - 天然去重：每条消息有唯一 id 字段
+//! ## Diferencias con parser Claude/Codex
+//! - Formato JSON (no JSONL): cada archivo es un objeto JSON único, contiene array messages
+//! - No necesita cálculo delta: campo tokens es valor independiente por mensaje
+//! - No necesita restaurar estado: no depende de valor acumulado de mensaje previo
+//! - Deduplicación natural: cada mensaje tiene campo id único
 
 use crate::database::{lock_conn, Database};
 use crate::error::AppError;
@@ -27,7 +27,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-/// 从 Gemini message 中提取的 token 数据
+/// Datos de token extraídos desde mensaje Gemini
 #[derive(Debug)]
 struct GeminiTokens {
     input: u32,
@@ -36,7 +36,7 @@ struct GeminiTokens {
     thoughts: u32,
 }
 
-/// 同步 Gemini 使用数据（从 JSON 会话日志）
+/// Sincroniza datos de uso Gemini (desde log de sesiones JSON)
 pub fn sync_gemini_usage(db: &Database) -> Result<SessionSyncResult, AppError> {
     let gemini_dir = get_gemini_dir();
 
@@ -60,7 +60,7 @@ pub fn sync_gemini_usage(db: &Database) -> Result<SessionSyncResult, AppError> {
                 result.skipped += skipped;
             }
             Err(e) => {
-                let msg = format!("Gemini 会话文件解析失败 {}: {e}", file_path.display());
+                let msg = format!("Falló parsear archivo de sesión Gemini {}: {e}", file_path.display());
                 log::warn!("[GEMINI-SYNC] {msg}");
                 result.errors.push(msg);
             }
@@ -69,7 +69,7 @@ pub fn sync_gemini_usage(db: &Database) -> Result<SessionSyncResult, AppError> {
 
     if result.imported > 0 {
         log::info!(
-            "[GEMINI-SYNC] 同步完成: 导入 {} 条, 跳过 {} 条, 扫描 {} 个文件",
+            "[GEMINI-SYNC] Sincronización completa: importados {} registros, saltados {} registros, escaneados {} archivos",
             result.imported,
             result.skipped,
             result.files_scanned
@@ -79,7 +79,7 @@ pub fn sync_gemini_usage(db: &Database) -> Result<SessionSyncResult, AppError> {
     Ok(result)
 }
 
-/// 收集所有 Gemini 会话 JSON 文件
+/// Recopila todos los archivos JSON de sesiones Gemini
 fn collect_gemini_session_files(gemini_dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
 
@@ -88,7 +88,7 @@ fn collect_gemini_session_files(gemini_dir: &Path) -> Vec<PathBuf> {
         return files;
     }
 
-    // 遍历 tmp/<project_hash>/chats/session-*.json
+    // Itera sobre tmp/<project_hash>/chats/session-*.json
     let project_dirs = match fs::read_dir(&tmp_dir) {
         Ok(entries) => entries,
         Err(_) => return files,
@@ -121,36 +121,36 @@ fn collect_gemini_session_files(gemini_dir: &Path) -> Vec<PathBuf> {
     files
 }
 
-/// 同步单个 Gemini 会话 JSON 文件，返回 (imported, skipped)
+/// Sincroniza archivo JSON de sesión Gemini individual, devuelve (imported, skipped)
 fn sync_single_gemini_file(db: &Database, file_path: &Path) -> Result<(u32, u32), AppError> {
     let file_path_str = file_path.to_string_lossy().to_string();
 
-    // 获取文件元数据
+    // Obtiene metadata de archivo
     let metadata = fs::metadata(file_path)
-        .map_err(|e| AppError::Config(format!("无法读取文件元数据: {e}")))?;
+        .map_err(|e| AppError::Config(format!("No se puede leer metadata de archivo: {e}")))?;
     let file_modified = metadata_modified_nanos(&metadata);
 
-    // 检查同步状态
+    // Verifica estado de sincronización
     let (last_modified, _last_offset) = get_sync_state(db, &file_path_str)?;
 
-    // 文件未变化则跳过
+    // Si archivo no cambió se salta
     if file_modified <= last_modified {
         return Ok((0, 0));
     }
 
-    // 读取并解析整个 JSON 文件
+    // Lee y parsea archivo JSON completo
     let content = fs::read_to_string(file_path)
-        .map_err(|e| AppError::Config(format!("无法读取文件: {e}")))?;
+        .map_err(|e| AppError::Config(format!("No se puede leer archivo: {e}")))?;
     let value: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| AppError::Config(format!("JSON 解析失败: {e}")))?;
+        .map_err(|e| AppError::Config(format!("Falló parsear JSON: {e}")))?;
 
-    // 提取顶层 sessionId
+    // Extrae sessionId de nivel superior
     let session_id = value
         .get("sessionId")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
-    // 遍历 messages 数组
+    // Itera sobre array messages
     let messages = match value.get("messages").and_then(|v| v.as_array()) {
         Some(msgs) => msgs,
         None => return Ok((0, 0)),
@@ -161,12 +161,12 @@ fn sync_single_gemini_file(db: &Database, file_path: &Path) -> Result<(u32, u32)
     let mut gemini_msg_count: i64 = 0;
 
     for msg in messages {
-        // 只处理 type == "gemini" 的消息
+        // Solo procesa mensajes con type == "gemini"
         if msg.get("type").and_then(|t| t.as_str()) != Some("gemini") {
             continue;
         }
 
-        // 提取 tokens 对象
+        // Extrae objeto tokens
         let tokens_obj = match msg.get("tokens") {
             Some(t) if t.is_object() => t,
             _ => continue,
@@ -174,12 +174,12 @@ fn sync_single_gemini_file(db: &Database, file_path: &Path) -> Result<(u32, u32)
 
         let tokens = parse_gemini_tokens(tokens_obj);
         if tokens.input == 0 && tokens.output == 0 && tokens.thoughts == 0 && tokens.cached == 0 {
-            continue; // 跳过全零的空 token 消息
+            continue; // Salta mensajes vacíos con todos tokens en cero
         }
 
         gemini_msg_count += 1;
 
-        // 提取消息 ID 和模型
+        // Extrae ID de mensaje y modelo
         let message_id = msg.get("id").and_then(|v| v.as_str()).unwrap_or("unknown");
         let model = msg
             .get("model")
@@ -187,7 +187,7 @@ fn sync_single_gemini_file(db: &Database, file_path: &Path) -> Result<(u32, u32)
             .unwrap_or("unknown");
         let timestamp = msg.get("timestamp").and_then(|v| v.as_str());
 
-        // 生成唯一 request_id
+        // Genera request_id único
         let session_id_str = session_id.as_deref().unwrap_or("unknown");
         let request_id = format!("gemini_session:{session_id_str}:{message_id}");
 
@@ -202,19 +202,19 @@ fn sync_single_gemini_file(db: &Database, file_path: &Path) -> Result<(u32, u32)
             Ok(true) => imported += 1,
             Ok(false) => skipped += 1,
             Err(e) => {
-                log::warn!("[GEMINI-SYNC] 插入失败 ({}): {e}", request_id);
+                log::warn!("[GEMINI-SYNC] Falló insertar ({}): {e}", request_id);
                 skipped += 1;
             }
         }
     }
 
-    // 更新同步状态
+    // Actualiza estado de sincronización
     update_sync_state(db, &file_path_str, file_modified, gemini_msg_count)?;
 
     Ok((imported, skipped))
 }
 
-/// 从 tokens JSON 对象中提取 token 数据
+/// Extrae datos de token desde objeto JSON tokens
 fn parse_gemini_tokens(tokens: &serde_json::Value) -> GeminiTokens {
     GeminiTokens {
         input: tokens.get("input").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
@@ -224,7 +224,7 @@ fn parse_gemini_tokens(tokens: &serde_json::Value) -> GeminiTokens {
     }
 }
 
-/// 插入单条 Gemini 会话记录到 proxy_request_logs
+/// Inserta registro único de sesión Gemini a proxy_request_logs
 fn insert_gemini_session_entry(
     db: &Database,
     request_id: &str,
@@ -248,7 +248,7 @@ fn insert_gemini_session_entry(
                 .unwrap_or(0)
         });
 
-    // 合并 thoughts 到 output（思考 token 按输出计费）
+    // Combina thoughts en output (tokens de pensamiento facturan como output)
     let output_tokens = tokens.output + tokens.thoughts;
 
     let dedup_key = DedupKey {
@@ -264,7 +264,7 @@ fn insert_gemini_session_entry(
         return Ok(false);
     }
 
-    // 计算费用
+    // Calcula costo
     let usage = TokenUsage {
         input_tokens: tokens.input,
         output_tokens,
@@ -297,7 +297,7 @@ fn insert_gemini_session_entry(
         ),
     };
 
-    // 使用 UPSERT：新记录插入，已存在记录更新 token 和费用（Gemini 全量重读可能携带更新值）
+    // Usa UPSERT: registros nuevos se insertan, registros existentes actualizan token y costos (relectura completa Gemini puede llevar valores actualizados)
     conn.execute(
         "INSERT INTO proxy_request_logs (
             request_id, provider_id, app_type, model, request_model,
@@ -347,13 +347,13 @@ fn insert_gemini_session_entry(
             "gemini_session",    // data_source
         ],
     )
-    .map_err(|e| AppError::Database(format!("插入 Gemini 会话日志失败: {e}")))?;
+    .map_err(|e| AppError::Database(format!("Falló insertar log de sesión Gemini: {e}")))?;
 
-    // changes() > 0 表示新插入或已更新，== 0 表示值完全相同（无实际变更）
+    // changes() > 0 indica nuevo insertado o actualizado, == 0 indica valores completamente iguales (sin cambio real)
     Ok(conn.changes() > 0)
 }
 
-/// 查找 Gemini 模型定价
+/// Busca precio de modelo Gemini
 fn find_gemini_pricing(conn: &rusqlite::Connection, model_id: &str) -> Option<ModelPricing> {
     find_model_pricing(conn, model_id)
 }
@@ -438,13 +438,13 @@ mod tests {
         assert_eq!(tokens.output, 29);
         assert_eq!(tokens.cached, 3138);
         assert_eq!(tokens.thoughts, 405);
-        // output + thoughts = 29 + 405 = 434（用于计费）
+        // output + thoughts = 29 + 405 = 434 (usado para facturación)
         assert_eq!(tokens.output + tokens.thoughts, 434);
     }
 
     #[test]
     fn test_parse_gemini_tokens_missing_fields() {
-        // 缺少某些字段时应返回 0
+        // Cuando faltan algunos campos debería devolver 0
         let json: serde_json::Value = serde_json::json!({
             "input": 100,
             "output": 50
@@ -469,7 +469,7 @@ mod tests {
         let tokens = parse_gemini_tokens(&json);
         assert_eq!(tokens.input, 0);
         assert_eq!(tokens.output, 0);
-        // 全零（包括 cached=0）会被 sync 逻辑跳过
+        // Todos ceros (incluyendo cached=0) será omitido por lógica sync
         assert!(
             tokens.input == 0 && tokens.output == 0 && tokens.thoughts == 0 && tokens.cached == 0
         );
@@ -477,7 +477,7 @@ mod tests {
 
     #[test]
     fn test_parse_gemini_tokens_cache_only_not_skipped() {
-        // 纯缓存命中消息（input/output/thoughts=0 但 cached>0）不应被跳过
+        // Mensaje puro de hit de caché (input/output/thoughts=0 pero cached>0) no debería omitirse
         let json: serde_json::Value = serde_json::json!({
             "input": 0,
             "output": 0,
@@ -486,9 +486,9 @@ mod tests {
         });
         let tokens = parse_gemini_tokens(&json);
         assert_eq!(tokens.cached, 5000);
-        // 跳过条件：所有四个字段都为 0 才跳过
+        // Condición de omitir: se omite solo cuando los cuatro campos son 0
         let should_skip =
             tokens.input == 0 && tokens.output == 0 && tokens.thoughts == 0 && tokens.cached == 0;
-        assert!(!should_skip, "纯缓存命中记录不应被跳过");
+        assert!(!should_skip, "Registro puro de hit de caché no debería omitirse");
     }
 }

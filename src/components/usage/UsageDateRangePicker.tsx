@@ -199,7 +199,7 @@ export function UsageDateRangePicker({
   const handleApply = () => {
     setError(null);
     if (draftStart > draftEnd) {
-      setError(t("usage.invalidTimeRangeOrder", "开始时间不能晚于结束时间"));
+      setError(t("usage.invalidTimeRangeOrder", "La hora de inicio no puede ser posterior a la hora de fin"));
       return;
     }
     onApply({
@@ -221,8 +221,8 @@ export function UsageDateRangePicker({
     const setTs = field === "start" ? setDraftStart : setDraftEnd;
     const label =
       field === "start"
-        ? t("usage.startTime", "开始时间")
-        : t("usage.endTime", "结束时间");
+        ? t("usage.startTime", "Hora de inicio")
+        : t("usage.endTime", "Hora de fin");
 
     return (
       <div
@@ -306,7 +306,7 @@ export function UsageDateRangePicker({
           {/* Left: date fields */}
           <div className="space-y-2 sm:w-[250px] sm:flex-none">
             <p className="text-xs text-muted-foreground">
-              {t("usage.customRangeHint", "支持日期与时间，最长 30 天")}
+              {t("usage.customRangeHint", "Soporta fecha y hora, máximo 30 días")}
             </p>
             {renderField("start")}
             {renderField("end")}
@@ -359,7 +359,7 @@ export function UsageDateRangePicker({
                 type="button"
                 className="text-sm font-medium hover:text-primary transition-colors"
                 onClick={goToToday}
-                title={t("usage.presetToday", { defaultValue: "当天" })}
+                title={t("usage.presetToday", { defaultValue: "Hoy" })}
               >
                 {displayMonth.toLocaleDateString(locale, {
                   year: "numeric",

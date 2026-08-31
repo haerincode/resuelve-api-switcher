@@ -1,6 +1,6 @@
-//! HTTP代理服务器
+//! HTTP代理servidor
 //!
-//! 基于Axum的HTTP服务器，处理代理请求
+//! 基/AxumdeHTTPservidor，procesar代理solicitud
 //!
 //! Uses a manual hyper HTTP/1.1 accept loop with `preserve_header_case(true)` so
 //! that the original header-name casing from the CLI client is captured in a
@@ -25,31 +25,31 @@ use std::sync::Arc;
 use tokio::sync::{oneshot, RwLock};
 use tokio::task::JoinHandle;
 
-/// 代理服务器状态（共享）
+/// 代理servidorestado（共享）
 #[derive(Clone)]
 pub struct ProxyState {
     pub db: Arc<Database>,
     pub config: Arc<RwLock<ProxyConfig>>,
     pub status: Arc<RwLock<ProxyStatus>>,
     pub start_time: Arc<RwLock<Option<std::time::Instant>>>,
-    /// 每个应用类型当前使用的 provider (app_type -> (provider_id, provider_name))
+    /// 每个应usartipocuando前使usarde provider (app_type -> (provider_id, provider_name))
     pub current_providers: Arc<RwLock<std::collections::HashMap<String, (String, String)>>>,
-    /// 共享的 ProviderRouter（持有熔断器状态，跨请求保持）
+    /// 共享de ProviderRouter（持有熔断器estado，跨solicitud保持）
     pub provider_router: Arc<ProviderRouter>,
-    /// Gemini Native shadow state，用于 thoughtSignature / tool call 回放
+    /// Gemini Native shadow state，usar/ thoughtSignature / tool call 回放
     pub gemini_shadow: Arc<GeminiShadowStore>,
-    /// AppHandle，用于发射事件和更新托盘菜单
+    /// AppHandle，usar/发射事件yactualizar托盘菜单
     pub app_handle: Option<tauri::AppHandle>,
     /// 故障转移切换管理器
     pub failover_manager: Arc<FailoverSwitchManager>,
 }
 
-/// 代理HTTP服务器
+/// 代理HTTPservidor
 pub struct ProxyServer {
     config: ProxyConfig,
     state: ProxyState,
     shutdown_tx: Arc<RwLock<Option<oneshot::Sender<()>>>>,
-    /// 服务器任务句柄，用于等待服务器实际关闭
+    /// servidor任务句柄，usar/esperarservidor实际关闭
     server_handle: Arc<RwLock<Option<JoinHandle<()>>>>,
 }
 
@@ -59,9 +59,9 @@ impl ProxyServer {
         db: Arc<Database>,
         app_handle: Option<tauri::AppHandle>,
     ) -> Self {
-        // 创建共享的 ProviderRouter（熔断器状态将跨所有请求保持）
+        // crear共享de ProviderRouter（熔断器estado/跨所有solicitud保持）
         let provider_router = Arc::new(ProviderRouter::new(db.clone()));
-        // 创建故障转移切换管理器
+        // crear故障转移切换管理器
         let failover_manager = Arc::new(FailoverSwitchManager::new(db.clone()));
 
         let state = ProxyState {
@@ -85,7 +85,7 @@ impl ProxyServer {
     }
 
     pub async fn start(&self) -> Result<ProxyServerInfo, ProxyError> {
-        // 检查是否已在运行
+        // verificar是否yaen运行
         if self.shutdown_tx.read().await.is_some() {
             return Err(ProxyError::AlreadyRunning);
         }
@@ -93,12 +93,12 @@ impl ProxyServer {
         let addr: SocketAddr =
             format!("{}:{}", self.config.listen_address, self.config.listen_port)
                 .parse()
-                .map_err(|e| ProxyError::BindFailed(format!("无效的地址: {e}")))?;
+                .map_err(|e| ProxyError::BindFailed(format!("inválidode地址: {e}")))?;
 
-        // 创建关闭通道
+        // crear关闭通道
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
-        // 构建路由
+        // construirruta
         let app = self.build_router();
 
         // 绑定监听器
@@ -106,26 +106,26 @@ impl ProxyServer {
             .await
             .map_err(|e| ProxyError::BindFailed(e.to_string()))?;
 
-        log::info!("[{}] 代理服务器启动于 {addr}", log_srv::STARTED);
+        log::info!("[{}] 代理servidor启动/ {addr}", log_srv::STARTED);
 
-        // 更新全局代理端口，用于系统代理检测
+        // actualizar全局代理端口，usar/系统代理检测
         crate::proxy::http_client::set_proxy_port(self.config.listen_port);
 
-        // 保存关闭句柄
+        // guardar关闭句柄
         *self.shutdown_tx.write().await = Some(shutdown_tx);
 
-        // 更新状态
+        // actualizarestado
         let mut status = self.state.status.write().await;
         status.running = true;
         status.address = self.config.listen_address.clone();
         status.port = self.config.listen_port;
         drop(status);
 
-        // 记录启动时间
+        // registrar启动/间
         *self.state.start_time.write().await = Some(std::time::Instant::now());
 
-        // 启动服务器 — 使用手动 hyper HTTP/1.1 accept loop
-        // 开启 preserve_header_case 以捕获客户端请求头的原始大小写
+        // 启动servidor — 使usar手动 hyper HTTP/1.1 accept loop
+        // 开启 preserve_header_case 以捕获clientesolicitud头de原始大小写
         let state = self.state.clone();
         let handle = tokio::spawn(async move {
             let mut shutdown_rx = shutdown_rx;
@@ -135,7 +135,7 @@ impl ProxyServer {
                         let (stream, _remote_addr) = match result {
                             Ok(v) => v,
                             Err(e) => {
-                                log::error!("[{SRV}] accept 失败: {e}", SRV = log_srv::ACCEPT_ERR);
+                                log::error!("[{SRV}] accept falló: {e}", SRV = log_srv::ACCEPT_ERR);
                                 tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                                 continue;
                             }
@@ -163,12 +163,12 @@ impl ProxyServer {
                                 }
                             };
 
-                            // service_fn 将 axum Router（tower::Service）桥接到 hyper
+                            // service_fn / axum Router（tower::Service）桥接a hyper
                             let service = hyper::service::service_fn(move |req: hyper::Request<hyper::body::Incoming>| {
                                 let mut router = app.clone();
                                 let cases = original_cases.clone();
                                 async move {
-                                    // 将 hyper::body::Incoming 转为 axum::body::Body，保留 extensions
+                                    // / hyper::body::Incoming 转para axum::body::Body，保留 extensions
                                     let (mut parts, body) = req.into_parts();
 
                                     // Insert our own header case map alongside hyper's internal one
@@ -185,7 +185,7 @@ impl ProxyServer {
                                 .serve_connection(TokioIo::new(stream), service)
                                 .await
                             {
-                                // Connection reset / broken pipe 等在代理场景下很常见，debug 级别
+                                // Connection reset / broken pipe 等en代理场景下很常见，debug 级别
                                 log::debug!("[{SRV}] connection error: {e}", SRV = log_srv::CONN_ERR);
                             }
                         });
@@ -196,12 +196,12 @@ impl ProxyServer {
                 }
             }
 
-            // 服务器停止后更新状态
+            // servidordetener后actualizarestado
             state.status.write().await.running = false;
             *state.start_time.write().await = None;
         });
 
-        // 保存服务器任务句柄
+        // guardarservidor任务句柄
         *self.server_handle.write().await = Some(handle);
 
         Ok(ProxyServerInfo {
@@ -212,27 +212,27 @@ impl ProxyServer {
     }
 
     pub async fn stop(&self) -> Result<(), ProxyError> {
-        // 1. 发送关闭信号
+        // 1. enviar关闭信号
         if let Some(tx) = self.shutdown_tx.write().await.take() {
             let _ = tx.send(());
         } else {
             return Err(ProxyError::NotRunning);
         }
 
-        // 2. 等待服务器任务结束（带 5 秒超时保护）
+        // 2. esperarservidor任务结束（带 5 秒timeout保护）
         if let Some(handle) = self.server_handle.write().await.take() {
             match tokio::time::timeout(std::time::Duration::from_secs(5), handle).await {
                 Ok(Ok(())) => {
-                    log::info!("[{}] 代理服务器已完全停止", log_srv::STOPPED);
+                    log::info!("[{}] 代理servidorya完全detener", log_srv::STOPPED);
                     Ok(())
                 }
                 Ok(Err(e)) => {
-                    log::warn!("[{}] 代理服务器任务异常终止: {e}", log_srv::TASK_ERROR);
+                    log::warn!("[{}] 代理servidor任务异常终止: {e}", log_srv::TASK_ERROR);
                     Err(ProxyError::StopFailed(e.to_string()))
                 }
                 Err(_) => {
                     log::warn!(
-                        "[{}] 代理服务器停止超时（5秒），强制继续",
+                        "[{}] 代理servidordetenertimeout（5秒），强制continuar",
                         log_srv::STOP_TIMEOUT
                     );
                     Err(ProxyError::StopTimeout)
@@ -246,12 +246,12 @@ impl ProxyServer {
     pub async fn get_status(&self) -> ProxyStatus {
         let mut status = self.state.status.read().await.clone();
 
-        // 计算运行时间
+        // 计算运行/间
         if let Some(start) = *self.state.start_time.read().await {
             status.uptime_seconds = start.elapsed().as_secs();
         }
 
-        // 从 current_providers HashMap 获取每个应用类型当前正在使用的 provider
+        // desde current_providers HashMap obtener每个应usartipocuando前正en使usarde provider
         let current_providers = self.state.current_providers.read().await;
         status.active_targets = current_providers
             .iter()
@@ -265,9 +265,9 @@ impl ProxyServer {
         status
     }
 
-    /// 更新某个应用类型当前“目标供应商”（用于 UI 展示 active_targets）
+    /// actualizar某个应usartipocuando前“目标proveedor”（usar/ UI 展示 active_targets）
     ///
-    /// 注意：这不代表该供应商一定已经处理过请求，而是用于“热切换/启用故障转移立即切 P1”
+    /// 注意：这不代表该proveedor一定ya经procesar过solicitud，而是usar/“热切换/habilitar故障转移立即切 P1”
     /// 等场景下，让 UI 能立刻反映最新目标。
     pub async fn set_active_target(&self, app_type: &str, provider_id: &str, provider_name: &str) {
         let mut current_providers = self.state.current_providers.write().await;
@@ -279,10 +279,10 @@ impl ProxyServer {
 
     fn build_router(&self) -> Router {
         Router::new()
-            // 健康检查
+            // 健康verificar
             .route("/health", get(handlers::health_check))
             .route("/status", get(handlers::get_status))
-            // Claude API (支持带前缀和不带前缀两种格式)
+            // Claude API (soportar带前缀y不带前缀两种formato)
             .route("/v1/messages", post(handlers::handle_messages))
             .route("/claude/v1/messages", post(handlers::handle_messages))
             // Claude Desktop 3P 本地 gateway（独立 provider namespace）
@@ -294,7 +294,7 @@ impl ProxyServer {
                 "/claude-desktop/v1/messages",
                 post(handlers::handle_claude_desktop_messages),
             )
-            // OpenAI Chat Completions API (Codex CLI，支持带前缀和不带前缀)
+            // OpenAI Chat Completions API (Codex CLI，soportar带前缀y不带前缀)
             .route("/chat/completions", post(handlers::handle_chat_completions))
             .route(
                 "/v1/chat/completions",
@@ -308,7 +308,7 @@ impl ProxyServer {
                 "/codex/v1/chat/completions",
                 post(handlers::handle_chat_completions),
             )
-            // OpenAI Responses API (Codex CLI，支持带前缀和不带前缀)
+            // OpenAI Responses API (Codex CLI，soportar带前缀y不带前缀)
             .route("/responses", post(handlers::handle_responses))
             .route("/v1/responses", post(handlers::handle_responses))
             .route("/v1/v1/responses", post(handlers::handle_responses))
@@ -330,29 +330,29 @@ impl ProxyServer {
                 "/codex/v1/responses/compact",
                 post(handlers::handle_responses_compact),
             )
-            // Gemini API (支持带前缀和不带前缀)
+            // Gemini API (soportar带前缀y不带前缀)
             //
-            // 用 `any(..)` 覆盖所有 HTTP 方法：除了 POST `:generateContent` /
+            // usar `any(..)` 覆盖所有 HTTP 方法：除了 POST `:generateContent` /
             // `:streamGenerateContent` / `:countTokens` 之外，Gemini SDK / CLI 还会发
-            // GET `/models`、GET `/models/<id>` 等只读端点。如果只挂 POST，这些 GET
-            // 请求会在路由层 404，绕过本地代理的统计、整流和故障转移。
+            // GET `/models`、GET `/models/<id>` 等只读endpoint。si只挂 POST，这些 GET
+            // solicitud会enruta层 404，绕过本地代理de统计、整流y故障转移。
             .route("/v1beta/*path", any(handlers::handle_gemini))
             .route("/gemini/v1beta/*path", any(handlers::handle_gemini))
-            // Gemini 的 GA 版本也叫 /v1，给原 SDK 留一条出口
+            // Gemini de GA 版本也叫 /v1，给原 SDK 留一条出口
             .route("/gemini/v1/*path", any(handlers::handle_gemini))
-            // 提高默认请求体大小限制（避免 413 Payload Too Large）
+            // 提高predeterminadosolicitud体大小限制（避免 413 Payload Too Large）
             .layer(DefaultBodyLimit::max(200 * 1024 * 1024))
             .with_state(self.state.clone())
     }
 
-    /// 在不重启服务的情况下更新运行时配置
+    /// en不重启服务de情况下actualizar运行/configuración
     pub async fn apply_runtime_config(&self, config: &ProxyConfig) {
         *self.state.config.write().await = config.clone();
     }
 
-    /// 热更新熔断器配置
+    /// 热actualizar熔断器configuración
     ///
-    /// 将新配置应用到所有已创建的熔断器实例
+    /// /新configuración应usara所有yacrearde熔断器实例
     pub async fn update_circuit_breaker_configs(
         &self,
         config: super::circuit_breaker::CircuitBreakerConfig,
@@ -371,7 +371,7 @@ impl ProxyServer {
             .await;
     }
 
-    /// 重置指定 Provider 的熔断器
+    /// 重置指定 Provider de熔断器
     pub async fn reset_provider_circuit_breaker(&self, provider_id: &str, app_type: &str) {
         self.state
             .provider_router

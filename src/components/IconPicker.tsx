@@ -8,9 +8,9 @@ import { searchIcons, getIconMetadata } from "@/icons/extracted/metadata";
 import { cn } from "@/lib/utils";
 
 interface IconPickerProps {
-  value?: string; // 当前选中的图标
-  onValueChange: (icon: string) => void; // 选择回调
-  color?: string; // 预览颜色
+  value?: string; // Icono seleccionado actualmente
+  onValueChange: (icon: string) => void; // Callback de selección
+  color?: string; // Color de vista previa
 }
 
 export const IconPicker: React.FC<IconPickerProps> = ({
@@ -20,7 +20,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 过滤图标列表
+  // Filtrar lista de iconos
   const filteredIcons = useMemo(() => {
     if (!searchQuery) return iconList;
     return searchIcons(searchQuery);
@@ -30,13 +30,13 @@ export const IconPicker: React.FC<IconPickerProps> = ({
     <div className="space-y-4">
       <div>
         <Label htmlFor="icon-search">
-          {t("iconPicker.search", { defaultValue: "搜索图标" })}
+          {t("iconPicker.search", { defaultValue: "Buscar icono" })}
         </Label>
         <Input
           id="icon-search"
           type="text"
           placeholder={t("iconPicker.searchPlaceholder", {
-            defaultValue: "输入图标名称...",
+            defaultValue: "Ingrese nombre del icono...",
           })}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -77,7 +77,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
 
       {filteredIcons.length === 0 && (
         <div className="text-center py-8 text-muted-foreground">
-          {t("iconPicker.noResults", { defaultValue: "未找到匹配的图标" })}
+          {t("iconPicker.noResults", { defaultValue: "No se encontraron iconos coincidentes" })}
         </div>
       )}
     </div>

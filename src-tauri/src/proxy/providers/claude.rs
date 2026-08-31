@@ -1,29 +1,29 @@
 //! Claude (Anthropic) Provider Adapter
 //!
-//! 支持透传模式和 OpenAI 格式转换模式
+//! soportar透传模式y OpenAI formatoconvertir模式
 //!
-//! ## API 格式
-//! - **anthropic** (默认): Anthropic Messages API 格式，直接透传
-//! - **openai_chat**: OpenAI Chat Completions 格式，需要 Anthropic ↔ OpenAI 转换
-//! - **openai_responses**: OpenAI Responses API 格式，需要 Anthropic ↔ Responses 转换
-//! - **gemini_native**: Google Gemini Native generateContent 格式，需要 Anthropic ↔ Gemini 转换
+//! ## API formato
+//! - **anthropic** (predeterminado): Anthropic Messages API formato，直接透传
+//! - **openai_chat**: OpenAI Chat Completions formato，需要 Anthropic ↔ OpenAI convertir
+//! - **openai_responses**: OpenAI Responses API formato，需要 Anthropic ↔ Responses convertir
+//! - **gemini_native**: Google Gemini Native generateContent formato，需要 Anthropic ↔ Gemini convertir
 //!
-//! ## 认证模式
+//! ## autenticación模式
 //! - **Claude**: Anthropic 官方 API (x-api-key + anthropic-version)
-//! - **ClaudeAuth**: 中转服务 (仅 Bearer 认证，无 x-api-key)
-//! - **OpenRouter**: 已支持 Claude Code 兼容接口，默认透传
+//! - **ClaudeAuth**: 中转服务 (仅 Bearer autenticación，sin x-api-key)
+//! - **OpenRouter**: yasoportar Claude Code 兼容接口，predeterminado透传
 //! - **GitHubCopilot**: GitHub Copilot (OAuth + Copilot Token)
 
 use super::{AuthInfo, AuthStrategy, ProviderAdapter, ProviderType};
 use crate::provider::Provider;
 use crate::proxy::error::ProxyError;
 
-/// 获取 Claude 供应商的 API 格式
+/// obtener Claude proveedorde API formato
 ///
-/// 供 handler/forwarder 外部使用的公开函数。
-/// 优先级：meta.apiFormat > settings_config.api_format > openrouter_compat_mode > 默认 "anthropic"
+/// 供 handler/forwarder 外部使usarde公开函数。
+/// 优先级：meta.apiFormat > settings_config.api_format > openrouter_compat_mode > predeterminado "anthropic"
 pub fn get_claude_api_format(provider: &Provider) -> &'static str {
-    // 0) Codex OAuth 强制使用 openai_responses（不可被覆盖）
+    // 0) Codex OAuth 强制使usar openai_responses（不可/覆盖）
     if let Some(meta) = provider.meta.as_ref() {
         if meta.provider_type.as_deref() == Some("codex_oauth") {
             return "openai_responses";
@@ -125,9 +125,9 @@ pub fn transform_claude_request_for_api_format(
 ) -> Result<serde_json::Value, ProxyError> {
     let is_codex_oauth = provider.is_codex_oauth();
 
-    // Copilot 场景：优先从 metadata.user_id 提取 session ID 作为 cache key
-    // 格式: "uuid_sessionId" → 提取 "_" 后面的部分作为 session 标识
-    // 同一会话的请求共享 cache key，提升 Copilot 缓存命中率
+    // Copilot 场景：优先desde metadata.user_id 提取 session ID 作para cache key
+    // formato: "uuid_sessionId" → 提取 "_" 后面de部分作para session 标识
+    // 同一sesióndesolicitud共享 cache key，提升 Copilot caché命中率
     let is_copilot = provider
         .meta
         .as_ref()
@@ -140,8 +140,8 @@ pub fn transform_claude_request_for_api_format(
             .is_some_and(|u| u.contains("githubcopilot.com"));
     let session_cache_key: Option<String> = if is_copilot {
         let metadata = body.get("metadata");
-        // Session 提取优先级（与 forwarder 和 session.rs 统一）：
-        //   1. metadata.user_id 中的 _session_ 后缀
+        // Session 提取优先级（con forwarder y session.rs 统一）：
+        //   1. metadata.user_id 中de _session_ 后缀
         //   2. metadata.session_id（直接字段）
         metadata
             .and_then(|m| m.get("user_id"))
@@ -179,8 +179,8 @@ pub fn transform_claude_request_for_api_format(
                 provider.id,
                 cache_key.is_some()
             );
-            // Codex OAuth (ChatGPT Plus/Pro 反代) 需要在请求体里强制 store: false
-            // + include: ["reasoning.encrypted_content"]，由 transform 层统一处理。
+            // Codex OAuth (ChatGPT Plus/Pro 反代) 需要ensolicitud体里强制 store: false
+            // + include: ["reasoning.encrypted_content"]，por transform 层统一procesar。
             let codex_fast_mode = provider.codex_fast_mode_enabled();
             super::transform_responses::anthropic_to_responses(
                 body,
@@ -224,16 +224,16 @@ impl ClaudeAdapter {
         Self
     }
 
-    /// 获取供应商类型
+    /// obtenerproveedortipo
     ///
-    /// 根据 base_url 和 auth_mode 检测具体的供应商类型：
-    /// - GitHubCopilot: meta.provider_type 为 github_copilot 或 base_url 包含 githubcopilot.com
-    /// - CodexOAuth: meta.provider_type 为 codex_oauth
+    /// según base_url y auth_mode 检测具体deproveedortipo：
+    /// - GitHubCopilot: meta.provider_type para github_copilot o base_url 包含 githubcopilot.com
+    /// - CodexOAuth: meta.provider_type para codex_oauth
     /// - OpenRouter: base_url 包含 openrouter.ai
-    /// - ClaudeAuth: auth_mode 为 bearer_only
-    /// - Claude: 默认 Anthropic 官方
+    /// - ClaudeAuth: auth_mode para bearer_only
+    /// - Claude: predeterminado Anthropic 官方
     pub fn provider_type(&self, provider: &Provider) -> ProviderType {
-        // 检测 Gemini Native 格式
+        // 检测 Gemini Native formato
         if self.get_api_format(provider) == "gemini_native" {
             return match self.extract_key(provider) {
                 Some(key) if key.starts_with("ya29.") || key.starts_with('{') => {
@@ -258,7 +258,7 @@ impl ClaudeAdapter {
             return ProviderType::OpenRouter;
         }
 
-        // 检测 ClaudeAuth (仅 Bearer 认证)
+        // 检测 ClaudeAuth (仅 Bearer autenticación)
         if self.is_bearer_only_mode(provider) {
             return ProviderType::ClaudeAuth;
         }
@@ -266,7 +266,7 @@ impl ClaudeAdapter {
         ProviderType::Claude
     }
 
-    /// 检测是否为 Codex OAuth 供应商（ChatGPT Plus/Pro 反代）
+    /// 检测是否para Codex OAuth proveedor（ChatGPT Plus/Pro 反代）
     fn is_codex_oauth(&self, provider: &Provider) -> bool {
         if let Some(meta) = provider.meta.as_ref() {
             if meta.provider_type.as_deref() == Some("codex_oauth") {
@@ -276,16 +276,16 @@ impl ClaudeAdapter {
         false
     }
 
-    /// 检测是否为 GitHub Copilot 供应商
+    /// 检测是否para GitHub Copilot proveedor
     fn is_github_copilot(&self, provider: &Provider) -> bool {
-        // 方式1: 检查 meta.provider_type
+        // 方式1: verificar meta.provider_type
         if let Some(meta) = provider.meta.as_ref() {
             if meta.provider_type.as_deref() == Some("github_copilot") {
                 return true;
             }
         }
 
-        // 方式2: 检查 base_url（兼容旧数据的 fallback，后续应优先依赖 providerType）
+        // 方式2: verificar base_url（兼容旧数据de fallback，后续应优先依赖 providerType）
         if let Ok(base_url) = self.extract_base_url(provider) {
             if base_url.contains("githubcopilot.com") {
                 return true;
@@ -295,7 +295,7 @@ impl ClaudeAdapter {
         false
     }
 
-    /// 检测是否使用 OpenRouter
+    /// 检测是否使usar OpenRouter
     fn is_openrouter(&self, provider: &Provider) -> bool {
         if let Ok(base_url) = self.extract_base_url(provider) {
             return base_url.contains("openrouter.ai");
@@ -303,19 +303,19 @@ impl ClaudeAdapter {
         false
     }
 
-    /// 获取 API 格式
+    /// obtener API formato
     ///
-    /// 从 provider.meta.api_format 读取格式设置：
-    /// - "anthropic" (默认): Anthropic Messages API 格式，直接透传
-    /// - "openai_chat": OpenAI Chat Completions 格式，需要格式转换
-    /// - "openai_responses": OpenAI Responses API 格式，需要格式转换
+    /// desde provider.meta.api_format leerformato设置：
+    /// - "anthropic" (predeterminado): Anthropic Messages API formato，直接透传
+    /// - "openai_chat": OpenAI Chat Completions formato，需要formatoconvertir
+    /// - "openai_responses": OpenAI Responses API formato，需要formatoconvertir
     fn get_api_format(&self, provider: &Provider) -> &'static str {
         get_claude_api_format(provider)
     }
 
-    /// 检测是否为仅 Bearer 认证模式
+    /// 检测是否para仅 Bearer autenticación模式
     fn is_bearer_only_mode(&self, provider: &Provider) -> bool {
-        // 检查 settings_config 中的 auth_mode
+        // verificar settings_config 中de auth_mode
         if let Some(auth_mode) = provider
             .settings_config
             .get("auth_mode")
@@ -326,7 +326,7 @@ impl ClaudeAdapter {
             }
         }
 
-        // 检查 env 中的 AUTH_MODE
+        // verificar env 中de AUTH_MODE
         if let Some(env) = provider.settings_config.get("env") {
             if let Some(auth_mode) = env.get("AUTH_MODE").and_then(|v| v.as_str()) {
                 if auth_mode == "bearer_only" {
@@ -338,7 +338,7 @@ impl ClaudeAdapter {
         false
     }
 
-    /// 从 Provider 配置中提取 API Key
+    /// desde Provider configuración中提取 API Key
     fn extract_key(&self, provider: &Provider) -> Option<String> {
         if let Some(env) = provider.settings_config.get("env") {
             // Anthropic 标准 key
@@ -348,7 +348,7 @@ impl ClaudeAdapter {
                 .map(str::trim)
                 .filter(|s| !s.is_empty())
             {
-                log::debug!("[Claude] 使用 ANTHROPIC_AUTH_TOKEN");
+                log::debug!("[Claude] 使usar ANTHROPIC_AUTH_TOKEN");
                 return Some(key.to_string());
             }
             if let Some(key) = env
@@ -357,7 +357,7 @@ impl ClaudeAdapter {
                 .map(str::trim)
                 .filter(|s| !s.is_empty())
             {
-                log::debug!("[Claude] 使用 ANTHROPIC_API_KEY");
+                log::debug!("[Claude] 使usar ANTHROPIC_API_KEY");
                 return Some(key.to_string());
             }
             // OpenRouter key
@@ -367,17 +367,17 @@ impl ClaudeAdapter {
                 .map(str::trim)
                 .filter(|s| !s.is_empty())
             {
-                log::debug!("[Claude] 使用 OPENROUTER_API_KEY");
+                log::debug!("[Claude] 使usar OPENROUTER_API_KEY");
                 return Some(key.to_string());
             }
-            // 备选 OpenAI key (用于 OpenRouter)
+            // 备选 OpenAI key (usar/ OpenRouter)
             if let Some(key) = env
                 .get("OPENAI_API_KEY")
                 .and_then(|v| v.as_str())
                 .map(str::trim)
                 .filter(|s| !s.is_empty())
             {
-                log::debug!("[Claude] 使用 OPENAI_API_KEY");
+                log::debug!("[Claude] 使usar OPENAI_API_KEY");
                 return Some(key.to_string());
             }
             // Gemini Native key
@@ -387,12 +387,12 @@ impl ClaudeAdapter {
                 .map(str::trim)
                 .filter(|s| !s.is_empty())
             {
-                log::debug!("[Claude] 使用 GEMINI_API_KEY");
+                log::debug!("[Claude] 使usar GEMINI_API_KEY");
                 return Some(key.to_string());
             }
         }
 
-        // 尝试直接获取
+        // 尝试直接obtener
         if let Some(key) = provider
             .settings_config
             .get("apiKey")
@@ -401,21 +401,21 @@ impl ClaudeAdapter {
             .map(str::trim)
             .filter(|s| !s.is_empty())
         {
-            log::debug!("[Claude] 使用 apiKey/api_key");
+            log::debug!("[Claude] 使usar apiKey/api_key");
             return Some(key.to_string());
         }
 
-        log::warn!("[Claude] 未找到有效的 API Key");
+        log::warn!("[Claude] no encontradoválidode API Key");
         None
     }
 
-    /// 根据 env 中填写的变量名推断 Anthropic 默认走哪种鉴权策略。
+    /// según env 中填写de变量名推断 Anthropic predeterminado走哪种鉴权策略。
     ///
-    /// 与 Anthropic SDK 原生语义保持一致：
-    /// - `ANTHROPIC_AUTH_TOKEN` → `ClaudeAuth`（发送 `Authorization: Bearer`）
-    /// - `ANTHROPIC_API_KEY`    → `Anthropic` （发送 `x-api-key`）
+    /// con Anthropic SDK 原生语义保持一致：
+    /// - `ANTHROPIC_AUTH_TOKEN` → `ClaudeAuth`（enviar `Authorization: Bearer`）
+    /// - `ANTHROPIC_API_KEY`    → `Anthropic` （enviar `x-api-key`）
     ///
-    /// 优先级与 [`extract_key`] 一致；两者都缺时返回 `None` 由调用方决定 fallback。
+    /// 优先级con [`extract_key`] 一致；两者都缺/retornar `None` por调usar方决定 fallback。
     fn infer_anthropic_auth_strategy(&self, provider: &Provider) -> Option<AuthStrategy> {
         let env = provider.settings_config.get("env")?;
 
@@ -449,19 +449,19 @@ impl ProviderAdapter for ClaudeAdapter {
     }
 
     fn extract_base_url(&self, provider: &Provider) -> Result<String, ProxyError> {
-        // Codex OAuth: 强制使用 ChatGPT 后端 API 端点（忽略用户配置的 base_url）
+        // Codex OAuth: 强制使usar ChatGPT 后端 API endpoint（忽略usar户configuraciónde base_url）
         if self.is_codex_oauth(provider) {
             return Ok("https://chatgpt.com/backend-api/codex".to_string());
         }
 
-        // 1. 从 env 中获取
+        // 1. desde env 中obtener
         if let Some(env) = provider.settings_config.get("env") {
             if let Some(url) = env.get("ANTHROPIC_BASE_URL").and_then(|v| v.as_str()) {
                 return Ok(url.trim_end_matches('/').to_string());
             }
         }
 
-        // 2. 尝试直接获取
+        // 2. 尝试直接obtener
         if let Some(url) = provider
             .settings_config
             .get("base_url")
@@ -487,25 +487,25 @@ impl ProviderAdapter for ClaudeAdapter {
         }
 
         Err(ProxyError::ConfigError(
-            "Claude Provider 缺少 base_url 配置".to_string(),
+            "Claude Provider 缺少 base_url configuración".to_string(),
         ))
     }
 
     fn extract_auth(&self, provider: &Provider) -> Option<AuthInfo> {
         let provider_type = self.provider_type(provider);
 
-        // GitHub Copilot 使用特殊的认证策略
-        // 实际的 token 会在代理请求时动态获取
+        // GitHub Copilot 使usar特殊deautenticación策略
+        // 实际de token 会en代理solicitud/动态obtener
         if provider_type == ProviderType::GitHubCopilot {
-            // 返回一个占位符，实际 token 由 CopilotAuthManager 动态提供
+            // retornar一个占位符，实际 token por CopilotAuthManager 动态提供
             return Some(AuthInfo::new(
                 "copilot_placeholder".to_string(),
                 AuthStrategy::GitHubCopilot,
             ));
         }
 
-        // Codex OAuth (ChatGPT Plus/Pro) 同样使用占位符
-        // 实际的 access_token 由 CodexOAuthManager 动态提供
+        // Codex OAuth (ChatGPT Plus/Pro) 同样使usar占位符
+        // 实际de access_token por CodexOAuthManager 动态提供
         if provider_type == ProviderType::CodexOAuth {
             return Some(AuthInfo::new(
                 "codex_oauth_placeholder".to_string(),
@@ -549,10 +549,10 @@ impl ProviderAdapter for ClaudeAdapter {
             ProviderType::OpenRouter => Some(AuthInfo::new(key, AuthStrategy::Bearer)),
             ProviderType::ClaudeAuth => Some(AuthInfo::new(key, AuthStrategy::ClaudeAuth)),
             _ => {
-                // 按 env 中的变量名推断鉴权策略，对齐 Anthropic SDK 语义：
+                // 按 env 中de变量名推断鉴权策略，/齐 Anthropic SDK 语义：
                 // ANTHROPIC_AUTH_TOKEN → Authorization: Bearer
                 // ANTHROPIC_API_KEY    → x-api-key
-                // 其他来源（apiKey 直填等）默认走 x-api-key（Anthropic 官方协议）。
+                // 其他来源（apiKey 直填等）predeterminado走 x-api-key（Anthropic 官方协议）。
                 let strategy = self
                     .infer_anthropic_auth_strategy(provider)
                     .unwrap_or(AuthStrategy::Anthropic);
@@ -562,18 +562,18 @@ impl ProviderAdapter for ClaudeAdapter {
     }
 
     fn build_url(&self, base_url: &str, endpoint: &str) -> String {
-        // Codex OAuth: 所有请求统一走 /responses 端点
+        // Codex OAuth: 所有solicitud统一走 /responses endpoint
         if base_url == "https://chatgpt.com/backend-api/codex" {
             let _ = endpoint; // 忽略原始 endpoint
             return "https://chatgpt.com/backend-api/codex/responses".to_string();
         }
 
         // NOTE:
-        // 过去 OpenRouter 只有 OpenAI Chat Completions 兼容接口，需要把 Claude 的 `/v1/messages`
-        // 映射到 `/v1/chat/completions`，并做 Anthropic ↔ OpenAI 的格式转换。
+        // 过去 OpenRouter 只有 OpenAI Chat Completions 兼容接口，需要把 Claude de `/v1/messages`
+        // mapeoa `/v1/chat/completions`，并做 Anthropic ↔ OpenAI deformatoconvertir。
         //
-        // 现在 OpenRouter 已推出 Claude Code 兼容接口，因此默认直接透传 endpoint。
-        // 如需回退旧逻辑，可在 forwarder 中根据 needs_transform 改写 endpoint。
+        // 现en OpenRouter ya推出 Claude Code 兼容接口，因此predeterminado直接透传 endpoint。
+        // 如需回退旧逻辑，可en forwarder 中según needs_transform 改写 endpoint。
         //
         let mut base = format!(
             "{}/{}",
@@ -581,7 +581,7 @@ impl ProviderAdapter for ClaudeAdapter {
             endpoint.trim_start_matches('/')
         );
 
-        // 去除重复的 /v1/v1（可能由 base_url 与 endpoint 都带版本导致）
+        // 去除重复de /v1/v1（可能por base_url con endpoint 都带版本导致）
         while base.contains("/v1/v1") {
             base = base.replace("/v1/v1", "/v1");
         }
@@ -595,7 +595,7 @@ impl ProviderAdapter for ClaudeAdapter {
     ) -> Result<Vec<(http::HeaderName, http::HeaderValue)>, ProxyError> {
         use super::adapter::auth_header_value as hv;
         use http::{HeaderName, HeaderValue};
-        // 注意：anthropic-version 由 forwarder.rs 统一处理（透传客户端值或设置默认值）
+        // 注意：anthropic-version por forwarder.rs 统一procesar（透传cliente值o设置predeterminado值）
         let bearer = format!("Bearer {}", auth.api_key);
         Ok(match auth.strategy {
             AuthStrategy::Anthropic => {
@@ -622,8 +622,8 @@ impl ProviderAdapter for ClaudeAdapter {
                 ]
             }
             AuthStrategy::CodexOAuth => {
-                // 注意：bearer token 由 forwarder 动态注入到 auth.api_key
-                // ChatGPT-Account-Id 由 forwarder 注入额外 header
+                // 注意：bearer token por forwarder 动态注入a auth.api_key
+                // ChatGPT-Account-Id por forwarder 注入额外 header
                 vec![
                     (HeaderName::from_static("authorization"), hv(&bearer)?),
                     (
@@ -633,7 +633,7 @@ impl ProviderAdapter for ClaudeAdapter {
                 ]
             }
             AuthStrategy::GitHubCopilot => {
-                // 生成请求追踪 ID
+                // generarsolicitud追踪 ID
                 let request_id = uuid::Uuid::new_v4().to_string();
                 vec![
                     (HeaderName::from_static("authorization"), hv(&bearer)?),
@@ -657,7 +657,7 @@ impl ProviderAdapter for ClaudeAdapter {
                         HeaderName::from_static("x-github-api-version"),
                         HeaderValue::from_static(super::copilot_auth::COPILOT_API_VERSION),
                     ),
-                    // 26-04-01新增的copilot关键 headers
+                    // 26-04-01新增decopilot关键 headers
                     (
                         HeaderName::from_static("openai-intent"),
                         HeaderValue::from_static("conversation-agent"),
@@ -670,7 +670,7 @@ impl ProviderAdapter for ClaudeAdapter {
                         HeaderName::from_static("x-interaction-type"),
                         HeaderValue::from_static("conversation-agent"),
                     ),
-                    // x-interaction-id 由 forwarder 按需注入（仅在有 session 时）
+                    // x-interaction-id por forwarder 按需注入（仅en有 session /）
                     (
                         HeaderName::from_static("x-vscode-user-agent-library-version"),
                         HeaderValue::from_static("electron-fetch"),
@@ -683,20 +683,20 @@ impl ProviderAdapter for ClaudeAdapter {
     }
 
     fn needs_transform(&self, provider: &Provider) -> bool {
-        // GitHub Copilot 总是需要格式转换 (Anthropic → OpenAI)
+        // GitHub Copilot 总是需要formatoconvertir (Anthropic → OpenAI)
         if self.is_github_copilot(provider) {
             return true;
         }
 
-        // Codex OAuth 总是需要格式转换 (Anthropic → OpenAI Responses API)
+        // Codex OAuth 总是需要formatoconvertir (Anthropic → OpenAI Responses API)
         if self.is_codex_oauth(provider) {
             return true;
         }
 
-        // 根据 api_format 配置决定是否需要格式转换
-        // - "anthropic" (默认): 直接透传，无需转换
-        // - "openai_chat": 需要 Anthropic ↔ OpenAI Chat Completions 格式转换
-        // - "openai_responses": 需要 Anthropic ↔ OpenAI Responses API 格式转换
+        // según api_format configuración决定是否需要formatoconvertir
+        // - "anthropic" (predeterminado): 直接透传，sin需convertir
+        // - "openai_chat": 需要 Anthropic ↔ OpenAI Chat Completions formatoconvertir
+        // - "openai_responses": 需要 Anthropic ↔ OpenAI Responses API formatoconvertir
         matches!(
             self.get_api_format(provider),
             "openai_chat" | "openai_responses" | "gemini_native"
@@ -788,7 +788,7 @@ mod tests {
 
     #[test]
     fn test_extract_auth_anthropic_auth_token_uses_claude_auth_strategy() {
-        // ANTHROPIC_AUTH_TOKEN 在 Anthropic SDK 里语义就是 Authorization: Bearer，
+        // ANTHROPIC_AUTH_TOKEN en Anthropic SDK 里语义就是 Authorization: Bearer，
         // 因此走 ClaudeAuth strategy 而不是 Anthropic（x-api-key）。
         let adapter = ClaudeAdapter::new();
         let provider = create_provider(json!({
@@ -820,7 +820,7 @@ mod tests {
 
     #[test]
     fn test_extract_auth_both_env_vars_prefer_auth_token() {
-        // 两个变量都填时，extract_key 选 AUTH_TOKEN，strategy 推断也必须保持一致。
+        // 两个变量都填/，extract_key 选 AUTH_TOKEN，strategy 推断也必须保持一致。
         let adapter = ClaudeAdapter::new();
         let provider = create_provider(json!({
             "env": {
@@ -837,8 +837,8 @@ mod tests {
 
     #[test]
     fn test_extract_auth_apikey_field_fallback_uses_anthropic_strategy() {
-        // 当用户没填任一 ANTHROPIC_* env，而是直接使用 apiKey 字段时，
-        // 视为没有显式语义偏好，默认走 Anthropic 官方协议（x-api-key）。
+        // cuandousar户没填任一 ANTHROPIC_* env，而是直接使usar apiKey 字段/，
+        // 视para没有显式语义偏好，predeterminado走 Anthropic 官方协议（x-api-key）。
         let adapter = ClaudeAdapter::new();
         let provider = create_provider(json!({
             "apiKey": "sk-direct",
@@ -887,7 +887,7 @@ mod tests {
 
     #[test]
     fn test_get_auth_headers_rejects_illegal_header_chars() {
-        // 用户粘贴含 \r\n 的"脏"key 不能让进程 panic
+        // usar户粘贴含 \r\n de"脏"key 不能让进程 panic
         let adapter = ClaudeAdapter::new();
         let auth = AuthInfo::new(
             "sk-ant-bad\r\nX-Inject: 1".to_string(),
@@ -1053,10 +1053,10 @@ mod tests {
         assert_eq!(auth.strategy, AuthStrategy::GoogleOAuth);
     }
 
-    /// 回归:从 oauth_creds.json 复制时常带前导换行/空格。未 trim 时
-    /// `starts_with('{')` 会落空,导致误分类为 `ProviderType::Gemini`,再
-    /// 以 raw JSON 当 `x-goog-api-key` 发出去触发 401。trim 应在 provider
-    /// 类型判定和 OAuth 解析前统一生效。
+    /// 回归:desde oauth_creds.json 复制/常带前导换行/空格。no trim /
+    /// `starts_with('{')` 会落空,导致误分类para `ProviderType::Gemini`,再
+    /// 以 raw JSON cuando `x-goog-api-key` 发出去触发 401。trim 应en provider
+    /// tipo判定y OAuth analizar前统一生效。
     #[test]
     fn test_extract_auth_gemini_cli_json_with_leading_whitespace_classifies_correctly() {
         let adapter = ClaudeAdapter::new();
@@ -1082,8 +1082,8 @@ mod tests {
         assert_eq!(auth.strategy, AuthStrategy::GoogleOAuth);
     }
 
-    /// 回归:裸 `ya29.` access_token 若带前导换行,也应被 trim 后识别为
-    /// Gemini CLI OAuth,避免前导空白把 `starts_with("ya29.")` 检查顶穿。
+    /// 回归:裸 `ya29.` access_token 若带前导换行,也应/ trim 后识别para
+    /// Gemini CLI OAuth,避免前导空白把 `starts_with("ya29.")` verificar顶穿。
     #[test]
     fn test_extract_auth_gemini_cli_access_token_with_leading_newline_classifies_correctly() {
         let adapter = ClaudeAdapter::new();

@@ -59,7 +59,7 @@ export function useImportExport(
       console.error("[useImportExport] Failed to open file dialog", error);
       toast.error(
         t("settings.selectFileFailed", {
-          defaultValue: "选择文件失败",
+          defaultValue: "Error al seleccionar archivo",
         }),
       );
     }
@@ -69,7 +69,7 @@ export function useImportExport(
     if (!selectedFile) {
       toast.error(
         t("settings.selectFileFailed", {
-          defaultValue: "请选择有效的 SQL 备份文件",
+          defaultValue: "Por favor seleccione un archivo de respaldo SQL válido",
         }),
       );
       return;
@@ -88,7 +88,7 @@ export function useImportExport(
         const message =
           result.message ||
           t("settings.configCorrupted", {
-            defaultValue: "SQL 文件已损坏或格式不正确",
+            defaultValue: "Archivo SQL dañado o formato incorrecto",
           });
         setErrorMessage(message);
         toast.error(message);
@@ -96,9 +96,9 @@ export function useImportExport(
       }
 
       setBackupId(result.backupId ?? null);
-      // 导入成功后立即触发外部刷新（与 live 同步结果解耦）
-      // - 避免 sync 失败时 UI 不刷新
-      // - 避免依赖 setTimeout（组件卸载会取消）
+      // Después de importar exitosamente, activar inmediatamente la actualización externa (desacoplado del resultado de sincronización con live)
+      // - Evitar que la UI no se actualice si la sincronización falla
+      // - Evitar dependencia de setTimeout (se cancela si el componente se desmonta)
       void onImportSuccess?.();
 
       const syncResult = await syncCurrentProvidersLiveSafe();
@@ -106,7 +106,7 @@ export function useImportExport(
         setStatus("success");
         toast.success(
           t("settings.importSuccess", {
-            defaultValue: "配置导入成功",
+            defaultValue: "Configuración importada exitosamente",
           }),
           { closeButton: true },
         );
@@ -119,7 +119,7 @@ export function useImportExport(
         toast.warning(
           t("settings.importPartialSuccess", {
             defaultValue:
-              "配置已导入，但同步到当前供应商失败。请手动重新选择一次供应商。",
+              "Configuración importada, pero falló la sincronización con el proveedor actual. Por favor reseleccione manualmente el proveedor.",
           }),
         );
       }
@@ -131,7 +131,7 @@ export function useImportExport(
       setErrorMessage(message);
       toast.error(
         t("settings.importFailedError", {
-          defaultValue: "导入配置失败: {{message}}",
+          defaultValue: "Error al importar configuración: {{message}}",
           message,
         }),
       );
@@ -149,7 +149,7 @@ export function useImportExport(
       if (!destination) {
         toast.error(
           t("settings.selectFileFailed", {
-            defaultValue: "请选择 SQL 备份保存路径",
+            defaultValue: "Por favor seleccione la ruta de guardado del respaldo SQL",
           }),
         );
         return;
@@ -160,14 +160,14 @@ export function useImportExport(
         const displayPath = result.filePath ?? destination;
         toast.success(
           t("settings.configExported", {
-            defaultValue: "配置已导出",
+            defaultValue: "Configuración exportada",
           }) + `\n${displayPath}`,
           { closeButton: true },
         );
       } else {
         toast.error(
           t("settings.exportFailed", {
-            defaultValue: "导出配置失败",
+            defaultValue: "Error al exportar configuración",
           }) + (result.message ? `: ${result.message}` : ""),
         );
       }
@@ -175,7 +175,7 @@ export function useImportExport(
       console.error("[useImportExport] Failed to export config", error);
       toast.error(
         t("settings.exportFailedError", {
-          defaultValue: "导出配置失败: {{message}}",
+          defaultValue: "Error al exportar configuración: {{message}}",
           message: error instanceof Error ? error.message : String(error ?? ""),
         }),
       );

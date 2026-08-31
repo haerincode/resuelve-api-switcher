@@ -716,7 +716,7 @@ pub(crate) fn write_live_snapshot(app_type: &AppType, provider: &Provider) -> Re
         AppType::ClaudeDesktop => {
             return Err(AppError::localized(
                 "claude_desktop.live.requires_db_context",
-                "Claude Desktop 配置写入需要通过供应商切换流程执行",
+                "Escritura de configuración Claude Desktop necesita ejecutarse mediante proceso de cambio de proveedor",
                 "Claude Desktop configuration must be written through the provider switch flow",
             ));
         }
@@ -724,12 +724,12 @@ pub(crate) fn write_live_snapshot(app_type: &AppType, provider: &Provider) -> Re
             let obj = provider
                 .settings_config
                 .as_object()
-                .ok_or_else(|| AppError::Config("Codex 供应商配置必须是 JSON 对象".to_string()))?;
+                .ok_or_else(|| AppError::Config("Configuración de proveedor Codex debe ser objeto JSON".to_string()))?;
             let auth = obj
                 .get("auth")
-                .ok_or_else(|| AppError::Config("Codex 供应商配置缺少 'auth' 字段".to_string()))?;
+                .ok_or_else(|| AppError::Config("Configuración de proveedor Codex carece de campo 'auth'".to_string()))?;
             let config_str = obj.get("config").and_then(|v| v.as_str()).ok_or_else(|| {
-                AppError::Config("Codex 供应商配置缺少 'config' 字段或不是字符串".to_string())
+                AppError::Config("Configuración de proveedor Codex carece de campo 'config' o no es string".to_string())
             })?;
 
             write_codex_live_atomic_with_stable_provider(auth, Some(config_str))?;
@@ -905,9 +905,9 @@ pub(crate) fn sync_current_provider_for_app_to_live(
 
 /// Sync current provider to live configuration
 ///
-/// 使用有效的当前供应商 ID（验证过存在性）。
-/// 优先从本地 settings 读取，验证后 fallback 到数据库的 is_current 字段。
-/// 这确保了配置导入后无效 ID 会自动 fallback 到数据库。
+/// Usa ID de proveedor actual válido (verificada su existencia).
+/// Prioriza lectura desde settings local, después de verificar fallback a campo is_current de base de datos.
+/// Esto asegura que ID inválido después de importar configuración automáticamente haga fallback a base de datos.
 ///
 /// For additive mode apps (OpenCode), all providers are synced instead of just the current one.
 pub fn sync_current_to_live(state: &AppState) -> Result<(), AppError> {
@@ -939,7 +939,7 @@ pub fn sync_current_to_live(state: &AppState) -> Result<(), AppError> {
     // Skill sync
     for app_type in AppType::all() {
         if let Err(e) = crate::services::skill::SkillService::sync_to_app(&state.db, &app_type) {
-            log::warn!("同步 Skill 到 {app_type:?} 失败: {e}");
+            log::warn!("Sincronizar Skill a {app_type:?} falló: {e}");
             // Continue syncing other apps, don't abort
         }
     }
@@ -955,7 +955,7 @@ pub fn read_live_settings(app_type: AppType) -> Result<Value, AppError> {
             if !auth_path.exists() {
                 return Err(AppError::localized(
                     "codex.auth.missing",
-                    "Codex 配置文件不存在：缺少 auth.json",
+                    "Archivo de configuración Codex no existe: falta auth.json",
                     "Codex configuration missing: auth.json not found",
                 ));
             }
@@ -968,7 +968,7 @@ pub fn read_live_settings(app_type: AppType) -> Result<Value, AppError> {
             if !path.exists() {
                 return Err(AppError::localized(
                     "claude.live.missing",
-                    "Claude Code 配置文件不存在",
+                    "Archivo de configuración Claude Code no existe",
                     "Claude settings file is missing",
                 ));
             }
@@ -976,7 +976,7 @@ pub fn read_live_settings(app_type: AppType) -> Result<Value, AppError> {
         }
         AppType::ClaudeDesktop => Err(AppError::localized(
             "claude_desktop.live.read_unsupported",
-            "Claude Desktop 3P 配置不支持作为通用 live 配置导入，请使用“从 Claude 导入兼容供应商”。",
+            "La configuración 3P de Claude Desktop no se puede importar como configuración live genérica. Usa \"Importar proveedor compatible desde Claude\".",
             "Claude Desktop 3P configuration cannot be imported as a generic live config. Use 'Import compatible providers from Claude' instead.",
         )),
         AppType::Gemini => {
@@ -989,7 +989,7 @@ pub fn read_live_settings(app_type: AppType) -> Result<Value, AppError> {
             if !env_path.exists() {
                 return Err(AppError::localized(
                     "gemini.env.missing",
-                    "Gemini .env 文件不存在",
+                    "Archivo .env de Gemini no existe",
                     "Gemini .env file not found",
                 ));
             }
@@ -1019,7 +1019,7 @@ pub fn read_live_settings(app_type: AppType) -> Result<Value, AppError> {
             if !config_path.exists() {
                 return Err(AppError::localized(
                     "opencode.config.missing",
-                    "OpenCode 配置文件不存在",
+                    "Archivo de configuración OpenCode no existe",
                     "OpenCode configuration file not found",
                 ));
             }
@@ -1034,7 +1034,7 @@ pub fn read_live_settings(app_type: AppType) -> Result<Value, AppError> {
             if !config_path.exists() {
                 return Err(AppError::localized(
                     "openclaw.config.missing",
-                    "OpenClaw 配置文件不存在",
+                    "Archivo de configuración OpenClaw no existe",
                     "OpenClaw configuration file not found",
                 ));
             }
@@ -1047,7 +1047,7 @@ pub fn read_live_settings(app_type: AppType) -> Result<Value, AppError> {
             if !config_path.exists() {
                 return Err(AppError::localized(
                     "hermes.config.missing",
-                    "Hermes 配置文件不存在",
+                    "Archivo de configuración Hermes no existe",
                     "Hermes configuration file not found",
                 ));
             }
@@ -1069,10 +1069,10 @@ pub fn import_default_config(state: &AppState, app_type: AppType) -> Result<bool
         return Ok(false);
     }
 
-    // 允许 "只有官方 seed 预设" 的情况下继续导入 live：
-    // - 启动编排顺序是先 import 后 seed，新用户启动时 providers 为空，导入照常
-    // - 老用户已有非 seed provider，跳过导入（正确）
-    // - 用户手动点 ProviderEmptyState 的导入按钮时，与官方 seed 共存而不被阻塞
+    // Permite continuar importación live en situación "solo presets seed oficiales":
+    // - Orden de orquestación de inicio es primero import luego seed, al iniciar nuevo usuario providers está vacío, importación procede normalmente
+    // - Usuario antiguo ya tiene provider no-seed, salta importación (correcto)
+    // - Cuando usuario manualmente hace clic en botón importar de ProviderEmptyState, coexiste con seed oficial sin ser bloqueado
     if state.db.has_non_official_seed_provider(app_type.as_str())? {
         return Ok(false);
     }
@@ -1083,7 +1083,7 @@ pub fn import_default_config(state: &AppState, app_type: AppType) -> Result<bool
             if !auth_path.exists() {
                 return Err(AppError::localized(
                     "codex.live.missing",
-                    "Codex 配置文件不存在",
+                    "Archivo de configuración Codex no existe",
                     "Codex configuration file is missing",
                 ));
             }
@@ -1096,7 +1096,7 @@ pub fn import_default_config(state: &AppState, app_type: AppType) -> Result<bool
             if !settings_path.exists() {
                 return Err(AppError::localized(
                     "claude.live.missing",
-                    "Claude Code 配置文件不存在",
+                    "Archivo de configuración Claude Code no existe",
                     "Claude settings file is missing",
                 ));
             }
@@ -1107,7 +1107,7 @@ pub fn import_default_config(state: &AppState, app_type: AppType) -> Result<bool
         AppType::ClaudeDesktop => {
             return Err(AppError::localized(
                 "claude_desktop.import_unsupported",
-                "Claude Desktop 3P 配置不能通过通用导入读取，请使用“从 Claude 导入兼容供应商”。",
+                "La configuración 3P de Claude Desktop no se puede leer mediante la importación genérica. Usa \"Importar proveedor compatible desde Claude\".",
                 "Claude Desktop 3P config cannot be imported through the generic import flow. Use 'Import compatible providers from Claude' instead.",
             ));
         }
@@ -1121,7 +1121,7 @@ pub fn import_default_config(state: &AppState, app_type: AppType) -> Result<bool
             if !env_path.exists() {
                 return Err(AppError::localized(
                     "gemini.live.missing",
-                    "Gemini 配置文件不存在",
+                    "Archivo de configuración Gemini no existe",
                     "Gemini configuration file is missing",
                 ));
             }
@@ -1164,7 +1164,7 @@ pub fn import_default_config(state: &AppState, app_type: AppType) -> Result<bool
         .set_current_provider(app_type.as_str(), &provider.id)?;
     crate::settings::set_current_provider(&app_type, Some(provider.id.as_str()))?;
 
-    Ok(true) // 真正导入了
+    Ok(true) // Realmente importó
 }
 
 /// Decide whether startup should auto-import the current live config as `default`.
@@ -1223,7 +1223,7 @@ pub(crate) fn write_gemini_live(provider: &Provider) -> Result<(), AppError> {
         } else if !config_value.is_null() {
             return Err(AppError::localized(
                 "gemini.validation.invalid_config",
-                "Gemini 配置格式错误: config 必须是对象或 null",
+                "Formato de configuración Gemini incorrecto: config debe ser objeto o null",
                 "Gemini config invalid: config must be an object or null",
             ));
         }

@@ -1,6 +1,6 @@
-//! Response Handler - 统一响应处理
+//! Response Handler - 统一respuestaprocesar
 //!
-//! 提供流式和非流式响应的统一处理接口
+//! 提供streamingy非streamingrespuestade统一procesar接口
 
 use super::session::ProxySession;
 use super::usage::parser::TokenUsage;
@@ -14,18 +14,18 @@ use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tokio::time::timeout;
 
-/// 响应类型
+/// respuestatipo
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum ResponseType {
-    /// 流式响应 (SSE)
+    /// streamingrespuesta (SSE)
     Stream,
-    /// 非流式响应
+    /// 非streamingrespuesta
     NonStream,
 }
 
 impl ResponseType {
-    /// 从 Content-Type 检测响应类型
+    /// desde Content-Type 检测respuestatipo
     #[allow(dead_code)]
     pub fn from_content_type(content_type: &str) -> Self {
         if content_type.contains("text/event-stream") {
@@ -36,18 +36,18 @@ impl ResponseType {
     }
 }
 
-/// 流式响应处理器
+/// streamingrespuestaprocesar器
 #[allow(dead_code)]
 pub struct StreamHandler {
-    /// 空闲超时时间
+    /// 空闲timeout/间
     idle_timeout: Duration,
-    /// 收集的事件
+    /// 收集de事件
     events: Arc<Mutex<Vec<Value>>>,
 }
 
 #[allow(dead_code)]
 impl StreamHandler {
-    /// 创建新的流式处理器
+    /// crear新destreamingprocesar器
     pub fn new(idle_timeout_secs: u64) -> Self {
         Self {
             idle_timeout: Duration::from_secs(idle_timeout_secs),
@@ -55,9 +55,9 @@ impl StreamHandler {
         }
     }
 
-    /// 处理流式响应，返回分流后的客户端流
+    /// procesarstreamingrespuesta，retornar分流后decliente流
     ///
-    /// 客户端流立即返回，内部流在后台收集事件
+    /// cliente流立即retornar，内部流en后台收集事件
     pub fn handle_stream<S>(
         &self,
         stream: S,
@@ -82,7 +82,7 @@ impl StreamHandler {
                     Ok(Some(Ok(bytes))) => {
                         _last_activity = Instant::now();
 
-                        // 解析 SSE 事件
+                        // analizar SSE 事件
                         crate::proxy::sse::append_utf8_safe(&mut buffer, &mut utf8_remainder, &bytes);
 
                         // 提取完整事件
@@ -102,7 +102,7 @@ impl StreamHandler {
                         yield Ok(bytes);
                     }
                     Ok(Some(Err(e))) => {
-                        log::error!("流错误: {e}");
+                        log::error!("流error: {e}");
                         yield Err(std::io::Error::other(e.to_string()));
                         break;
                     }
@@ -111,8 +111,8 @@ impl StreamHandler {
                         break;
                     }
                     Err(_) => {
-                        // 空闲超时
-                        log::warn!("流式响应空闲超时: {idle_timeout:?} 无数据");
+                        // 空闲timeout
+                        log::warn!("streamingrespuesta空闲timeout: {idle_timeout:?} sin数据");
                         yield Err(std::io::Error::other("Stream idle timeout"));
                         break;
                     }
@@ -121,13 +121,13 @@ impl StreamHandler {
         }
     }
 
-    /// 获取收集的事件
+    /// obtener收集de事件
     pub async fn get_events(&self) -> Vec<Value> {
         let guard = self.events.lock().await;
         guard.clone()
     }
 
-    /// 从收集的事件中提取 Token 使用量
+    /// desde收集de事件中提取 Token 使usar量
     pub async fn extract_usage(&self, session: &ProxySession) -> Option<TokenUsage> {
         let events = self.get_events().await;
 
@@ -142,15 +142,15 @@ impl StreamHandler {
     }
 }
 
-/// 非流式响应处理器
+/// 非streamingrespuestaprocesar器
 #[allow(dead_code)]
 pub struct NonStreamHandler;
 
 #[allow(dead_code)]
 impl NonStreamHandler {
-    /// 处理非流式响应
+    /// procesar非streamingrespuesta
     ///
-    /// 克隆响应体用于后台解析，原始响应立即返回
+    /// 克隆respuesta体usar/后台analizar，原始respuesta立即retornar
     pub async fn handle_response(
         body: &[u8],
         session: &ProxySession,
@@ -172,13 +172,13 @@ impl NonStreamHandler {
     }
 }
 
-/// 统一响应分发器
+/// 统一respuesta分发器
 #[allow(dead_code)]
 pub struct ResponseDispatcher;
 
 #[allow(dead_code)]
 impl ResponseDispatcher {
-    /// 判断响应类型
+    /// 判断respuestatipo
     pub fn detect_type(content_type: &str) -> ResponseType {
         ResponseType::from_content_type(content_type)
     }

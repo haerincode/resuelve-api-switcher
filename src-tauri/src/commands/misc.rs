@@ -18,7 +18,7 @@ use std::os::windows::process::CommandExt;
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
-/// 打开外部链接
+/// Abrir enlace externo
 #[tauri::command]
 pub async fn open_external(app: AppHandle, url: String) -> Result<bool, String> {
     let url = if url.starts_with("http://") || url.starts_with("https://") {
@@ -29,7 +29,7 @@ pub async fn open_external(app: AppHandle, url: String) -> Result<bool, String> 
 
     app.opener()
         .open_url(&url, None::<String>)
-        .map_err(|e| format!("打开链接失败: {e}"))?;
+        .map_err(|e| format!("Error al abrir el enlace: {e}"))?;
 
     Ok(true)
 }
@@ -40,17 +40,17 @@ pub async fn copy_text_to_clipboard(text: String) -> Result<bool, String> {
     // Clipboard access can block on some platforms and may have thread/loop constraints
     tokio::task::spawn_blocking(move || {
         let mut clipboard =
-            arboard::Clipboard::new().map_err(|e| format!("访问系统剪贴板失败: {e}"))?;
+            arboard::Clipboard::new().map_err(|e| format!("Error al acceder al portapapeles del sistema: {e}"))?;
         clipboard
             .set_text(text)
-            .map_err(|e| format!("写入系统剪贴板失败: {e}"))?;
+            .map_err(|e| format!("Error al escribir en el portapapeles del sistema: {e}"))?;
         Ok(true)
     })
     .await
-    .map_err(|e| format!("剪贴板任务执行失败: {e}"))?
+    .map_err(|e| format!("Error al ejecutar tarea de portapapeles: {e}"))?
 }
 
-/// 检查更新
+/// Comprobar actualizaciones
 #[tauri::command]
 pub async fn check_for_updates(handle: AppHandle) -> Result<bool, String> {
     handle
@@ -59,15 +59,15 @@ pub async fn check_for_updates(handle: AppHandle) -> Result<bool, String> {
             "https://github.com/farion1231/cc-switch/releases/latest",
             None::<String>,
         )
-        .map_err(|e| format!("打开更新页面失败: {e}"))?;
+        .map_err(|e| format!("Error al abrir la página de actualizaciones: {e}"))?;
 
     Ok(true)
 }
 
-/// 判断是否为便携版（绿色版）运行
+/// Determinar si se ejecuta en modo portátil (versión green)
 #[tauri::command]
 pub async fn is_portable_mode() -> Result<bool, String> {
-    let exe_path = std::env::current_exe().map_err(|e| format!("获取可执行路径失败: {e}"))?;
+    let exe_path = std::env::current_exe().map_err(|e| format!("Error al obtener la ruta del ejecutable: {e}"))?;
     if let Some(dir) = exe_path.parent() {
         Ok(dir.join("portable.ini").is_file())
     } else {
@@ -75,22 +75,22 @@ pub async fn is_portable_mode() -> Result<bool, String> {
     }
 }
 
-/// 获取应用启动阶段的初始化错误（若有）。
-/// 用于前端在早期主动拉取，避免事件订阅竞态导致的提示缺失。
+/// Obtener errores de inicialización de la fase de inicio de la aplicación (si los hay).
+/// Usado para que el frontend los obtenga proactivamente al inicio, evitando pérdida de notificaciones por condiciones de carrera en la suscripción a eventos.
 #[tauri::command]
 pub async fn get_init_error() -> Result<Option<InitErrorPayload>, String> {
     Ok(crate::init_status::get_init_error())
 }
 
-/// 获取 JSON→SQLite 迁移结果（若有）。
-/// 只返回一次 true，之后返回 false，用于前端显示一次性 Toast 通知。
+/// Obtener el resultado de la migración JSON→SQLite (si existe).
+/// Solo devuelve true una vez, después devuelve false, usado para mostrar notificación Toast única en el frontend.
 #[tauri::command]
 pub async fn get_migration_result() -> Result<bool, String> {
     Ok(crate::init_status::take_migration_success())
 }
 
-/// 获取 Skills 自动导入（SSOT）迁移结果（若有）。
-/// 只返回一次 Some({count})，之后返回 None，用于前端显示一次性 Toast 通知。
+/// Obtener el resultado de la migración de importación automática de Skills (SSOT) (si existe).
+/// Solo devuelve Some({count}) una vez, después devuelve None, usado para mostrar notificación Toast única en el frontend.
 #[tauri::command]
 pub async fn get_skills_migration_result() -> Result<Option<SkillsMigrationPayload>, String> {
     Ok(crate::init_status::take_skills_migration_result())
@@ -100,11 +100,11 @@ pub async fn get_skills_migration_result() -> Result<Option<SkillsMigrationPaylo
 pub struct ToolVersion {
     name: String,
     version: Option<String>,
-    latest_version: Option<String>, // 新增字段：最新版本
+    latest_version: Option<String>, // Nuevo campo: versión más reciente
     error: Option<String>,
-    /// 工具运行环境: "windows", "wsl", "macos", "linux", "unknown"
+    /// Entorno de ejecución de la herramienta: "windows", "wsl", "macos", "linux", "unknown"
     env_type: String,
-    /// 当 env_type 为 "wsl" 时，返回该工具绑定的 WSL distro（用于按 distro 探测 shells）
+    /// Cuando env_type es "wsl", devuelve la distro de WSL vinculada a esta herramienta (usado para detectar shells por distro)
     wsl_distro: Option<String>,
 }
 
@@ -185,7 +185,7 @@ pub async fn get_tool_versions(
     }
 }
 
-/// 获取单个工具的版本信息（内部实现）
+/// Obtener información de versión de una herramienta individual (implementación interna)
 async fn get_single_tool_version_impl(
     tool: &str,
     wsl_shell: Option<&str>,
@@ -196,13 +196,13 @@ async fn get_single_tool_version_impl(
         "unexpected tool name in get_single_tool_version_impl: {tool}"
     );
 
-    // 判断该工具的运行环境 & WSL distro（如有）
+    // Determinar el entorno de ejecución de esta herramienta y la distro de WSL (si existe)
     let (env_type, wsl_distro) = tool_env_type_and_wsl_distro(tool);
 
-    // 使用全局 HTTP 客户端（已包含代理配置）
+    // Usar el cliente HTTP global (ya incluye configuración de proxy)
     let client = crate::proxy::http_client::get();
 
-    // 1. 获取本地版本
+    // 1. Obtener versión local
     let (local_version, local_error) = if let Some(distro) = wsl_distro.as_deref() {
         try_get_version_wsl(tool, distro, wsl_shell, wsl_shell_flag)
     } else {
@@ -214,7 +214,7 @@ async fn get_single_tool_version_impl(
         }
     };
 
-    // 2. 获取远程最新版本
+    // 2. Obtener versión remota más reciente
     let latest_version = match tool {
         "claude" => fetch_npm_latest_version(&client, "@anthropic-ai/claude-code").await,
         "codex" => fetch_npm_latest_version(&client, "@openai/codex").await,
@@ -274,11 +274,11 @@ async fn fetch_github_latest_version(client: &reqwest::Client, repo: &str) -> Op
     }
 }
 
-/// 预编译的版本号正则表达式
+/// Expresión regular precompilada para extraer números de versión
 static VERSION_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\d+\.\d+\.\d+(-[\w.]+)?").expect("Invalid version regex"));
 
-/// 从版本输出中提取纯版本号
+/// Extraer número de versión puro de la salida de versión
 fn extract_version(raw: &str) -> String {
     VERSION_RE
         .find(raw)
@@ -286,7 +286,7 @@ fn extract_version(raw: &str) -> String {
         .unwrap_or_else(|| raw.to_string())
 }
 
-/// 尝试直接执行命令获取版本
+/// Intentar ejecutar comando directamente para obtener versión
 fn try_get_version(tool: &str) -> (Option<String>, Option<String>) {
     use std::process::Command;
 
@@ -338,8 +338,8 @@ fn try_get_version(tool: &str) -> (Option<String>, Option<String>) {
     }
 }
 
-/// 校验 WSL 发行版名称是否合法
-/// WSL 发行版名称只允许字母、数字、连字符和下划线
+/// Validar si el nombre de la distribución de WSL es legal
+/// Los nombres de distribución de WSL solo permiten letras, números, guiones y guiones bajos
 #[cfg(target_os = "windows")]
 fn is_valid_wsl_distro_name(name: &str) -> bool {
     !name.is_empty()
@@ -381,18 +381,18 @@ fn try_get_version_wsl(
 ) -> (Option<String>, Option<String>) {
     use std::process::Command;
 
-    // 防御性断言：tool 只能是预定义的值
+    // Aserción defensiva: tool solo puede ser uno de los valores predefinidos
     debug_assert!(
         ["claude", "codex", "gemini", "opencode"].contains(&tool),
         "unexpected tool name: {tool}"
     );
 
-    // 校验 distro 名称，防止命令注入
+    // Validar nombre de distro, prevenir inyección de comandos
     if !is_valid_wsl_distro_name(distro) {
         return (None, Some(format!("[WSL:{distro}] invalid distro name")));
     }
 
-    // 构建 Shell 脚本检测逻辑
+    // Construir lógica de detección de script Shell
     let (shell, flag, cmd) = if let Some(shell) = force_shell {
         // Defensive validation: never allow an arbitrary executable name here.
         if !is_valid_shell(shell) {
@@ -422,7 +422,7 @@ fn try_get_version_wsl(
             }
             format!("\"${{SHELL:-sh}}\" {flag} '{tool} --version'")
         } else {
-            // 兜底：自动尝试 -lic, -lc, -c
+            // Respaldo: intentar automáticamente -lic, -lc, -c
             format!(
                 "\"${{SHELL:-sh}}\" -lic '{tool} --version' 2>/dev/null || \"${{SHELL:-sh}}\" -lc '{tool} --version' 2>/dev/null || \"${{SHELL:-sh}}\" -c '{tool} --version'"
             )
@@ -469,9 +469,9 @@ fn try_get_version_wsl(
     }
 }
 
-/// 非 Windows 平台的 WSL 版本检测存根
-/// 注意：此函数实际上不会被调用，因为 `wsl_distro_from_path` 在非 Windows 平台总是返回 None。
-/// 保留此函数是为了保持 API 一致性，防止未来重构时遗漏。
+/// Stub de detección de versión WSL en plataformas no Windows
+/// Nota: Esta función en realidad no se llama, ya que `wsl_distro_from_path` en plataformas no Windows siempre devuelve None.
+/// Esta función se mantiene para preservar la consistencia de la API, evitando omisiones en futuras refactorizaciones.
 #[cfg(not(target_os = "windows"))]
 fn try_get_version_wsl(
     _tool: &str,
@@ -517,10 +517,10 @@ fn extend_from_path_list(
     }
 }
 
-/// OpenCode install.sh 路径优先级（见 https://github.com/anomalyco/opencode README）:
+/// OpenCode install.sh prioridad de rutas (ver https://github.com/anomalyco/opencode README):
 ///   $OPENCODE_INSTALL_DIR > $XDG_BIN_DIR > $HOME/bin > $HOME/.opencode/bin
-/// 额外扫描 Bun 默认全局安装路径（~/.bun/bin）
-/// 和 Go 安装路径（~/go/bin、$GOPATH/*/bin）。
+/// Escaneo adicional de la ruta de instalación global predeterminada de Bun (~/.bun/bin)
+/// y ruta de instalación de Go (~/go/bin, $GOPATH/*/bin).
 fn opencode_extra_search_paths(
     home: &Path,
     opencode_install_dir: Option<std::ffi::OsString>,
@@ -581,13 +581,13 @@ fn extend_mise_node_search_paths(paths: &mut Vec<std::path::PathBuf>, home: &Pat
     }
 }
 
-/// 扫描常见路径查找 CLI
+/// Escanear rutas comunes para buscar CLI
 fn scan_cli_version(tool: &str) -> (Option<String>, Option<String>) {
     use std::process::Command;
 
     let home = dirs::home_dir().unwrap_or_default();
 
-    // 常见的安装路径（原生安装优先）
+    // Rutas de instalación comunes (instalaciones nativas primero)
     let mut search_paths: Vec<std::path::PathBuf> = Vec::new();
     if !home.as_os_str().is_empty() {
         push_unique_path(&mut search_paths, home.join(".local/bin"));
@@ -726,8 +726,8 @@ fn wsl_distro_for_tool(tool: &str) -> Option<String> {
     wsl_distro_from_path(&override_dir)
 }
 
-/// 从 UNC 路径中提取 WSL 发行版名称
-/// 支持 `\\wsl$\Ubuntu\...` 和 `\\wsl.localhost\Ubuntu\...` 两种格式
+/// Extraer el nombre de la distribución WSL de una ruta UNC
+/// Soporta tanto el formato `\\wsl$\Ubuntu\...` como `\\wsl.localhost\Ubuntu\...`
 #[cfg(target_os = "windows")]
 fn wsl_distro_from_path(path: &Path) -> Option<String> {
     use std::path::{Component, Prefix};
@@ -751,10 +751,10 @@ fn wsl_distro_from_path(path: &Path) -> Option<String> {
     }
 }
 
-/// 打开指定提供商的终端
+/// Abrir terminal del proveedor especificado
 ///
-/// 根据提供商配置的环境变量启动一个带有该提供商特定设置的终端
-/// 无需检查是否为当前激活的提供商，任何提供商都可以打开终端
+/// Inicia un terminal con las configuraciones específicas del proveedor según las variables de entorno configuradas
+/// No necesita verificar si es el proveedor activo actualmente, cualquier proveedor puede abrir un terminal
 #[allow(non_snake_case)]
 #[tauri::command]
 pub async fn open_provider_terminal(
@@ -766,26 +766,26 @@ pub async fn open_provider_terminal(
     let app_type = AppType::from_str(&app).map_err(|e| e.to_string())?;
     let launch_cwd = resolve_launch_cwd(cwd)?;
 
-    // 获取提供商配置
+    // Obtener configuración del proveedor
     let providers = ProviderService::list(state.inner(), app_type.clone())
-        .map_err(|e| format!("获取提供商列表失败: {e}"))?;
+        .map_err(|e| format!("Error al obtener lista de proveedores: {e}"))?;
 
     let provider = providers
         .get(&providerId)
-        .ok_or_else(|| format!("提供商 {providerId} 不存在"))?;
+        .ok_or_else(|| format!("El proveedor {providerId} no existe"))?;
 
-    // 从提供商配置中提取环境变量
+    // Extraer variables de entorno de la configuración del proveedor
     let config = &provider.settings_config;
     let env_vars = extract_env_vars_from_config(config, &app_type);
 
-    // 根据平台启动终端，传入提供商ID用于生成唯一的配置文件名
+    // Iniciar terminal según la plataforma, pasando el ID del proveedor para generar un nombre de archivo de configuración único
     launch_terminal_with_env(env_vars, &providerId, launch_cwd.as_deref())
-        .map_err(|e| format!("启动终端失败: {e}"))?;
+        .map_err(|e| format!("Error al iniciar terminal: {e}"))?;
 
     Ok(true)
 }
 
-/// 从提供商配置中提取环境变量
+/// Extraer variables de entorno de la configuración del proveedor
 fn extract_env_vars_from_config(
     config: &serde_json::Value,
     app_type: &AppType,
@@ -841,17 +841,17 @@ fn resolve_launch_cwd(cwd: Option<String>) -> Result<Option<PathBuf>, String> {
     };
 
     if raw_path.contains('\n') || raw_path.contains('\r') {
-        return Err("目录路径包含非法换行符".to_string());
+        return Err("La ruta del directorio contiene saltos de línea ilegales".to_string());
     }
 
     let path = Path::new(&raw_path);
     if !path.exists() {
-        return Err(format!("目录不存在: {raw_path}"));
+        return Err(format!("El directorio no existe: {raw_path}"));
     }
 
-    let resolved = std::fs::canonicalize(path).map_err(|e| format!("解析目录失败: {e}"))?;
+    let resolved = std::fs::canonicalize(path).map_err(|e| format!("Error al resolver el directorio: {e}"))?;
     if !resolved.is_dir() {
-        return Err(format!("选择的路径不是文件夹: {}", resolved.display()));
+        return Err(format!("La ruta seleccionada no es una carpeta: {}", resolved.display()));
     }
 
     // Strip Windows extended-length prefix that canonicalize produces,
@@ -872,8 +872,8 @@ fn resolve_launch_cwd(cwd: Option<String>) -> Result<Option<PathBuf>, String> {
     Ok(Some(resolved))
 }
 
-/// 创建临时配置文件并启动 claude 终端
-/// 使用 --settings 参数传入提供商特定的 API 配置
+/// Crear archivo de configuración temporal e iniciar terminal claude
+/// Usar el parámetro --settings para pasar la configuración de API específica del proveedor
 fn launch_terminal_with_env(
     env_vars: Vec<(String, String)>,
     provider_id: &str,
@@ -886,7 +886,7 @@ fn launch_terminal_with_env(
         std::process::id()
     ));
 
-    // 创建并写入配置文件
+    // Crear y escribir archivo de configuración
     write_claude_config(&config_file, &env_vars)?;
 
     #[cfg(target_os = "macos")]
@@ -908,10 +908,10 @@ fn launch_terminal_with_env(
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-    Err("不支持的操作系统".to_string())
+    Err("Sistema operativo no soportado".to_string())
 }
 
-/// 写入 claude 配置文件
+/// Escribir archivo de configuración claude
 fn write_claude_config(
     config_file: &std::path::Path,
     env_vars: &[(String, String)],
@@ -926,12 +926,12 @@ fn write_claude_config(
     config_obj.insert("env".to_string(), serde_json::Value::Object(env_obj));
 
     let config_json =
-        serde_json::to_string_pretty(&config_obj).map_err(|e| format!("序列化配置失败: {e}"))?;
+        serde_json::to_string_pretty(&config_obj).map_err(|e| format!("Error al serializar configuración: {e}"))?;
 
-    std::fs::write(config_file, config_json).map_err(|e| format!("写入配置文件失败: {e}"))
+    std::fs::write(config_file, config_json).map_err(|e| format!("Error al escribir archivo de configuración: {e}"))
 }
 
-/// macOS: 根据用户首选终端启动
+/// macOS: Iniciar según el terminal preferido del usuario
 #[cfg(target_os = "macos")]
 fn launch_macos_terminal(config_file: &std::path::Path, cwd: Option<&Path>) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
@@ -959,11 +959,11 @@ exec bash --norc --noprofile
         cd_command = cd_command,
     );
 
-    std::fs::write(&script_file, &script_content).map_err(|e| format!("写入启动脚本失败: {e}"))?;
+    std::fs::write(&script_file, &script_content).map_err(|e| format!("Error al escribir script de inicio: {e}"))?;
 
     // Make script executable
     std::fs::set_permissions(&script_file, std::fs::Permissions::from_mode(0o755))
-        .map_err(|e| format!("设置脚本权限失败: {e}"))?;
+        .map_err(|e| format!("Error al establecer permisos del script: {e}"))?;
 
     // Try the preferred terminal first, fall back to Terminal.app if it fails
     // Note: Kitty doesn't need the -e flag, others do
@@ -981,7 +981,7 @@ exec bash --norc --noprofile
     // If preferred terminal fails and it's not the default, try Terminal.app as fallback
     if result.is_err() && terminal != "terminal" {
         log::warn!(
-            "首选终端 {} 启动失败，回退到 Terminal.app: {:?}",
+            "Error al iniciar terminal preferido {}, usando Terminal.app como respaldo: {:?}",
             terminal,
             result.as_ref().err()
         );
@@ -1008,12 +1008,12 @@ end tell"#,
         .arg("-e")
         .arg(&applescript)
         .output()
-        .map_err(|e| format!("执行 osascript 失败: {e}"))?;
+        .map_err(|e| format!("Error al ejecutar osascript: {e}"))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(format!(
-            "Terminal.app 执行失败 (exit code: {:?}): {}",
+            "Error al ejecutar Terminal.app (exit code: {:?}): {}",
             output.status.code(),
             stderr
         ));
@@ -1069,12 +1069,12 @@ fn launch_macos_iterm2(script_file: &std::path::Path) -> Result<(), String> {
         .arg("-e")
         .arg(&applescript)
         .output()
-        .map_err(|e| format!("执行 osascript 失败: {e}"))?;
+        .map_err(|e| format!("Error al ejecutar osascript: {e}"))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(format!(
-            "iTerm2 执行失败 (exit code: {:?}): {}",
+            "Error al ejecutar iTerm2 (exit code: {:?}): {}",
             output.status.code(),
             stderr
         ));
@@ -1099,12 +1099,12 @@ fn launch_macos_ghostty(script_file: &std::path::Path) -> Result<(), String> {
         ])
         .arg(script_file)
         .output()
-        .map_err(|e| format!("启动 Ghostty 失败: {e}"))?;
+        .map_err(|e| format!("Error al iniciar Ghostty: {e}"))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(format!(
-            "Ghostty 启动失败 (exit code: {:?}): {}",
+            "Error al iniciar Ghostty (exit code: {:?}): {}",
             output.status.code(),
             stderr
         ));
@@ -1113,7 +1113,7 @@ fn launch_macos_ghostty(script_file: &std::path::Path) -> Result<(), String> {
     Ok(())
 }
 
-/// macOS: 使用 open -na 启动支持 --args 参数的终端（Alacritty/Kitty/WezTerm/Kaku）
+/// macOS: Usar open -na para iniciar terminales que soportan el parámetro --args (Alacritty/Kitty/WezTerm/Kaku)
 #[cfg(target_os = "macos")]
 fn launch_macos_open_app(
     app_name: &str,
@@ -1132,12 +1132,12 @@ fn launch_macos_open_app(
 
     let output = cmd
         .output()
-        .map_err(|e| format!("启动 {app_name} 失败: {e}"))?;
+        .map_err(|e| format!("Error al iniciar {app_name}: {e}"))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(format!(
-            "{} 启动失败 (exit code: {:?}): {}",
+            "Error al iniciar {} (exit code: {:?}): {}",
             app_name,
             output.status.code(),
             stderr
@@ -1185,11 +1185,11 @@ fn launch_macos_warp(script_file: &std::path::Path) -> Result<(), String> {
     let warp_url = warp_url.to_string();
     cmd.arg(warp_url);
 
-    let output = cmd.output().map_err(|e| format!("启动 Warp 失败: {e}"))?;
+    let output = cmd.output().map_err(|e| format!("Error al iniciar Warp: {e}"))?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(format!(
-            "Warp 启动失败 (exit code: {:?}): {}",
+            "Error al iniciar Warp (exit code: {:?}): {}",
             output.status.code(),
             stderr
         ));
@@ -1198,7 +1198,7 @@ fn launch_macos_warp(script_file: &std::path::Path) -> Result<(), String> {
     Ok(())
 }
 
-/// Linux: 根据用户首选终端启动
+/// Linux: Iniciar según el terminal preferido del usuario
 #[cfg(target_os = "linux")]
 fn launch_linux_terminal(config_file: &std::path::Path, cwd: Option<&Path>) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
@@ -1238,10 +1238,10 @@ exec bash --norc --noprofile
         cd_command = cd_command,
     );
 
-    std::fs::write(&script_file, &script_content).map_err(|e| format!("写入启动脚本失败: {e}"))?;
+    std::fs::write(&script_file, &script_content).map_err(|e| format!("Error al escribir script de inicio: {e}"))?;
 
     std::fs::set_permissions(&script_file, std::fs::Permissions::from_mode(0o755))
-        .map_err(|e| format!("设置脚本权限失败: {e}"))?;
+        .map_err(|e| format!("Error al establecer permisos del script: {e}"))?;
 
     // Build terminal list: preferred terminal first (if specified), then defaults
     let terminals_to_try: Vec<(&str, Vec<&str>)> = if let Some(ref pref) = preferred {
@@ -1267,7 +1267,7 @@ exec bash --norc --noprofile
             .collect()
     };
 
-    let mut last_error = String::from("未找到可用的终端");
+    let mut last_error = String::from("No se encontró ningún terminal disponible");
 
     for (terminal, args) in terminals_to_try {
         // Check if terminal exists in common paths
@@ -1286,7 +1286,7 @@ exec bash --norc --noprofile
             match result {
                 Ok(_) => return Ok(()),
                 Err(e) => {
-                    last_error = format!("执行 {} 失败: {}", terminal, e);
+                    last_error = format!("Error al ejecutar {}: {}", terminal, e);
                 }
             }
         }
@@ -1309,7 +1309,7 @@ fn which_command(cmd: &str) -> bool {
         .unwrap_or(false)
 }
 
-/// Windows: 根据用户首选终端启动
+/// Windows: Iniciar según el terminal preferido del usuario
 #[cfg(target_os = "windows")]
 fn launch_windows_terminal(
     temp_dir: &std::path::Path,
@@ -1338,7 +1338,7 @@ del \"%~f0\" >nul 2>&1
         cwd_command = cwd_command,
     );
 
-    std::fs::write(&bat_file, &content).map_err(|e| format!("写入批处理文件失败: {e}"))?;
+    std::fs::write(&bat_file, &content).map_err(|e| format!("Error al escribir archivo batch: {e}"))?;
 
     let bat_path = bat_file.to_string_lossy();
     let ps_cmd = format!("& '{}'", bat_path);
@@ -1356,7 +1356,7 @@ del \"%~f0\" >nul 2>&1
     // If preferred terminal fails and it's not the default, try cmd as fallback
     if result.is_err() && terminal != "cmd" {
         log::warn!(
-            "首选终端 {} 启动失败，回退到 cmd: {:?}",
+            "Error al iniciar terminal preferido {}, usando cmd como respaldo: {:?}",
             terminal,
             result.as_ref().err()
         );
@@ -1427,12 +1427,12 @@ fn run_windows_start_command(args: &[&str], terminal_name: &str) -> Result<(), S
         .args(&full_args)
         .creation_flags(CREATE_NO_WINDOW)
         .output()
-        .map_err(|e| format!("启动 {} 失败: {e}", terminal_name))?;
+        .map_err(|e| format!("Error al iniciar {}: {e}", terminal_name))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(format!(
-            "{} 启动失败 (exit code: {:?}): {}",
+            "Error al iniciar {} (exit code: {:?}): {}",
             terminal_name,
             output.status.code(),
             stderr
@@ -1442,12 +1442,12 @@ fn run_windows_start_command(args: &[&str], terminal_name: &str) -> Result<(), S
     Ok(())
 }
 
-/// 打开用户首选终端并在其中执行一条命令行。脚本尾部 `read -n 1` / `pause`
-/// 是刻意设计的——让命令退出后窗口不要瞬间关闭，用户才看得到 `command
-/// not found` / `ModuleNotFoundError` 这类诊断信息。
+/// Abrir el terminal preferido del usuario y ejecutar una línea de comando en él. El final del script `read -n 1` / `pause`
+/// es intencional—para que la ventana no se cierre instantáneamente después de que el comando termine, para que el usuario pueda ver
+/// información de diagnóstico como `command not found` / `ModuleNotFoundError`.
 ///
-/// **Security**：`command_line` 会被原样拼进 shell/batch 脚本，调用方必须
-/// 保证它是可信字符串（当前只由后端硬编码调用）。
+/// **Security**: `command_line` se insertará tal cual en el script shell/batch, el llamador debe
+/// garantizar que es una cadena confiable (actualmente solo se llama por código duro del backend).
 pub(crate) fn launch_terminal_running(command_line: &str, label: &str) -> Result<(), String> {
     let temp_dir = std::env::temp_dir();
     let pid = std::process::id();
@@ -1476,9 +1476,9 @@ read -n 1 -s
         use std::os::unix::fs::PermissionsExt;
 
         std::fs::write(&script_file, &script_content)
-            .map_err(|e| format!("写入启动脚本失败: {e}"))?;
+            .map_err(|e| format!("Error al escribir script de inicio: {e}"))?;
         std::fs::set_permissions(&script_file, std::fs::Permissions::from_mode(0o755))
-            .map_err(|e| format!("设置脚本权限失败: {e}"))?;
+            .map_err(|e| format!("Error al establecer permisos del script: {e}"))?;
 
         let preferred = crate::settings::get_preferred_terminal();
         let terminal = preferred.as_deref().unwrap_or("terminal");
@@ -1496,7 +1496,7 @@ read -n 1 -s
 
         if result.is_err() && terminal != "terminal" {
             log::warn!(
-                "首选终端 {} 启动失败，回退到 Terminal.app: {:?}",
+                "Error al iniciar terminal preferido {}, usando Terminal.app como respaldo: {:?}",
                 terminal,
                 result.as_ref().err()
             );
@@ -1511,9 +1511,9 @@ read -n 1 -s
         use std::process::Command;
 
         std::fs::write(&script_file, &script_content)
-            .map_err(|e| format!("写入启动脚本失败: {e}"))?;
+            .map_err(|e| format!("Error al escribir script de inicio: {e}"))?;
         std::fs::set_permissions(&script_file, std::fs::Permissions::from_mode(0o755))
-            .map_err(|e| format!("设置脚本权限失败: {e}"))?;
+            .map_err(|e| format!("Error al establecer permisos del script: {e}"))?;
 
         let preferred = crate::settings::get_preferred_terminal();
         let default_terminals = [
@@ -1547,7 +1547,7 @@ read -n 1 -s
                 .collect()
         };
 
-        let mut last_error = String::from("未找到可用的终端");
+        let mut last_error = String::from("No se encontró ningún terminal disponible");
 
         for (terminal, args) in terminals_to_try {
             let terminal_exists = which_command(terminal)
@@ -1564,7 +1564,7 @@ read -n 1 -s
                 match spawn_result {
                     Ok(_) => return Ok(()),
                     Err(e) => {
-                        last_error = format!("执行 {} 失败: {}", terminal, e);
+                        last_error = format!("Error al ejecutar {}: {}", terminal, e);
                     }
                 }
             }
@@ -1584,7 +1584,7 @@ read -n 1 -s
             "@echo off\r\necho [cc-switch] Starting: {cmd}\r\necho.\r\n{cmd}\r\necho.\r\necho [cc-switch] Command exited. Press any key to close.\r\npause >nul\r\ndel \"%~f0\" >nul 2>&1\r\n",
             cmd = command_line,
         );
-        std::fs::write(&bat_file, &content).map_err(|e| format!("写入批处理文件失败: {e}"))?;
+        std::fs::write(&bat_file, &content).map_err(|e| format!("Error al escribir archivo batch: {e}"))?;
 
         let bat_path = bat_file.to_string_lossy();
         let ps_cmd = format!("& '{}'", bat_path);
@@ -1600,7 +1600,7 @@ read -n 1 -s
 
         let final_result = if result.is_err() && terminal != "cmd" {
             log::warn!(
-                "首选终端 {} 启动失败，回退到 cmd: {:?}",
+                "Error al iniciar terminal preferido {}, usando cmd como respaldo: {:?}",
                 terminal,
                 result.as_ref().err()
             );
@@ -1621,11 +1621,11 @@ read -n 1 -s
     #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
     {
         let _ = (temp_dir, pid, command_line, label);
-        Err("不支持的操作系统".to_string())
+        Err("Sistema operativo no soportado".to_string())
     }
 }
 
-/// 设置窗口主题（Windows/macOS 标题栏颜色）
+/// Establecer tema de ventana (color de barra de título en Windows/macOS)
 /// theme: "dark" | "light" | "system"
 #[tauri::command]
 pub async fn set_window_theme(window: tauri::Window, theme: String) -> Result<(), String> {
@@ -1810,7 +1810,7 @@ mod tests {
         let error = resolve_launch_cwd(Some(missing.to_string_lossy().into_owned()))
             .expect_err("missing directory should fail");
 
-        assert!(error.contains("目录不存在"));
+        assert!(error.contains("El directorio no existe"));
     }
 
     #[test]

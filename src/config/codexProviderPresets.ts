@@ -1,5 +1,5 @@
 /**
- * Codex 预设供应商配置模板
+ * Plantillas de proveedores predefinidos para Codex
  */
 import { ProviderCategory } from "../types";
 import type { CodexApiFormat } from "../types";
@@ -7,30 +7,38 @@ import type { PresetTheme } from "./claudeProviderPresets";
 
 export interface CodexProviderPreset {
   name: string;
-  nameKey?: string; // i18n key for localized display name
+  nameKey?: string; // clave i18n para el nombre localizado
   websiteUrl: string;
-  // 第三方供应商可提供单独的获取 API Key 链接
+  // Los proveedores de terceros pueden ofrecer un enlace propio para obtener la API Key
   apiKeyUrl?: string;
-  auth: Record<string, any>; // 将写入 ~/.codex/auth.json
-  config: string; // 将写入 ~/.codex/config.toml（TOML 字符串）
-  isOfficial?: boolean; // 标识是否为官方预设
-  isPartner?: boolean; // 标识是否为商业合作伙伴
-  partnerPromotionKey?: string; // 合作伙伴促销信息的 i18n key
-  category?: ProviderCategory; // 新增：分类
-  isCustomTemplate?: boolean; // 标识是否为自定义模板
-  // 新增：请求地址候选列表（用于地址管理/测速）
+  auth: Record<string, any>; // se escribe en ~/.codex/auth.json
+  config: string; // se escribe en ~/.codex/config.toml (cadena TOML)
+  isOfficial?: boolean; // indica si es un preset oficial
+  isPartner?: boolean; // indica si es un socio comercial
+  partnerPromotionKey?: string; // clave i18n del texto promocional del socio
+  category?: ProviderCategory; // categoría del proveedor
+  isCustomTemplate?: boolean; // indica si es una plantilla personalizada
+  // Lista de endpoints candidatos (para gestión de direcciones y test de velocidad)
   endpointCandidates?: string[];
-  // 新增：视觉主题配置
+  // Configuración del tema visual
   theme?: PresetTheme;
-  // 图标配置
-  icon?: string; // 图标名称
-  iconColor?: string; // 图标颜色
-  // Codex API 格式
+  // Configuración del icono
+  icon?: string; // nombre del icono
+  iconColor?: string; // color del icono
+  // Formato de la API de Codex
   apiFormat?: CodexApiFormat;
 }
 
 /**
- * 生成第三方供应商的 auth.json
+ * Puerto por defecto del router local del switcher (proxy/types.rs: listen_port).
+ * Codex apunta aquí para que las peticiones pasen por el router y se registre el uso.
+ */
+export const LOCAL_ROUTER_BASE_URL = "http://127.0.0.1:15721/v1";
+
+/**
+ * Genera el auth.json de un proveedor de terceros.
+ * La clave vive aquí, no en config.toml: el campo "API Key" del formulario escribe
+ * OPENAI_API_KEY y config.toml solo la referencia.
  */
 export function generateThirdPartyAuth(apiKey: string): Record<string, any> {
   return {
@@ -39,14 +47,22 @@ export function generateThirdPartyAuth(apiKey: string): Record<string, any> {
 }
 
 /**
- * 生成第三方供应商的 config.toml
+ * Genera el config.toml de un proveedor de terceros.
+ *
+ * @param providerName    Identificador de la sección TOML (se normaliza a snake_case).
+ * @param baseUrl         Endpoint que usará Codex.
+ * @param modelName       Modelo por defecto.
+ * @param apiKey          Se deja vacío en los presets: lo rellena el formulario.
+ * @param displayName     Nombre visible del proveedor. Si se omite se usa el identificador.
  */
 export function generateThirdPartyConfig(
   providerName: string,
   baseUrl: string,
   modelName = "gpt-5.4",
+  apiKey = "",
+  displayName?: string,
 ): string {
-  // 清理供应商名称，确保符合TOML键名规范
+  // Se limpia el nombre para que cumpla las reglas de claves TOML.
   const cleanProviderName =
     providerName
       .toLowerCase()
@@ -59,10 +75,10 @@ model_reasoning_effort = "high"
 disable_response_storage = true
 
 [model_providers.${cleanProviderName}]
-name = "${cleanProviderName}"
+name = "${displayName || cleanProviderName}"
 base_url = "${baseUrl}"
 wire_api = "responses"
-requires_openai_auth = true`;
+api_key = "${apiKey}"`;
 }
 
 export const codexProviderPresets: CodexProviderPreset[] = [
@@ -74,10 +90,15 @@ export const codexProviderPresets: CodexProviderPreset[] = [
     auth: generateThirdPartyAuth(""),
     config: generateThirdPartyConfig(
       "resuelve_api",
-      "https://resuelve-api-f47v.onrender.com/v1",
-      "gpt-5.6-sol",
+      LOCAL_ROUTER_BASE_URL,
+      "gpt-5.6-terra",
+      "",
+      "Resuelve-API",
     ),
-    endpointCandidates: ["https://resuelve-api-f47v.onrender.com/v1"],
+    endpointCandidates: [
+      LOCAL_ROUTER_BASE_URL,
+      "https://resuelve-api-f47v.onrender.com/v1",
+    ],
     theme: {
       icon: "codex",
       backgroundColor: "#38BDF8",

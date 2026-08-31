@@ -36,7 +36,7 @@ interface ProviderCardProps {
   provider: Provider;
   isCurrent: boolean;
   appId: AppId;
-  isInConfig?: boolean; // OpenCode: 是否已添加到 opencode.json
+  isInConfig?: boolean; // OpenCode: si ya fue agregado a opencode.json
   isOmo?: boolean;
   isOmoSlim?: boolean;
   onSwitch: (provider: Provider) => void;
@@ -52,19 +52,19 @@ interface ProviderCardProps {
   onOpenTerminal?: (provider: Provider) => void;
   isTesting?: boolean;
   isProxyRunning: boolean;
-  isProxyTakeover?: boolean; // 代理接管模式（Live配置已被接管，切换为热切换）
+  isProxyTakeover?: boolean; // Modo proxy takeover (config Live tomada, cambiar a hot-swap)
   dragHandleProps?: DragHandleProps;
-  isAutoFailoverEnabled?: boolean; // 是否开启自动故障转移
-  failoverPriority?: number; // 故障转移优先级（1 = P1, 2 = P2, ...）
-  isInFailoverQueue?: boolean; // 是否在故障转移队列中
-  onToggleFailover?: (enabled: boolean) => void; // 切换故障转移队列
-  activeProviderId?: string; // 代理当前实际使用的供应商 ID（用于故障转移模式下标注绿色边框）
+  isAutoFailoverEnabled?: boolean; // Si failover automático está habilitado
+  failoverPriority?: number; // Prioridad de failover (1 = P1, 2 = P2, ...)
+  isInFailoverQueue?: boolean; // Si está en cola de failover
+  onToggleFailover?: (enabled: boolean) => void; // Cambiar cola de failover
+  activeProviderId?: string; // ID del proveedor que el proxy usa actualmente (para marcar borde verde en modo failover)
   // OpenClaw: default model
   isDefaultModel?: boolean;
   onSetAsDefault?: () => void;
 }
 
-/** 判断是否为官方供应商（无自定义 base URL / API key，直连官方 API） */
+/** Determinar si es proveedor oficial (sin base URL / API key personalizada, conexión directa a API oficial) */
 function isOfficialProvider(provider: Provider, appId: AppId): boolean {
   if (provider.category === "official") {
     return true;
@@ -76,12 +76,12 @@ function isOfficialProvider(provider: Provider, appId: AppId): boolean {
     return !baseUrl || (typeof baseUrl === "string" && baseUrl.trim() === "");
   }
   if (appId === "codex") {
-    // 无 OPENAI_API_KEY → 使用 Codex CLI 内置 OAuth（官方）
+    // Sin OPENAI_API_KEY: se usa el OAuth integrado de Codex CLI (oficial)
     const apiKey = config?.auth?.OPENAI_API_KEY;
     return !apiKey || (typeof apiKey === "string" && apiKey.trim() === "");
   }
   if (appId === "gemini") {
-    // 无 GEMINI_API_KEY 且无 GOOGLE_GEMINI_BASE_URL → Google OAuth 官方模式
+    // Sin GEMINI_API_KEY ni GOOGLE_GEMINI_BASE_URL: modo OAuth oficial de Google
     const apiKey = config?.env?.GEMINI_API_KEY;
     const baseUrl = config?.env?.GOOGLE_GEMINI_BASE_URL;
     return (
@@ -165,7 +165,7 @@ export function ProviderCard({
   const { data: health } = useProviderHealth(provider.id, appId);
 
   const fallbackUrlText = t("provider.notConfigured", {
-    defaultValue: "未配置接口地址",
+    defaultValue: "No configurado",
   });
 
   const displayUrl = useMemo(() => {
@@ -212,8 +212,8 @@ export function ProviderCard({
   const isClaudeThirdParty =
     appId === "claude" && provider.category === "third_party";
 
-  // 获取用量数据以判断是否有多套餐
-  // 累加模式应用（OpenCode/OpenClaw/Hermes）：使用 isInConfig 代替 isCurrent
+  // Obtener datos de uso para determinar si hay múltiples planes
+  // Aplicaciones modo acumulativo (OpenCode/OpenClaw/Hermes): usar isInConfig en vez de isCurrent
   const shouldAutoQuery =
     appId === "opencode" || appId === "openclaw" || appId === "hermes"
       ? isInConfig
@@ -247,12 +247,12 @@ export function ProviderCard({
     onOpenWebsite(displayUrl);
   };
 
-  // 判断是否是"当前使用中"的供应商
-  // - OMO/OMO Slim 供应商：使用 isCurrent
-  // - OpenClaw：使用默认模型归属的 provider 作为当前项（蓝色边框）
-  // - OpenCode（非 OMO）：不存在"当前"概念，返回 false
-  // - 故障转移模式：代理实际使用的供应商（activeProviderId）
-  // - 普通模式：isCurrent
+  // Determinar si es el proveedor "en uso actual"
+  // - Proveedor OMO/OMO Slim: usar isCurrent
+  // - OpenClaw: usar provider del modelo predeterminado como actual (borde azul)
+  // - OpenCode (no OMO): no existe concepto de "actual", devolver false
+  // - Modo failover: proveedor que el proxy usa realmente (activeProviderId)
+  // - Modo normal: isCurrent
   const isActiveProvider = isAnyOmo
     ? isCurrent
     : appId === "openclaw"
@@ -347,7 +347,7 @@ export function ProviderCard({
                 provider.meta?.claudeDesktopMode === "proxy" && (
                   <span className="inline-flex items-center rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
                     {t("claudeDesktop.modeProxy", {
-                      defaultValue: "需要路由",
+                      defaultValue: "Requiere enrutamiento",
                     })}
                   </span>
                 )}
@@ -358,7 +358,7 @@ export function ProviderCard({
                 provider.meta.apiFormat !== "anthropic" && (
                   <span className="inline-flex items-center rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
                     {t("claudeCode.needsRouting", {
-                      defaultValue: "需要路由",
+                      defaultValue: "Requiere enrutamiento",
                     })}
                   </span>
                 )}
@@ -366,7 +366,7 @@ export function ProviderCard({
               {codexNeedsRouting && (
                 <span className="inline-flex items-center rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
                   {t("codex.needsRouting", {
-                    defaultValue: "需要路由",
+                    defaultValue: "Requiere enrutamiento",
                   })}
                 </span>
               )}
@@ -374,7 +374,7 @@ export function ProviderCard({
               {appId === "claude" && provider.category === "official" && (
                 <span className="inline-flex items-center rounded-md bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700/60 dark:text-slate-200">
                   {t("claudeCode.noRoutingSupport", {
-                    defaultValue: "不支持路由",
+                    defaultValue: "No soporta enrutamiento",
                   })}
                 </span>
               )}
@@ -382,7 +382,7 @@ export function ProviderCard({
               {appId === "codex" && provider.category === "official" && (
                 <span className="inline-flex items-center rounded-md bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700/60 dark:text-slate-200">
                   {t("codex.noRoutingSupport", {
-                    defaultValue: "不支持路由",
+                    defaultValue: "No soporta enrutamiento",
                   })}
                 </span>
               )}
@@ -405,7 +405,7 @@ export function ProviderCard({
                   <span
                     className="text-yellow-500 dark:text-yellow-400"
                     title={t("provider.officialPartner", {
-                      defaultValue: "官方合作伙伴",
+                      defaultValue: "Socio oficial",
                     })}
                   >
                     ⭐
@@ -416,7 +416,7 @@ export function ProviderCard({
                 <span
                   className="inline-flex items-center rounded-md bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700/60 dark:text-slate-200"
                   title={t("provider.managedByHermesHint", {
-                    defaultValue: "由 Hermes 管理，请在 Hermes Web UI 中编辑",
+                    defaultValue: "Gestionado por Hermes, editar en Hermes Web UI",
                   })}
                 >
                   {t("provider.managedByHermes", {
@@ -471,7 +471,7 @@ export function ProviderCard({
                   <span className="font-medium">
                     {t("usage.multiplePlans", {
                       count: usage?.data?.length || 0,
-                      defaultValue: `${usage?.data?.length || 0} 个套餐`,
+                      defaultValue: `${usage?.data?.length || 0} planes`,
                     })}
                   </span>
                 </div>
@@ -495,8 +495,8 @@ export function ProviderCard({
                   className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500 dark:text-gray-400 flex-shrink-0"
                   title={
                     isExpanded
-                      ? t("usage.collapse", { defaultValue: "收起" })
-                      : t("usage.expand", { defaultValue: "展开" })
+                      ? t("usage.collapse", { defaultValue: "Contraer" })
+                      : t("usage.expand", { defaultValue: "Expandir" })
                   }
                 >
                   {isExpanded ? (

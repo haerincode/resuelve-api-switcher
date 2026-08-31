@@ -14,7 +14,7 @@ let changeLanguageSpy: ReturnType<typeof vi.spyOn<any, any>>;
 beforeEach(() => {
   useSettingsQueryMock.mockReset();
   window.localStorage.clear();
-  (i18n as any).language = "zh";
+  (i18n as any).language = "es";
   changeLanguageSpy = vi
     .spyOn(i18n, "changeLanguage")
     .mockImplementation(async (lang?: string) => {
@@ -138,7 +138,7 @@ describe("useSettingsForm Hook", () => {
     });
 
     changeLanguageSpy.mockClear();
-    (i18n as any).language = "zh";
+    (i18n as any).language = "es";
 
     act(() => {
       result.current.resetSettings({
@@ -147,7 +147,7 @@ describe("useSettingsForm Hook", () => {
         enableClaudePluginIntegration: true,
         claudeConfigDir: "  /reset  ",
         codexConfigDir: "   ",
-        language: "zh",
+        language: "es",
       });
     });
 
@@ -157,7 +157,7 @@ describe("useSettingsForm Hook", () => {
     expect(settings.enableClaudePluginIntegration).toBe(true);
     expect(settings.claudeConfigDir).toBe("/reset");
     expect(settings.codexConfigDir).toBeUndefined();
-    expect(settings.language).toBe("zh");
+    expect(settings.language).toBe("es");
     expect(result.current.initialLanguage).toBe("en");
     expect(changeLanguageSpy).toHaveBeenCalledWith("en");
   });
@@ -170,7 +170,7 @@ describe("useSettingsForm Hook", () => {
         enableClaudePluginIntegration: false,
         claudeConfigDir: null,
         codexConfigDir: null,
-        language: "zh",
+        language: "es",
       },
       isLoading: false,
     });
@@ -182,10 +182,10 @@ describe("useSettingsForm Hook", () => {
     });
 
     changeLanguageSpy.mockClear();
-    (i18n as any).language = "zh";
+    (i18n as any).language = "es";
 
     act(() => {
-      result.current.syncLanguage("zh");
+      result.current.syncLanguage("es");
     });
 
     expect(changeLanguageSpy).not.toHaveBeenCalled();

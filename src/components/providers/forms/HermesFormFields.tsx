@@ -275,7 +275,7 @@ export function HermesFormFields({
     <>
       <div className="space-y-2">
         <FormLabel htmlFor="hermes-api-mode">
-          {t("hermes.form.apiMode", { defaultValue: "API 模式" })}
+          {t("hermes.form.apiMode", { defaultValue: "Modo API" })}
         </FormLabel>
         <Select
           value={apiMode}
@@ -294,14 +294,14 @@ export function HermesFormFields({
         </Select>
         <p className="text-xs text-muted-foreground">
           {t("hermes.form.apiModeHint", {
-            defaultValue: "供应商 API 协议。请根据端点选择正确的协议。",
+            defaultValue: "Protocolo API del proveedor. Seleccione el protocolo correcto según el endpoint.",
           })}
         </p>
       </div>
 
       <div className="space-y-2">
         <FormLabel htmlFor="hermes-baseurl">
-          {t("hermes.form.baseUrl", { defaultValue: "API 端点" })}
+          {t("hermes.form.baseUrl", { defaultValue: "Endpoint API" })}
         </FormLabel>
         <Input
           id="hermes-baseurl"
@@ -321,7 +321,7 @@ export function HermesFormFields({
         ) : (
           <p className="text-xs text-muted-foreground">
             {t("hermes.form.baseUrlHint", {
-              defaultValue: "供应商的 API 端点地址。",
+              defaultValue: "Dirección del endpoint API del proveedor.",
             })}
           </p>
         )}
@@ -340,7 +340,7 @@ export function HermesFormFields({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <FormLabel>
-            {t("hermes.form.models", { defaultValue: "模型列表" })}
+            {t("hermes.form.models", { defaultValue: "Lista de modelos" })}
           </FormLabel>
           <div className="flex gap-1">
             <Button
@@ -366,7 +366,7 @@ export function HermesFormFields({
               className="h-7 gap-1"
             >
               <Plus className="h-3.5 w-3.5" />
-              {t("hermes.form.addModel", { defaultValue: "添加模型" })}
+              {t("hermes.form.addModel", { defaultValue: "Agregar modelo" })}
             </Button>
           </div>
         </div>
@@ -374,7 +374,7 @@ export function HermesFormFields({
         {models.length === 0 ? (
           <p className="text-sm text-muted-foreground py-2">
             {t("hermes.form.noModels", {
-              defaultValue: "暂无模型配置。切换到此供应商时将无默认模型。",
+              defaultValue: "Sin modelos configurados. Al cambiar a este proveedor no habrá modelo predeterminado.",
             })}
           </p>
         ) : (
@@ -395,10 +395,10 @@ export function HermesFormFields({
                   >
                     {index === 0
                       ? t("hermes.form.primaryModel", {
-                          defaultValue: "默认模型",
+                          defaultValue: "Modelo predeterminado",
                         })
                       : t("hermes.form.fallbackModel", {
-                          defaultValue: "备选模型",
+                          defaultValue: "Modelo alternativo",
                         })}
                   </span>
                 </div>
@@ -406,7 +406,7 @@ export function HermesFormFields({
                 <div className="flex items-center gap-2">
                   <div className="flex-1 space-y-1">
                     <label className="text-xs text-muted-foreground">
-                      {t("hermes.form.modelId", { defaultValue: "模型 ID" })}
+                      {t("hermes.form.modelId", { defaultValue: "ID de modelo" })}
                     </label>
                     <div className="flex gap-1">
                       <Input
@@ -462,7 +462,7 @@ export function HermesFormFields({
                   <div className="flex-1 space-y-1">
                     <label className="text-xs text-muted-foreground">
                       {t("hermes.form.modelName", {
-                        defaultValue: "显示名称",
+                        defaultValue: "Nombre visible",
                       })}
                     </label>
                     <Input
@@ -494,7 +494,7 @@ export function HermesFormFields({
                   <div className="space-y-1">
                     <label className="text-xs text-muted-foreground">
                       {t("hermes.form.contextLength", {
-                        defaultValue: "上下文长度",
+                        defaultValue: "Longitud de contexto",
                       })}
                     </label>
                     <Input
@@ -519,7 +519,7 @@ export function HermesFormFields({
         <p className="text-xs text-muted-foreground">
           {t("hermes.form.modelsHint", {
             defaultValue:
-              "切换到此供应商时，第一个模型会写入顶层 model.default。",
+              "Al cambiar a este proveedor, el primer modelo se escribirá en model.default de nivel superior.",
           })}
         </p>
       </div>
@@ -532,7 +532,7 @@ export function HermesFormFields({
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">
             {t("hermes.form.rateLimitDelay", {
-              defaultValue: "请求间隔（秒）",
+              defaultValue: "Intervalo de solicitud (segundos)",
             })}
           </label>
           <Input
@@ -556,7 +556,7 @@ export function HermesFormFields({
           <p className="text-xs text-muted-foreground">
             {t("hermes.form.rateLimitDelayHint", {
               defaultValue:
-                "连续请求间的最小间隔秒数（可选）。留空表示无限制。",
+                "Mínimo intervalo en segundos entre solicitudes consecutivas (opcional). Dejar vacío significa sin límite.",
             })}
           </p>
         </div>

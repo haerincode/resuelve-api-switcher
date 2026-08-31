@@ -5,7 +5,7 @@ use url::{Host, Url};
 
 use crate::error::AppError;
 
-/// 执行用量查询脚本
+/// Ejecutar script de consulta de uso
 pub async fn execute_usage_script(
     script_code: &str,
     api_key: &str,
@@ -15,70 +15,70 @@ pub async fn execute_usage_script(
     user_id: Option<&str>,
     template_type: Option<&str>,
 ) -> Result<Value, AppError> {
-    // 检测是否为自定义模板模式
-    // 优先使用前端传递的 template_type
+    // Detectar si es modo de plantilla personalizada
+    // Priorizar el template_type pasado desde el frontend
     let is_custom_template = template_type.map(|t| t == "custom").unwrap_or(false);
 
-    // 1. 替换模板变量，避免泄露敏感信息
+    // 1. Reemplazar variables de plantilla, evitar filtración de información sensible
     let script_with_vars =
         build_script_with_vars(script_code, api_key, base_url, access_token, user_id);
 
-    // 2. 验证 base_url 的安全性（仅当提供了 base_url 时）
-    // 自定义模板模式下，用户可能不使用模板变量，而是直接在脚本中写完整 URL
+    // 2. Validar seguridad de base_url (solo cuando se proporciona base_url)
+    // En modo de plantilla personalizada, el usuario puede no usar variables de plantilla, sino escribir URL completa directamente en el script
     if !base_url.is_empty() {
         validate_base_url(base_url)?;
     }
 
-    // 3. 在独立作用域中提取 request 配置（确保 Runtime/Context 在 await 前释放）
+    // 3. Extraer configuración de request en un ámbito independiente (asegurar que Runtime/Context se liberen antes de await)
     let request_config = {
         let runtime = Runtime::new().map_err(|e| {
             AppError::localized(
                 "usage_script.runtime_create_failed",
-                format!("创建 JS 运行时失败: {e}"),
+                format!("Error al crear runtime de JS: {e}"),
                 format!("Failed to create JS runtime: {e}"),
             )
         })?;
         let context = Context::full(&runtime).map_err(|e| {
             AppError::localized(
                 "usage_script.context_create_failed",
-                format!("创建 JS 上下文失败: {e}"),
+                format!("Error al crear contexto de JS: {e}"),
                 format!("Failed to create JS context: {e}"),
             )
         })?;
 
         context.with(|ctx| {
-            // 执行用户代码，获取配置对象
+            // Ejecutar código del usuario, obtener objeto de configuración
             let config: rquickjs::Object = ctx.eval(script_with_vars.clone()).map_err(|e| {
                 AppError::localized(
                     "usage_script.config_parse_failed",
-                    format!("解析配置失败: {e}"),
+                    format!("Error al analizar configuración: {e}"),
                     format!("Failed to parse config: {e}"),
                 )
             })?;
 
-            // 提取 request 配置
+            // Extraer configuración de request
             let request: rquickjs::Object = config.get("request").map_err(|e| {
                 AppError::localized(
                     "usage_script.request_missing",
-                    format!("缺少 request 配置: {e}"),
+                    format!("Falta configuración de request: {e}"),
                     format!("Missing request config: {e}"),
                 )
             })?;
 
-            // 将 request 转换为 JSON 字符串
+            // Convertir request a cadena JSON
             let request_json: String = ctx
                 .json_stringify(request)
                 .map_err(|e| {
                     AppError::localized(
                         "usage_script.request_serialize_failed",
-                        format!("序列化 request 失败: {e}"),
+                        format!("Error al serializar request: {e}"),
                         format!("Failed to serialize request: {e}"),
                     )
                 })?
                 .ok_or_else(|| {
                     AppError::localized(
                         "usage_script.serialize_none",
-                        "序列化返回 None",
+                        "La serialización devolvió None",
                         "Serialization returned None",
                     )
                 })?
@@ -86,99 +86,99 @@ pub async fn execute_usage_script(
                 .map_err(|e| {
                     AppError::localized(
                         "usage_script.get_string_failed",
-                        format!("获取字符串失败: {e}"),
+                        format!("Error al obtener cadena: {e}"),
                         format!("Failed to get string: {e}"),
                     )
                 })?;
 
             Ok::<_, AppError>(request_json)
         })?
-    }; // Runtime 和 Context 在这里被 drop
+    }; // Runtime y Context se eliminan aquí
 
-    // 4. 解析 request 配置
+    // 4. Analizar configuración de request
     let request: RequestConfig = serde_json::from_str(&request_config).map_err(|e| {
         AppError::localized(
             "usage_script.request_format_invalid",
-            format!("request 配置格式错误: {e}"),
+            format!("Formato de configuración de request incorrecto: {e}"),
             format!("Invalid request config format: {e}"),
         )
     })?;
 
-    // 5. 验证请求 URL（HTTPS 强制 + 同源检查）
+    // 5. Validar URL de solicitud (HTTPS forzado + verificación de mismo origen)
     validate_request_url(&request.url, base_url, is_custom_template)?;
 
-    // 6. 发送 HTTP 请求
+    // 6. Enviar solicitud HTTP
     let response_data = send_http_request(&request, timeout_secs).await?;
 
-    // 7. 在独立作用域中执行 extractor（确保 Runtime/Context 在函数结束前释放）
+    // 7. Ejecutar extractor en un ámbito independiente (asegurar que Runtime/Context se liberen antes del final de la función)
     let result: Value = {
         let runtime = Runtime::new().map_err(|e| {
             AppError::localized(
                 "usage_script.runtime_create_failed",
-                format!("创建 JS 运行时失败: {e}"),
+                format!("Error al crear runtime de JS: {e}"),
                 format!("Failed to create JS runtime: {e}"),
             )
         })?;
         let context = Context::full(&runtime).map_err(|e| {
             AppError::localized(
                 "usage_script.context_create_failed",
-                format!("创建 JS 上下文失败: {e}"),
+                format!("Error al crear contexto de JS: {e}"),
                 format!("Failed to create JS context: {e}"),
             )
         })?;
 
         context.with(|ctx| {
-            // 重新 eval 获取配置对象
+            // Re-evaluar para obtener objeto de configuración
             let config: rquickjs::Object = ctx.eval(script_with_vars.clone()).map_err(|e| {
                 AppError::localized(
                     "usage_script.config_reparse_failed",
-                    format!("重新解析配置失败: {e}"),
+                    format!("Error al volver a analizar configuración: {e}"),
                     format!("Failed to re-parse config: {e}"),
                 )
             })?;
 
-            // 提取 extractor 函数
+            // Extraer función extractor
             let extractor: Function = config.get("extractor").map_err(|e| {
                 AppError::localized(
                     "usage_script.extractor_missing",
-                    format!("缺少 extractor 函数: {e}"),
+                    format!("Falta función extractor: {e}"),
                     format!("Missing extractor function: {e}"),
                 )
             })?;
 
-            // 将响应数据转换为 JS 值
+            // Convertir datos de respuesta a valor JS
             let response_js: rquickjs::Value =
                 ctx.json_parse(response_data.as_str()).map_err(|e| {
                     AppError::localized(
                         "usage_script.response_parse_failed",
-                        format!("解析响应 JSON 失败: {e}"),
+                        format!("Error al analizar JSON de respuesta: {e}"),
                         format!("Failed to parse response JSON: {e}"),
                     )
                 })?;
 
-            // 调用 extractor(response)
+            // Llamar extractor(response)
             let result_js: rquickjs::Value = extractor.call((response_js,)).map_err(|e| {
                 AppError::localized(
                     "usage_script.extractor_exec_failed",
-                    format!("执行 extractor 失败: {e}"),
+                    format!("Error al ejecutar extractor: {e}"),
                     format!("Failed to execute extractor: {e}"),
                 )
             })?;
 
-            // 转换为 JSON 字符串
+            // Convertir a cadena JSON
             let result_json: String = ctx
                 .json_stringify(result_js)
                 .map_err(|e| {
                     AppError::localized(
                         "usage_script.result_serialize_failed",
-                        format!("序列化结果失败: {e}"),
+                        format!("Error al serializar resultado: {e}"),
                         format!("Failed to serialize result: {e}"),
                     )
                 })?
                 .ok_or_else(|| {
                     AppError::localized(
                         "usage_script.serialize_none",
-                        "序列化返回 None",
+                        "La serialización devolvió None",
                         "Serialization returned None",
                     )
                 })?
@@ -186,29 +186,29 @@ pub async fn execute_usage_script(
                 .map_err(|e| {
                     AppError::localized(
                         "usage_script.get_string_failed",
-                        format!("获取字符串失败: {e}"),
+                        format!("Error al obtener cadena: {e}"),
                         format!("Failed to get string: {e}"),
                     )
                 })?;
 
-            // 解析为 serde_json::Value
+            // Analizar como serde_json::Value
             serde_json::from_str(&result_json).map_err(|e| {
                 AppError::localized(
                     "usage_script.json_parse_failed",
-                    format!("JSON 解析失败: {e}"),
+                    format!("Error al analizar JSON: {e}"),
                     format!("JSON parse failed: {e}"),
                 )
             })
         })?
-    }; // Runtime 和 Context 在这里被 drop
+    }; // Runtime y Context se eliminan aquí
 
-    // 8. 验证返回值格式
+    // 8. Validar formato del valor devuelto
     validate_result(&result)?;
 
     Ok(result)
 }
 
-/// 请求配置结构
+/// Estructura de configuración de solicitud
 #[derive(Debug, serde::Deserialize)]
 struct RequestConfig {
     url: String,
@@ -219,18 +219,18 @@ struct RequestConfig {
     body: Option<String>,
 }
 
-/// 发送 HTTP 请求
+/// Enviar solicitud HTTP
 async fn send_http_request(config: &RequestConfig, timeout_secs: u64) -> Result<String, AppError> {
-    // 使用全局 HTTP 客户端（已包含代理配置）
+    // Usar el cliente HTTP global (ya incluye configuración de proxy)
     let client = crate::proxy::http_client::get();
-    // 约束超时范围，防止异常配置导致长时间阻塞（最小 2 秒，最大 30 秒）
+    // Restringir rango de timeout, prevenir bloqueo prolongado por configuración anómala (mínimo 2 segundos, máximo 30 segundos)
     let request_timeout = std::time::Duration::from_secs(timeout_secs.clamp(2, 30));
 
-    // 严格校验 HTTP 方法，非法值不回退为 GET
+    // Validación estricta del método HTTP, valores no válidos no se convierten a GET
     let method: reqwest::Method = config.method.parse().map_err(|_| {
         AppError::localized(
             "usage_script.invalid_http_method",
-            format!("不支持的 HTTP 方法: {}", config.method),
+            format!("Método HTTP no soportado: {}", config.method),
             format!("Unsupported HTTP method: {}", config.method),
         )
     })?;
@@ -239,21 +239,21 @@ async fn send_http_request(config: &RequestConfig, timeout_secs: u64) -> Result<
         .request(method.clone(), &config.url)
         .timeout(request_timeout);
 
-    // 添加请求头
+    // Agregar encabezados de solicitud
     for (k, v) in &config.headers {
         req = req.header(k, v);
     }
 
-    // 添加请求体
+    // Agregar cuerpo de solicitud
     if let Some(body) = &config.body {
         req = req.body(body.clone());
     }
 
-    // 发送请求
+    // Enviar solicitud
     let resp = req.send().await.map_err(|e| {
         AppError::localized(
             "usage_script.request_failed",
-            format!("请求失败: {e}"),
+            format!("Solicitud fallida: {e}"),
             format!("Request failed: {e}"),
         )
     })?;
@@ -262,7 +262,7 @@ async fn send_http_request(config: &RequestConfig, timeout_secs: u64) -> Result<
     let text = resp.text().await.map_err(|e| {
         AppError::localized(
             "usage_script.read_response_failed",
-            format!("读取响应失败: {e}"),
+            format!("Error al leer respuesta: {e}"),
             format!("Failed to read response: {e}"),
         )
     })?;
@@ -287,14 +287,14 @@ async fn send_http_request(config: &RequestConfig, timeout_secs: u64) -> Result<
     Ok(text)
 }
 
-/// 验证脚本返回值（支持单对象或数组）
+/// Validar valor devuelto por el script (soporta objeto único o array)
 fn validate_result(result: &Value) -> Result<(), AppError> {
-    // 如果是数组，验证每个元素
+    // Si es un array, validar cada elemento
     if let Some(arr) = result.as_array() {
         if arr.is_empty() {
             return Err(AppError::localized(
                 "usage_script.empty_array",
-                "脚本返回的数组不能为空",
+                "El array devuelto por el script no puede estar vacío",
                 "Script returned empty array",
             ));
         }
@@ -302,7 +302,7 @@ fn validate_result(result: &Value) -> Result<(), AppError> {
             validate_single_usage(item).map_err(|e| {
                 AppError::localized(
                     "usage_script.array_validation_failed",
-                    format!("数组索引[{idx}]验证失败: {e}"),
+                    format!("Error de validación en índice del array [{idx}]: {e}"),
                     format!("Validation failed at index [{idx}]: {e}"),
                 )
             })?;
@@ -310,28 +310,28 @@ fn validate_result(result: &Value) -> Result<(), AppError> {
         return Ok(());
     }
 
-    // 如果是单对象，直接验证（向后兼容）
+    // Si es un objeto único, validar directamente (retrocompatibilidad)
     validate_single_usage(result)
 }
 
-/// 验证单个用量数据对象
+/// Validar un objeto de datos de uso individual
 fn validate_single_usage(result: &Value) -> Result<(), AppError> {
     let obj = result.as_object().ok_or_else(|| {
         AppError::localized(
             "usage_script.must_return_object",
-            "脚本必须返回对象或对象数组",
+            "El script debe devolver un objeto o array de objetos",
             "Script must return object or array of objects",
         )
     })?;
 
-    // 所有字段均为可选，只进行类型检查
+    // Todos los campos son opcionales, solo verificar tipo
     if obj.contains_key("isValid")
         && !result["isValid"].is_null()
         && !result["isValid"].is_boolean()
     {
         return Err(AppError::localized(
             "usage_script.isvalid_type_error",
-            "isValid 必须是布尔值或 null",
+            "isValid debe ser booleano o null",
             "isValid must be boolean or null",
         ));
     }
@@ -341,7 +341,7 @@ fn validate_single_usage(result: &Value) -> Result<(), AppError> {
     {
         return Err(AppError::localized(
             "usage_script.invalidmessage_type_error",
-            "invalidMessage 必须是字符串或 null",
+            "invalidMessage debe ser cadena o null",
             "invalidMessage must be string or null",
         ));
     }
@@ -351,28 +351,28 @@ fn validate_single_usage(result: &Value) -> Result<(), AppError> {
     {
         return Err(AppError::localized(
             "usage_script.remaining_type_error",
-            "remaining 必须是数字或 null",
+            "remaining debe ser número o null",
             "remaining must be number or null",
         ));
     }
     if obj.contains_key("unit") && !result["unit"].is_null() && !result["unit"].is_string() {
         return Err(AppError::localized(
             "usage_script.unit_type_error",
-            "unit 必须是字符串或 null",
+            "unit debe ser cadena o null",
             "unit must be string or null",
         ));
     }
     if obj.contains_key("total") && !result["total"].is_null() && !result["total"].is_number() {
         return Err(AppError::localized(
             "usage_script.total_type_error",
-            "total 必须是数字或 null",
+            "total debe ser número o null",
             "total must be number or null",
         ));
     }
     if obj.contains_key("used") && !result["used"].is_null() && !result["used"].is_number() {
         return Err(AppError::localized(
             "usage_script.used_type_error",
-            "used 必须是数字或 null",
+            "used debe ser número o null",
             "used must be number or null",
         ));
     }
@@ -382,14 +382,14 @@ fn validate_single_usage(result: &Value) -> Result<(), AppError> {
     {
         return Err(AppError::localized(
             "usage_script.planname_type_error",
-            "planName 必须是字符串或 null",
+            "planName debe ser cadena o null",
             "planName must be string or null",
         ));
     }
     if obj.contains_key("extra") && !result["extra"].is_null() && !result["extra"].is_string() {
         return Err(AppError::localized(
             "usage_script.extra_type_error",
-            "extra 必须是字符串或 null",
+            "extra debe ser cadena o null",
             "extra must be string or null",
         ));
     }
@@ -397,7 +397,7 @@ fn validate_single_usage(result: &Value) -> Result<(), AppError> {
     Ok(())
 }
 
-/// 构建替换变量后的脚本，保持与旧版脚本的兼容性
+/// Construir script con variables reemplazadas, mantener compatibilidad con scripts antiguos
 fn build_script_with_vars(
     script_code: &str,
     api_key: &str,
@@ -419,50 +419,50 @@ fn build_script_with_vars(
     replaced
 }
 
-/// 验证 base_url 的基本安全性
+/// Validar seguridad básica de base_url
 fn validate_base_url(base_url: &str) -> Result<(), AppError> {
     if base_url.is_empty() {
         return Err(AppError::localized(
             "usage_script.base_url_empty",
-            "base_url 不能为空",
+            "base_url no puede estar vacío",
             "base_url cannot be empty",
         ));
     }
 
-    // 解析 URL
+    // Analizar URL
     let parsed_url = Url::parse(base_url).map_err(|e| {
         AppError::localized(
             "usage_script.base_url_invalid",
-            format!("无效的 base_url: {e}"),
+            format!("base_url no válido: {e}"),
             format!("Invalid base_url: {e}"),
         )
     })?;
 
     let is_loopback = is_loopback_host(&parsed_url);
 
-    // 必须是 HTTPS（允许 localhost 用于开发）
+    // Debe ser HTTPS (permitir localhost para desarrollo)
     if parsed_url.scheme() != "https" && !is_loopback {
         return Err(AppError::localized(
             "usage_script.base_url_https_required",
-            "base_url 必须使用 HTTPS 协议（localhost 除外）",
+            "base_url debe usar protocolo HTTPS (excepto localhost)",
             "base_url must use HTTPS (localhost allowed)",
         ));
     }
 
-    // 检查主机名格式有效性
+    // Verificar validez de formato del nombre de host
     let hostname = parsed_url.host_str().ok_or_else(|| {
         AppError::localized(
             "usage_script.base_url_hostname_missing",
-            "base_url 必须包含有效的主机名",
+            "base_url debe incluir un nombre de host válido",
             "base_url must include a valid hostname",
         )
     })?;
 
-    // 基本的主机名格式检查
+    // Verificación básica de formato del nombre de host
     if hostname.is_empty() {
         return Err(AppError::localized(
             "usage_script.base_url_hostname_empty",
-            "base_url 主机名不能为空",
+            "El nombre de host de base_url no puede estar vacío",
             "base_url hostname cannot be empty",
         ));
     }
@@ -470,51 +470,51 @@ fn validate_base_url(base_url: &str) -> Result<(), AppError> {
     Ok(())
 }
 
-/// 验证请求 URL 是否安全（HTTPS 强制 + 同源检查）
+/// Validar si la URL de solicitud es segura (HTTPS forzado + verificación de mismo origen)
 fn validate_request_url(
     request_url: &str,
     base_url: &str,
     is_custom_template: bool,
 ) -> Result<(), AppError> {
-    // 解析请求 URL
+    // Analizar URL de solicitud
     let parsed_request = Url::parse(request_url).map_err(|e| {
         AppError::localized(
             "usage_script.request_url_invalid",
-            format!("无效的请求 URL: {e}"),
+            format!("URL de solicitud no válida: {e}"),
             format!("Invalid request URL: {e}"),
         )
     })?;
 
     let is_request_loopback = is_loopback_host(&parsed_request);
 
-    // 必须使用 HTTPS（允许 localhost 用于开发）
-    // 自定义模板模式下，允许用户自行决定是否使用 HTTP（用户需自行承担安全风险）
+    // Debe usar HTTPS (permitir localhost para desarrollo)
+    // En modo de plantilla personalizada, permitir que el usuario decida si usar HTTP (el usuario debe asumir el riesgo de seguridad)
     if !is_custom_template && parsed_request.scheme() != "https" && !is_request_loopback {
         return Err(AppError::localized(
             "usage_script.request_https_required",
-            "请求 URL 必须使用 HTTPS 协议（localhost 除外）",
+            "La URL de solicitud debe usar protocolo HTTPS (excepto localhost)",
             "Request URL must use HTTPS (localhost allowed)",
         ));
     }
 
-    // 如果提供了 base_url（非空），则进行同源检查
-    // 🔧 自定义模板模式下，用户可以自由访问任意 HTTPS 域名，跳过同源检查
+    // Si se proporciona base_url (no vacío), realizar verificación de mismo origen
+    // 🔧 En modo de plantilla personalizada, el usuario puede acceder libremente a cualquier dominio HTTPS, omitir verificación de mismo origen
     if !base_url.is_empty() && !is_custom_template {
-        // 解析 base URL
+        // Analizar base URL
         let parsed_base = Url::parse(base_url).map_err(|e| {
             AppError::localized(
                 "usage_script.base_url_invalid",
-                format!("无效的 base_url: {e}"),
+                format!("base_url no válido: {e}"),
                 format!("Invalid base_url: {e}"),
             )
         })?;
 
-        // 核心安全检查：必须与 base_url 同源（相同域名和端口）
+        // Verificación de seguridad central: debe ser del mismo origen que base_url (mismo dominio y puerto)
         if parsed_request.host_str() != parsed_base.host_str() {
             return Err(AppError::localized(
                 "usage_script.request_host_mismatch",
                 format!(
-                    "请求域名 {} 与 base_url 域名 {} 不匹配（必须是同源请求）",
+                    "El dominio de solicitud {} no coincide con el dominio de base_url {} (debe ser solicitud de mismo origen)",
                     parsed_request.host_str().unwrap_or("unknown"),
                     parsed_base.host_str().unwrap_or("unknown")
                 ),
@@ -526,27 +526,27 @@ fn validate_request_url(
             ));
         }
 
-        // 检查端口是否匹配（考虑默认端口）
-        // 使用 port_or_known_default() 会自动处理默认端口（http->80, https->443）
+        // Verificar si los puertos coinciden (considerar puerto predeterminado)
+        // Usar port_or_known_default() maneja automáticamente puertos predeterminados (http->80, https->443)
         match (
             parsed_request.port_or_known_default(),
             parsed_base.port_or_known_default(),
         ) {
             (Some(request_port), Some(base_port)) if request_port == base_port => {
-                // 端口匹配，继续执行
+                // Puerto coincide, continuar
             }
             (Some(request_port), Some(base_port)) => {
                 return Err(AppError::localized(
                     "usage_script.request_port_mismatch",
-                    format!("请求端口 {request_port} 必须与 base_url 端口 {base_port} 匹配"),
+                    format!("El puerto de solicitud {request_port} debe coincidir con el puerto de base_url {base_port}"),
                     format!("Request port {request_port} must match base_url port {base_port}"),
                 ));
             }
             _ => {
-                // 理论上不会发生，因为 port_or_known_default() 应该总是返回 Some
+                // Teóricamente no debería ocurrir, ya que port_or_known_default() siempre debería devolver Some
                 return Err(AppError::localized(
                     "usage_script.request_port_unknown",
-                    "无法确定端口号",
+                    "No se puede determinar el número de puerto",
                     "Unable to determine port number",
                 ));
             }
@@ -556,7 +556,7 @@ fn validate_request_url(
     Ok(())
 }
 
-/// 判断 URL 是否指向本机（localhost / loopback）
+/// Determinar si la URL apunta a la máquina local (localhost / loopback)
 fn is_loopback_host(url: &Url) -> bool {
     match url.host() {
         Some(Host::Domain(d)) => d.eq_ignore_ascii_case("localhost"),
@@ -626,7 +626,7 @@ mod tests {
             if should_match {
                 assert!(
                     result.is_ok(),
-                    "应该匹配的URL被拒绝: base_url={}, request_url={}, error={}",
+                    "URL que debería coincidir fue rechazada: base_url={}, request_url={}, error={}",
                     base_url,
                     request_url,
                     result.unwrap_err()
@@ -634,7 +634,7 @@ mod tests {
             } else {
                 assert!(
                     result.is_err(),
-                    "应该不匹配的URL被允许: base_url={}, request_url={}",
+                    "URL que no debería coincidir fue permitida: base_url={}, request_url={}",
                     base_url,
                     request_url
                 );

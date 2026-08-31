@@ -408,11 +408,13 @@ impl AppSettings {
             .filter(|s| !s.is_empty())
             .map(|s| s.to_string());
 
+        // Solo se aceptan español e inglés. Un valor fuera de la lista se descarta y
+        // el resto del código cae al predeterminado (español).
         self.language = self
             .language
             .as_ref()
             .map(|s| s.trim())
-            .filter(|s| matches!(*s, "en" | "zh" | "ja"))
+            .filter(|s| matches!(*s, "es" | "en"))
             .map(|s| s.to_string());
 
         if let Some(sync) = &mut self.webdav_sync {

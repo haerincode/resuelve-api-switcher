@@ -61,7 +61,7 @@ export function AddProviderDialog({
         await universalProvidersApi.upsert(provider);
         toast.success(
           t("universalProvider.addSuccess", {
-            defaultValue: "统一供应商添加成功",
+            defaultValue: "Proveedor unificado agregado exitosamente",
           }),
         );
         setUniversalFormOpen(false);
@@ -74,7 +74,7 @@ export function AddProviderDialog({
         );
         toast.error(
           t("universalProvider.addFailed", {
-            defaultValue: "统一供应商添加失败",
+            defaultValue: "Fallo al agregar proveedor unificado",
           }),
         );
       }
@@ -94,7 +94,7 @@ export function AddProviderDialog({
         unknown
       >;
 
-      // 构造基础提交数据
+      // Construir datos de envío básicos
       const providerData: Omit<Provider, "id"> & {
         providerKey?: string;
         suggestedDefaults?: OpenClawSuggestedDefaults;

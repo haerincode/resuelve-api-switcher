@@ -1,11 +1,11 @@
-//! Claude Code 会话日志使用追踪
+//! Seguimiento de uso de log de sesiones Claude Code
 //!
-//! 从 ~/.claude/projects/ 下的 JSONL 会话文件中提取 token 使用数据，
-//! 实现无代理模式下的使用统计。
+//! Extrae datos de uso de tokens desde archivos de sesión JSONL bajo ~/.claude/projects/,
+//! implementa estadísticas de uso en modo sin proxy.
 //!
-//! ## 数据流
+//! ## Flujo de datos
 //! ```text
-//! ~/.claude/projects/*/*.jsonl → 增量解析 → 去重 → 费用计算 → proxy_request_logs 表
+//! ~/.claude/projects/*/*.jsonl → parseo incremental → deduplicación → cálculo de costos → tabla proxy_request_logs
 //! ```
 
 use crate::config::get_claude_config_dir;
@@ -24,7 +24,7 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-/// 同步结果
+/// Resultado de sincronización
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionSyncResult {
@@ -34,7 +34,7 @@ pub struct SessionSyncResult {
     pub errors: Vec<String>,
 }
 
-/// 数据来源分布
+/// Distribución de fuente de datos
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DataSourceSummary {
@@ -43,7 +43,7 @@ pub struct DataSourceSummary {
     pub total_cost_usd: String,
 }
 
-/// 从 JSONL 中解析出的 assistant 消息使用数据
+/// Datos de uso de mensaje assistant parseados desde JSONL
 #[derive(Debug)]
 struct ParsedAssistantUsage {
     message_id: String,
@@ -57,7 +57,7 @@ struct ParsedAssistantUsage {
     session_id: Option<String>,
 }
 
-/// 同步 Claude Code 会话日志到使用统计数据库
+/// Sincroniza log de sesiones Claude Code a base de datos de estadísticas de uso
 pub fn sync_claude_session_logs(db: &Database) -> Result<SessionSyncResult, AppError> {
     let projects_dir = get_claude_config_dir().join("projects");
     if !projects_dir.exists() {
@@ -76,7 +76,7 @@ pub fn sync_claude_session_logs(db: &Database) -> Result<SessionSyncResult, AppE
         errors: vec![],
     };
 
-    // 收集所有 .jsonl 文件
+    // Recopila todos los archivos .jsonl
     let jsonl_files = collect_jsonl_files(&projects_dir);
 
     for file_path in &jsonl_files {
@@ -89,7 +89,7 @@ pub fn sync_claude_session_logs(db: &Database) -> Result<SessionSyncResult, AppE
             }
             Err(e) => {
                 let msg = format!("{}: {e}", file_path.display());
-                log::warn!("[SESSION-SYNC] 文件解析失败: {msg}");
+                log::warn!("[SESSION-SYNC] Falló parsear archivo: {msg}");
                 result.errors.push(msg);
             }
         }
@@ -97,7 +97,7 @@ pub fn sync_claude_session_logs(db: &Database) -> Result<SessionSyncResult, AppE
 
     if result.imported > 0 {
         log::info!(
-            "[SESSION-SYNC] 同步完成: 导入 {} 条, 跳过 {} 条, 扫描 {} 个文件",
+            "[SESSION-SYNC] Sincronización completa: importados {} registros, saltados {} registros, escaneados {} archivos",
             result.imported,
             result.skipped,
             result.files_scanned
@@ -107,11 +107,11 @@ pub fn sync_claude_session_logs(db: &Database) -> Result<SessionSyncResult, AppE
     Ok(result)
 }
 
-/// 收集目录下所有 .jsonl 文件（含子 agent 文件）
+/// Recopila todos los archivos .jsonl bajo directorio (incluye archivos de subagents)
 ///
-/// 扫描三层固定深度，不使用递归，避免死循环：
-///   projects_dir/项目目录/*.jsonl                          (主会话)
-///   projects_dir/项目目录/SESSION_ID/subagents/*.jsonl      (子 agent)
+/// Escanea tres niveles de profundidad fija, no usa recursión, evita bucle infinito:
+///   projects_dir/directorio_proyecto/*.jsonl                          (sesión principal)
+///   projects_dir/directorio_proyecto/SESSION_ID/subagents/*.jsonl      (subagent)
 fn collect_jsonl_files(projects_dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
 
@@ -125,15 +125,15 @@ fn collect_jsonl_files(projects_dir: &Path) -> Vec<PathBuf> {
         if !path.is_dir() {
             continue;
         }
-        // 每个项目目录下的 .jsonl 文件
+        // Archivos .jsonl bajo cada directorio de proyecto
         if let Ok(sub_entries) = fs::read_dir(&path) {
             for sub_entry in sub_entries.flatten() {
                 let sub_path = sub_entry.path();
                 if sub_path.extension().and_then(|e| e.to_str()) == Some("jsonl") {
-                    // 主会话 JSONL 文件
+                    // Archivo JSONL de sesión principal
                     files.push(sub_path);
                 } else if sub_path.is_dir() {
-                    // 扫描子 agent 目录: 项目/SESSION_ID/subagents/*.jsonl
+                    // Escanea directorio de subagents: proyecto/SESSION_ID/subagents/*.jsonl
                     let subagents_dir = sub_path.join("subagents");
                     if subagents_dir.is_dir() {
                         if let Ok(agent_entries) = fs::read_dir(&subagents_dir) {
@@ -154,26 +154,26 @@ fn collect_jsonl_files(projects_dir: &Path) -> Vec<PathBuf> {
     files
 }
 
-/// 同步单个 JSONL 文件，返回 (imported, skipped)
+/// Sincroniza archivo JSONL individual, devuelve (imported, skipped)
 fn sync_single_file(db: &Database, file_path: &Path) -> Result<(u32, u32), AppError> {
     let file_path_str = file_path.to_string_lossy().to_string();
 
-    // 获取文件元数据
+    // Obtiene metadata de archivo
     let metadata = fs::metadata(file_path)
-        .map_err(|e| AppError::Config(format!("无法读取文件元数据: {e}")))?;
+        .map_err(|e| AppError::Config(format!("No se puede leer metadata de archivo: {e}")))?;
     let file_modified = metadata_modified_nanos(&metadata);
 
-    // 检查同步状态
+    // Verifica estado de sincronización
     let (last_modified, last_offset) = get_sync_state(db, &file_path_str)?;
 
-    // 文件未变化则跳过
+    // Si archivo no cambió se salta
     if file_modified <= last_modified {
         return Ok((0, 0));
     }
 
-    // 从上次偏移位置开始增量解析
+    // Inicia parseo incremental desde posición de offset anterior
     let file =
-        fs::File::open(file_path).map_err(|e| AppError::Config(format!("无法打开文件: {e}")))?;
+        fs::File::open(file_path).map_err(|e| AppError::Config(format!("No se puede abrir archivo: {e}")))?;
     let reader = BufReader::new(file);
 
     let mut line_offset: i64 = 0;
@@ -183,14 +183,14 @@ fn sync_single_file(db: &Database, file_path: &Path) -> Result<(u32, u32), AppEr
     for line_result in reader.lines() {
         line_offset += 1;
 
-        // 跳过已处理的行
+        // Salta líneas ya procesadas
         if line_offset <= last_offset {
             continue;
         }
 
         let line = match line_result {
             Ok(l) => l,
-            Err(_) => continue, // 容忍不完整的最后一行
+            Err(_) => continue, // Tolera última línea incompleta
         };
 
         if line.trim().is_empty() {
@@ -202,14 +202,14 @@ fn sync_single_file(db: &Database, file_path: &Path) -> Result<(u32, u32), AppEr
             Err(_) => continue,
         };
 
-        // 提取 session ID (从 system 或首条消息)
+        // Extrae session ID (desde system o primer mensaje)
         if current_session_id.is_none() {
             if let Some(sid) = value.get("sessionId").and_then(|v| v.as_str()) {
                 current_session_id = Some(sid.to_string());
             }
         }
 
-        // 只处理 assistant 类型的消息
+        // Solo procesa mensajes de tipo assistant
         if value.get("type").and_then(|t| t.as_str()) != Some("assistant") {
             continue;
         }
@@ -263,15 +263,15 @@ fn sync_single_file(db: &Database, file_path: &Path) -> Result<(u32, u32), AppEr
             session_id: current_session_id.clone(),
         };
 
-        // 按 message.id 去重：优先保留有 stop_reason 的条目，否则保留最新的
+        // Deduplica por message.id: prioriza preservar entrada con stop_reason, sino preserva más reciente
         let should_replace = match messages.get(&msg_id) {
             None => true,
             Some(existing) => {
-                // 新条目有 stop_reason 而旧条目没有 → 替换
+                // Nueva entrada tiene stop_reason y antigua no → reemplaza
                 if parsed.stop_reason.is_some() && existing.stop_reason.is_none() {
                     true
                 }
-                // 两个都有或都没有 stop_reason → 取 output_tokens 更大的
+                // Ambas tienen o ambas carecen de stop_reason → toma la de mayor output_tokens
                 else if parsed.stop_reason.is_some() == existing.stop_reason.is_some() {
                     parsed.output_tokens > existing.output_tokens
                 } else {
@@ -285,12 +285,12 @@ fn sync_single_file(db: &Database, file_path: &Path) -> Result<(u32, u32), AppEr
         }
     }
 
-    // 写入数据库
+    // Escribe a base de datos
     let mut imported: u32 = 0;
     let mut skipped: u32 = 0;
 
     for msg in messages.values() {
-        // 只导入有 stop_reason 的最终条目（完整的 API 调用）
+        // Solo importa entradas finales con stop_reason (llamadas API completas)
         if msg.stop_reason.is_none() {
             continue;
         }
@@ -301,7 +301,7 @@ fn sync_single_file(db: &Database, file_path: &Path) -> Result<(u32, u32), AppEr
             msg.message_id
         );
 
-        // 跳过 output_tokens 为 0 的无意义条目
+        // Salta entradas sin sentido con output_tokens en 0
         if msg.output_tokens == 0 {
             continue;
         }
@@ -310,19 +310,19 @@ fn sync_single_file(db: &Database, file_path: &Path) -> Result<(u32, u32), AppEr
             Ok(true) => imported += 1,
             Ok(false) => skipped += 1,
             Err(e) => {
-                log::warn!("[SESSION-SYNC] 插入失败 ({}): {e}", msg.message_id);
+                log::warn!("[SESSION-SYNC] Falló insertar ({}): {e}", msg.message_id);
                 skipped += 1;
             }
         }
     }
 
-    // 更新同步状态
+    // Actualiza estado de sincronización
     update_sync_state(db, &file_path_str, file_modified, line_offset)?;
 
     Ok((imported, skipped))
 }
 
-/// 获取 session_log_sync 表中某条目的同步进度。
+/// Obtiene progreso de sincronización de una entrada en tabla session_log_sync.
 ///
 /// Shared by all session_usage_* parsers.
 pub(crate) fn get_sync_state(db: &Database, file_path: &str) -> Result<(i64, i64), AppError> {
@@ -335,10 +335,10 @@ pub(crate) fn get_sync_state(db: &Database, file_path: &str) -> Result<(i64, i64
     Ok(result.unwrap_or((0, 0)))
 }
 
-/// 返回文件 mtime 的纳秒时间戳。
+/// Devuelve timestamp en nanosegundos del mtime del archivo.
 ///
-/// `session_log_sync.last_modified` 旧数据是秒级时间戳；新写入纳秒值不需要
-/// schema 迁移，旧值会自然触发一次增量重扫，并继续依赖行 offset 避免重复导入。
+/// `session_log_sync.last_modified` datos antiguos son timestamp a nivel de segundos; nuevos escriben valor en nanosegundos no necesita
+/// migración de schema, valor antiguo activará naturalmente reescaneo incremental una vez, y continuará dependiendo de offset de línea para evitar importación duplicada.
 pub(crate) fn metadata_modified_nanos(metadata: &fs::Metadata) -> i64 {
     metadata
         .modified()
@@ -348,7 +348,7 @@ pub(crate) fn metadata_modified_nanos(metadata: &fs::Metadata) -> i64 {
         .unwrap_or(0)
 }
 
-/// 更新 session_log_sync 表中某条目的同步进度。
+/// Actualiza progreso de sincronización de una entrada en tabla session_log_sync.
 ///
 /// Shared by all session_usage_* parsers.
 pub(crate) fn update_sync_state(
@@ -368,11 +368,11 @@ pub(crate) fn update_sync_state(
          VALUES (?1, ?2, ?3, ?4)",
         rusqlite::params![file_path, last_modified, last_offset, now],
     )
-    .map_err(|e| AppError::Database(format!("更新同步状态失败: {e}")))?;
+    .map_err(|e| AppError::Database(format!("Falló actualizar estado de sincronización: {e}")))?;
     Ok(())
 }
 
-/// 插入单条会话日志到 proxy_request_logs，返回是否成功插入 (true=新插入, false=已存在)
+/// Inserta registro único de sesión a proxy_request_logs, devuelve si insertó exitosamente (true=nuevo insertado, false=ya existe)
 fn insert_session_log_entry(
     db: &Database,
     request_id: &str,
@@ -408,7 +408,7 @@ fn insert_session_log_entry(
         return Ok(false);
     }
 
-    // 计算费用
+    // Calcula costo
     let usage = TokenUsage {
         input_tokens: msg.input_tokens,
         output_tokens: msg.output_tokens,
@@ -451,7 +451,7 @@ fn insert_session_log_entry(
         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)",
         rusqlite::params![
             request_id,
-            "_session",         // provider_id: 标记为会话来源
+            "_session",         // provider_id: marca como fuente de sesión
             "claude",           // app_type
             msg.model,
             msg.model,          // request_model = model
@@ -464,24 +464,24 @@ fn insert_session_log_entry(
             cache_read_cost,
             cache_creation_cost,
             total_cost,
-            0i64,               // latency_ms: 会话日志无此数据
+            0i64,               // latency_ms: log de sesión no tiene estos datos
             Option::<i64>::None, // first_token_ms
-            200i64,             // status_code: 有 stop_reason 说明请求成功
+            200i64,             // status_code: tener stop_reason indica solicitud exitosa
             Option::<String>::None, // error_message
             msg.session_id,
             Some("session_log"), // provider_type
-            1i64,               // is_streaming: Claude Code 通常使用流式
+            1i64,               // is_streaming: Claude Code usualmente usa streaming
             "1.0",              // cost_multiplier
             created_at,
             "session_log",      // data_source
         ],
     )
-    .map_err(|e| AppError::Database(format!("插入会话日志失败: {e}")))?;
+    .map_err(|e| AppError::Database(format!("Falló insertar log de sesión: {e}")))?;
 
     Ok(true)
 }
 
-/// 从 model_pricing 表查找模型定价（支持模糊匹配）
+/// Busca precio de modelo desde tabla model_pricing (soporta coincidencia difusa)
 fn find_model_pricing_for_session(
     conn: &rusqlite::Connection,
     model_id: &str,
@@ -489,7 +489,7 @@ fn find_model_pricing_for_session(
     find_model_pricing(conn, model_id)
 }
 
-/// 查询数据来源分布统计
+/// Consulta estadísticas de distribución de fuente de datos
 pub fn get_data_source_breakdown(db: &Database) -> Result<Vec<DataSourceSummary>, AppError> {
     let conn = lock_conn!(db.conn);
 
@@ -564,10 +564,10 @@ mod tests {
 
     #[test]
     fn test_dedup_by_message_id() {
-        // 同一个 message.id 有多条，应该取 stop_reason 有值的那条
+        // Mismo message.id tiene múltiples entradas, debería tomar la que tiene valor stop_reason
         let mut messages: HashMap<String, ParsedAssistantUsage> = HashMap::new();
 
-        // 中间条目（无 stop_reason）
+        // Entrada intermedia (sin stop_reason)
         let intermediate = ParsedAssistantUsage {
             message_id: "msg_1".to_string(),
             model: "claude-opus-4-6".to_string(),
@@ -581,7 +581,7 @@ mod tests {
         };
         messages.insert("msg_1".to_string(), intermediate);
 
-        // 最终条目（有 stop_reason）
+        // Entrada final (con stop_reason)
         let final_entry = ParsedAssistantUsage {
             message_id: "msg_1".to_string(),
             model: "claude-opus-4-6".to_string(),
@@ -594,7 +594,7 @@ mod tests {
             session_id: None,
         };
 
-        // 应该替换
+        // Debería reemplazar
         let should_replace = final_entry.stop_reason.is_some()
             && messages.get("msg_1").unwrap().stop_reason.is_none();
         assert!(should_replace);

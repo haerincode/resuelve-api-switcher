@@ -1,9 +1,9 @@
 //! Codex (OpenAI) Provider Adapter
 //!
-//! 仅透传模式，支持直连 OpenAI API
+//! 仅透传模式，soportar直连 OpenAI API
 //!
-//! ## 客户端检测
-//! 支持检测官方 Codex 客户端 (codex_vscode, codex_cli_rs)
+//! ## cliente检测
+//! soportar检测官方 Codex cliente (codex_vscode, codex_cli_rs)
 
 use super::{AuthInfo, AuthStrategy, ProviderAdapter};
 use crate::provider::Provider;
@@ -12,7 +12,7 @@ use regex::Regex;
 use std::sync::LazyLock;
 use toml::Value as TomlValue;
 
-/// 官方 Codex 客户端 User-Agent 正则
+/// 官方 Codex cliente User-Agent 正entonces
 #[allow(dead_code)]
 static CODEX_CLIENT_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(codex_vscode|codex_cli_rs)/[\d.]+").unwrap());
@@ -144,7 +144,7 @@ impl CodexAdapter {
         Self
     }
 
-    /// 检测是否为官方 Codex 客户端
+    /// 检测是否para官方 Codex cliente
     ///
     /// 匹配 User-Agent 模式: `^(codex_vscode|codex_cli_rs)/[\d.]+`
     #[allow(dead_code)]
@@ -152,23 +152,23 @@ impl CodexAdapter {
         CODEX_CLIENT_REGEX.is_match(user_agent)
     }
 
-    /// 从 Provider 配置中提取 API Key
+    /// desde Provider configuración中提取 API Key
     fn extract_key(&self, provider: &Provider) -> Option<String> {
-        // 1. 尝试从 env 中获取
+        // 1. 尝试desde env 中obtener
         if let Some(env) = provider.settings_config.get("env") {
             if let Some(key) = env.get("OPENAI_API_KEY").and_then(|v| v.as_str()) {
                 return Some(key.to_string());
             }
         }
 
-        // 2. 尝试从 auth 中获取 (Codex CLI 格式)
+        // 2. 尝试desde auth 中obtener (Codex CLI formato)
         if let Some(auth) = provider.settings_config.get("auth") {
             if let Some(key) = auth.get("OPENAI_API_KEY").and_then(|v| v.as_str()) {
                 return Some(key.to_string());
             }
         }
 
-        // 3. 尝试直接获取
+        // 3. 尝试直接obtener
         if let Some(key) = provider
             .settings_config
             .get("apiKey")
@@ -178,7 +178,7 @@ impl CodexAdapter {
             return Some(key.to_string());
         }
 
-        // 4. 尝试从 config 对象中获取
+        // 4. 尝试desde config /象中obtener
         if let Some(config) = provider.settings_config.get("config") {
             if let Some(key) = config
                 .get("api_key")
@@ -205,7 +205,7 @@ impl ProviderAdapter for CodexAdapter {
     }
 
     fn extract_base_url(&self, provider: &Provider) -> Result<String, ProxyError> {
-        // 1. 尝试直接获取 base_url 字段
+        // 1. 尝试直接obtener base_url 字段
         if let Some(url) = provider
             .settings_config
             .get("base_url")
@@ -223,13 +223,13 @@ impl ProviderAdapter for CodexAdapter {
             return Ok(url.trim_end_matches('/').to_string());
         }
 
-        // 3. 尝试从 config 对象中获取
+        // 3. 尝试desde config /象中obtener
         if let Some(config) = provider.settings_config.get("config") {
             if let Some(url) = config.get("base_url").and_then(|v| v.as_str()) {
                 return Ok(url.trim_end_matches('/').to_string());
             }
 
-            // 尝试解析 TOML 字符串格式
+            // 尝试analizar TOML 字符串formato
             if let Some(config_str) = config.as_str() {
                 if let Some(start) = config_str.find("base_url = \"") {
                     let rest = &config_str[start + 12..];
@@ -247,7 +247,7 @@ impl ProviderAdapter for CodexAdapter {
         }
 
         Err(ProxyError::ConfigError(
-            "Codex Provider 缺少 base_url 配置".to_string(),
+            "Codex Provider 缺少 base_url configuración".to_string(),
         ))
     }
 
@@ -260,22 +260,22 @@ impl ProviderAdapter for CodexAdapter {
         let base_trimmed = base_url.trim_end_matches('/');
         let endpoint_trimmed = endpoint.trim_start_matches('/');
 
-        // OpenAI/Codex 的 base_url 可能是：
+        // OpenAI/Codex de base_url 可能是：
         // - 纯 origin: https://api.openai.com  (需要自动补 /v1)
-        // - 已含 /v1: https://api.openai.com/v1 (直接拼接)
+        // - ya含 /v1: https://api.openai.com/v1 (直接拼接)
         // - 自定义前缀: https://xxx/openai (不添加 /v1，直接拼接)
 
-        // 检查 base_url 是否已经包含 /v1
+        // verificar base_url 是否ya经包含 /v1
         let already_has_v1 = base_trimmed.ends_with("/v1");
 
-        // 检查是否是纯 origin（没有路径部分）
+        // verificar是否是纯 origin（没有路径部分）
         let origin_only = match base_trimmed.split_once("://") {
             Some((_scheme, rest)) => !rest.contains('/'),
             None => !base_trimmed.contains('/'),
         };
 
         let mut url = if already_has_v1 {
-            // 已经有 /v1，直接拼接
+            // ya经有 /v1，直接拼接
             format!("{base_trimmed}/{endpoint_trimmed}")
         } else if origin_only {
             // 纯 origin，添加 /v1
@@ -285,7 +285,7 @@ impl ProviderAdapter for CodexAdapter {
             format!("{base_trimmed}/{endpoint_trimmed}")
         };
 
-        // 去除重复的 /v1/v1（可能由 base_url 与 endpoint 都带版本导致）
+        // 去除重复de /v1/v1（可能por base_url con endpoint 都带版本导致）
         while url.contains("/v1/v1") {
             url = url.replace("/v1/v1", "/v1");
         }
@@ -390,12 +390,12 @@ mod tests {
     #[test]
     fn test_build_url_dedup_v1() {
         let adapter = CodexAdapter::new();
-        // base_url 已包含 /v1，endpoint 也包含 /v1
+        // base_url ya包含 /v1，endpoint 也包含 /v1
         let url = adapter.build_url("https://www.packyapi.com/v1", "/v1/responses");
         assert_eq!(url, "https://www.packyapi.com/v1/responses");
     }
 
-    // 官方客户端检测测试
+    // 官方cliente检测测试
     #[test]
     fn test_is_official_client_vscode() {
         assert!(CodexAdapter::is_official_client("codex_vscode/1.0.0"));
@@ -420,7 +420,7 @@ mod tests {
 
     #[test]
     fn test_is_official_client_partial_match() {
-        // 必须从开头匹配
+        // 必须desde开头匹配
         assert!(!CodexAdapter::is_official_client("some codex_vscode/1.0.0"));
         assert!(!CodexAdapter::is_official_client(
             "prefix_codex_cli_rs/1.0.0"

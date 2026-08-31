@@ -172,7 +172,7 @@ export function CommonConfigEditor({
               />
               <span>
                 {t("claudeConfig.writeCommonConfig", {
-                  defaultValue: "写入通用配置",
+                  defaultValue: "Escribir configuración común",
                 })}
               </span>
             </label>
@@ -185,7 +185,7 @@ export function CommonConfigEditor({
             className="text-xs text-blue-400 dark:text-blue-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
           >
             {t("claudeConfig.editCommonConfig", {
-              defaultValue: "编辑通用配置",
+              defaultValue: "Editar configuración común",
             })}
           </button>
         </div>
@@ -266,7 +266,7 @@ export function CommonConfigEditor({
       <FullScreenPanel
         isOpen={isModalOpen}
         title={t("claudeConfig.editCommonConfigTitle", {
-          defaultValue: "编辑通用配置片段",
+          defaultValue: "Editar fragmento de configuración común",
         })}
         onClose={onModalClose}
         footer={
@@ -285,7 +285,7 @@ export function CommonConfigEditor({
                   <Download className="w-4 h-4" />
                 )}
                 {t("claudeConfig.extractFromCurrent", {
-                  defaultValue: "从编辑内容提取",
+                  defaultValue: "Extraer del contenido editado",
                 })}
               </Button>
             )}

@@ -37,7 +37,7 @@ interface ProviderPresetSelectorProps {
   onPresetChange: (value: string) => void;
   onUniversalPresetSelect?: (preset: UniversalProviderPreset) => void;
   onManageUniversalProviders?: () => void;
-  category?: ProviderCategory; // 当前选中的分类
+  category?: ProviderCategory; // Categoría actualmente seleccionada
 }
 
 export function ProviderPresetSelector({
@@ -55,32 +55,32 @@ export function ProviderPresetSelector({
     switch (category) {
       case "official":
         return t("providerForm.officialHint", {
-          defaultValue: "💡 官方供应商使用浏览器登录，无需配置 API Key",
+          defaultValue: "💡 Proveedores oficiales usan inicio de sesión en navegador, no requieren configurar API Key",
         });
       case "cn_official":
         return t("providerForm.cnOfficialApiKeyHint", {
-          defaultValue: "💡 国产官方供应商只需填写 API Key，请求地址已预设",
+          defaultValue: "💡 Proveedores oficiales nacionales solo necesitan completar API Key, dirección de solicitud preconfigurada",
         });
       case "aggregator":
         return t("providerForm.aggregatorApiKeyHint", {
-          defaultValue: "💡 聚合服务供应商只需填写 API Key 即可使用",
+          defaultValue: "💡 Proveedores de servicio agregado solo necesitan completar API Key para usar",
         });
       case "third_party":
         return t("providerForm.thirdPartyApiKeyHint", {
-          defaultValue: "💡 第三方供应商需要填写 API Key 和请求地址",
+          defaultValue: "💡 Proveedores de terceros necesitan completar API Key y dirección de solicitud",
         });
       case "custom":
         return t("providerForm.customApiKeyHint", {
-          defaultValue: "💡 自定义配置需手动填写所有必要字段",
+          defaultValue: "💡 Configuración personalizada requiere completar manualmente todos los campos necesarios",
         });
       case "omo":
         return t("providerForm.omoHint", {
           defaultValue:
-            "💡 OMO 配置管理 Agent 模型分配，兼容 oh-my-openagent.jsonc / oh-my-opencode.jsonc",
+            "💡 Configuración OMO gestiona asignación de modelo Agent, compatible con oh-my-openagent.jsonc / oh-my-opencode.jsonc",
         });
       default:
         return t("providerPreset.hint", {
-          defaultValue: "选择预设后可继续调整下方字段。",
+          defaultValue: "Después de seleccionar preset puede continuar ajustando campos a continuación.",
         });
     }
   };
@@ -185,7 +185,7 @@ export function ProviderPresetSelector({
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-accent text-muted-foreground hover:bg-accent/80 relative"
                 title={t("universalProvider.hint", {
                   defaultValue:
-                    "跨应用统一配置，自动同步到 Claude/Codex/Gemini",
+                    "Configuración unificada entre aplicaciones, sincronizar automáticamente a Claude/Codex/Gemini",
                 })}
               >
                 <ProviderIcon icon={preset.icon} name={preset.name} size={14} />
@@ -201,12 +201,12 @@ export function ProviderPresetSelector({
                 onClick={onManageUniversalProviders}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-accent text-muted-foreground hover:bg-accent/80"
                 title={t("universalProvider.manage", {
-                  defaultValue: "管理统一供应商",
+                  defaultValue: "Gestionar proveedor unificado",
                 })}
               >
                 <Settings2 className="h-4 w-4" />
                 {t("universalProvider.manage", {
-                  defaultValue: "管理",
+                  defaultValue: "Gestionar",
                 })}
               </button>
             )}

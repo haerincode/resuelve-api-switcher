@@ -9,11 +9,11 @@ use std::path::Path;
 
 const MAX_BACKUPS: usize = 10;
 
-/// 配置导入导出相关业务逻辑
+/// Lógica de negocio relacionada con importar/exportar configuración
 pub struct ConfigService;
 
 impl ConfigService {
-    /// 为当前 config.json 创建备份，返回备份 ID（若文件不存在则返回空字符串）。
+    /// Crea respaldo para config.json actual, devuelve ID de respaldo (si archivo no existe devuelve string vacío).
     pub fn create_backup(config_path: &Path) -> Result<String, AppError> {
         if !config_path.exists() {
             return Ok(String::new());
@@ -83,7 +83,7 @@ impl ConfigService {
         Ok(())
     }
 
-    /// 同步当前供应商到对应的 live 配置。
+    /// Sincroniza proveedor actual a configuración live correspondiente.
     pub fn sync_current_providers_to_live(config: &mut MultiAppConfig) -> Result<(), AppError> {
         Self::sync_current_provider_for_app(config, &AppType::Claude)?;
         Self::sync_current_provider_for_app(config, &AppType::Codex)?;
@@ -110,7 +110,7 @@ impl ConfigService {
                 Some(provider) => provider.clone(),
                 None => {
                     log::warn!(
-                        "当前应用 {app_type:?} 的供应商 {current_id} 不存在，跳过 live 同步"
+                        "Proveedor {current_id} de aplicación actual {app_type:?} no existe, se salta sincronización live"
                     );
                     return Ok(());
                 }
@@ -147,22 +147,22 @@ impl ConfigService {
         provider: &Provider,
     ) -> Result<(), AppError> {
         let settings = provider.settings_config.as_object().ok_or_else(|| {
-            AppError::Config(format!("供应商 {provider_id} 的 Codex 配置必须是对象"))
+            AppError::Config(format!("Configuración Codex de proveedor {provider_id} debe ser objeto"))
         })?;
         let auth = settings.get("auth").ok_or_else(|| {
-            AppError::Config(format!("供应商 {provider_id} 的 Codex 配置缺少 auth 字段"))
+            AppError::Config(format!("Configuración Codex de proveedor {provider_id} carece de campo auth"))
         })?;
         if !auth.is_object() {
             return Err(AppError::Config(format!(
-                "供应商 {provider_id} 的 Codex auth 配置必须是 JSON 对象"
+                "Configuración auth Codex de proveedor {provider_id} debe ser objeto JSON"
             )));
         }
         let cfg_text = settings.get("config").and_then(Value::as_str);
 
         crate::codex_config::write_codex_live_atomic_with_stable_provider(auth, cfg_text)?;
-        // 注意：MCP 同步在 v3.7.0 中已通过 McpService 进行，不再在此调用
-        // sync_enabled_to_codex 使用旧的 config.mcp.codex 结构，在新架构中为空
-        // MCP 的启用/禁用应通过 McpService::toggle_app 进行
+        // Nota: sincronización MCP en v3.7.0 ya se hace mediante McpService, ya no se llama aquí
+        // sync_enabled_to_codex usa estructura antigua config.mcp.codex, está vacía en nueva arquitectura
+        // Habilitar/deshabilitar MCP debe hacerse mediante McpService::toggle_app
 
         let cfg_text_after = crate::codex_config::read_and_validate_codex_config_text()?;
         if let Some(manager) = config.get_manager_mut(&AppType::Codex) {
@@ -213,7 +213,7 @@ impl ConfigService {
 
         ProviderService::write_gemini_live(provider)?;
 
-        // 读回实际写入的内容并更新到配置中（包含 settings.json）
+        // Lee contenido realmente escrito y actualiza en configuración (incluye settings.json)
         let live_after_env = read_gemini_env()?;
         let settings_path = crate::gemini_config::get_gemini_settings_path();
         let live_after_config = if settings_path.exists() {

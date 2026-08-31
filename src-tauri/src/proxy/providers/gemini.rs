@@ -1,10 +1,10 @@
 //! Gemini (Google) Provider Adapter
 //!
-//! 支持 API Key 和 OAuth 两种认证方式
+//! soportar API Key y OAuth 两种autenticación方式
 //!
-//! ## 认证模式
-//! - **Gemini**: API Key 认证 (x-goog-api-key)
-//! - **GeminiCli**: OAuth Bearer 认证 (用于 Gemini CLI)
+//! ## autenticación模式
+//! - **Gemini**: API Key autenticación (x-goog-api-key)
+//! - **GeminiCli**: OAuth Bearer autenticación (usar/ Gemini CLI)
 
 use super::{AuthInfo, AuthStrategy, ProviderAdapter, ProviderType};
 use crate::provider::Provider;
@@ -25,12 +25,12 @@ pub struct OAuthCredentials {
 
 #[allow(dead_code)]
 impl OAuthCredentials {
-    /// 检查是否需要刷新 token（有 refresh_token 但没有有效的 access_token）
+    /// verificar是否需要刷新 token（有 refresh_token pero没有válidode access_token）
     pub fn needs_refresh(&self) -> bool {
         self.refresh_token.is_some() && self.access_token.is_empty()
     }
 
-    /// 检查是否可以刷新 token
+    /// verificar是否可以刷新 token
     pub fn can_refresh(&self) -> bool {
         self.refresh_token.is_some() && self.client_id.is_some() && self.client_secret.is_some()
     }
@@ -41,10 +41,10 @@ impl GeminiAdapter {
         Self
     }
 
-    /// 获取供应商类型
+    /// obtenerproveedortipo
     ///
-    /// 根据 API Key 格式检测：
-    /// - GeminiCli: access_token (ya29. 开头) 或 JSON 格式凭证
+    /// según API Key formato检测：
+    /// - GeminiCli: access_token (ya29. 开头) o JSON formato凭证
     /// - Gemini: 普通 API Key
     pub fn provider_type(&self, provider: &Provider) -> ProviderType {
         if let Some(key) = self.extract_key_raw(provider) {
@@ -52,7 +52,7 @@ impl GeminiAdapter {
             if key.starts_with("ya29.") {
                 return ProviderType::GeminiCli;
             }
-            // JSON 格式的 OAuth 凭证
+            // JSON formatode OAuth 凭证
             if key.starts_with('{') {
                 return ProviderType::GeminiCli;
             }
@@ -60,7 +60,7 @@ impl GeminiAdapter {
         ProviderType::Gemini
     }
 
-    /// 检测认证类型
+    /// 检测autenticacióntipo
     pub fn detect_auth_type(&self, provider: &Provider) -> AuthStrategy {
         match self.provider_type(provider) {
             ProviderType::GeminiCli => AuthStrategy::GoogleOAuth,
@@ -68,10 +68,10 @@ impl GeminiAdapter {
         }
     }
 
-    /// 解析 OAuth 凭证
+    /// analizar OAuth 凭证
     pub fn parse_oauth_credentials(&self, key: &str) -> Option<OAuthCredentials> {
-        // 防御性 trim:前端在 input 事件中会 trim,但 JSON 编辑器 / deeplink
-        // 导入 / live 回填等路径会绕过。带前导换行的 oauth_creds.json 粘贴
+        // 防御性 trim:前端en input 事件中会 trim,pero JSON 编辑器 / deeplink
+        // 导入 / live 回填等路径会绕过。带前导换行de oauth_creds.json 粘贴
         // 是常见场景,此处统一兜底。
         let key = key.trim();
 
@@ -85,7 +85,7 @@ impl GeminiAdapter {
             });
         }
 
-        // JSON 格式
+        // JSON formato
         if key.starts_with('{') {
             if let Ok(json) = serde_json::from_str::<serde_json::Value>(key) {
                 let access_token = json
@@ -106,7 +106,7 @@ impl GeminiAdapter {
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string());
 
-                // 如果有 access_token 或 refresh_token，返回凭证
+                // si有 access_token o refresh_token，retornar凭证
                 if !access_token.is_empty() || refresh_token.is_some() {
                     return Some(OAuthCredentials {
                         access_token,
@@ -121,10 +121,10 @@ impl GeminiAdapter {
         None
     }
 
-    /// 从 Provider 配置中提取原始 API Key
+    /// desde Provider configuración中提取原始 API Key
     fn extract_key_raw(&self, provider: &Provider) -> Option<String> {
         if let Some(env) = provider.settings_config.get("env") {
-            // 使用 GEMINI_API_KEY
+            // 使usar GEMINI_API_KEY
             if let Some(key) = env
                 .get("GEMINI_API_KEY")
                 .and_then(|v| v.as_str())
@@ -135,7 +135,7 @@ impl GeminiAdapter {
             }
         }
 
-        // 尝试直接获取
+        // 尝试直接obtener
         if let Some(key) = provider
             .settings_config
             .get("apiKey")
@@ -163,14 +163,14 @@ impl ProviderAdapter for GeminiAdapter {
     }
 
     fn extract_base_url(&self, provider: &Provider) -> Result<String, ProxyError> {
-        // 从 env 中获取
+        // desde env 中obtener
         if let Some(env) = provider.settings_config.get("env") {
             if let Some(url) = env.get("GOOGLE_GEMINI_BASE_URL").and_then(|v| v.as_str()) {
                 return Ok(url.trim_end_matches('/').to_string());
             }
         }
 
-        // 尝试直接获取
+        // 尝试直接obtener
         if let Some(url) = provider
             .settings_config
             .get("base_url")
@@ -188,7 +188,7 @@ impl ProviderAdapter for GeminiAdapter {
         }
 
         Err(ProxyError::ConfigError(
-            "Gemini Provider 缺少 base_url 配置".to_string(),
+            "Gemini Provider 缺少 base_url configuración".to_string(),
         ))
     }
 
@@ -198,11 +198,11 @@ impl ProviderAdapter for GeminiAdapter {
 
         match strategy {
             AuthStrategy::GoogleOAuth => {
-                // 解析 OAuth 凭证
+                // analizar OAuth 凭证
                 if let Some(creds) = self.parse_oauth_credentials(&key) {
                     Some(AuthInfo::with_access_token(key, creds.access_token))
                 } else {
-                    // 回退到普通 API Key
+                    // 回退a普通 API Key
                     Some(AuthInfo::new(key, AuthStrategy::Google))
                 }
             }
@@ -216,7 +216,7 @@ impl ProviderAdapter for GeminiAdapter {
 
         let mut url = format!("{base_trimmed}/{endpoint_trimmed}");
 
-        // 处理 /v1beta 路径去重
+        // procesar /v1beta 路径去重
         let version_patterns = ["/v1beta", "/v1"];
         for pattern in &version_patterns {
             let duplicate = format!("{pattern}{pattern}");
@@ -391,7 +391,7 @@ mod tests {
     #[test]
     fn test_build_url_dedup() {
         let adapter = GeminiAdapter::new();
-        // 模拟 base_url 已包含 /v1beta，endpoint 也包含 /v1beta
+        // 模拟 base_url ya包含 /v1beta，endpoint 也包含 /v1beta
         let url = adapter.build_url(
             "https://generativelanguage.googleapis.com/v1beta",
             "/v1beta/models/gemini-pro:generateContent",

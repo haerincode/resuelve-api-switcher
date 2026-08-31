@@ -1,6 +1,6 @@
-//! 流式健康检查服务
+//! Servicio de verificación de salud en streaming
 //!
-//! 使用流式 API 进行快速健康检查，只需接收首个 chunk 即判定成功。
+//! Usa API en streaming para verificación rápida de salud, solo necesita recibir primer chunk para determinar éxito.
 
 use futures::StreamExt;
 use reqwest::Client;
@@ -20,7 +20,7 @@ use crate::proxy::providers::{
     get_adapter, AuthInfo, AuthStrategy, ClaudeAdapter, ProviderAdapter,
 };
 
-/// 健康状态枚举
+/// Enum de estado de salud
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum HealthStatus {
@@ -29,20 +29,20 @@ pub enum HealthStatus {
     Failed,
 }
 
-/// 流式检查配置
+/// Configuración de verificación en streaming
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StreamCheckConfig {
     pub timeout_secs: u64,
     pub max_retries: u32,
     pub degraded_threshold_ms: u64,
-    /// Claude 测试模型
+    /// Modelo de prueba Claude
     pub claude_model: String,
-    /// Codex 测试模型
+    /// Modelo de prueba Codex
     pub codex_model: String,
-    /// Gemini 测试模型
+    /// Modelo de prueba Gemini
     pub gemini_model: String,
-    /// 检查提示词
+    /// Prompt de verificación
     #[serde(default = "default_test_prompt")]
     pub test_prompt: String,
 }
@@ -65,7 +65,7 @@ impl Default for StreamCheckConfig {
     }
 }
 
-/// 流式检查结果
+/// Resultado de verificación en streaming
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StreamCheckResult {
@@ -77,18 +77,18 @@ pub struct StreamCheckResult {
     pub model_used: String,
     pub tested_at: i64,
     pub retry_count: u32,
-    /// 细粒度错误分类（如 "modelNotFound"），前端据此渲染专门的文案
+    /// Clasificación de error de grano fino (como "modelNotFound"), frontend renderiza texto especializado según esto
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error_category: Option<String>,
 }
 
-/// 流式健康检查服务
+/// Servicio de verificación de salud en streaming
 pub struct StreamCheckService;
 
 impl StreamCheckService {
-    /// 执行流式健康检查（带重试）
+    /// Ejecuta verificación de salud en streaming (con reintentos)
     ///
-    /// 如果 Provider 配置了单独的测试配置（meta.testConfig），则使用该配置覆盖全局配置
+    /// Si Provider configuró configuración de prueba separada (meta.testConfig), usa esa configuración para sobrescribir configuración global
     pub async fn check_with_retry(
         app_type: &AppType,
         provider: &Provider,
@@ -97,7 +97,7 @@ impl StreamCheckService {
         base_url_override: Option<String>,
         claude_api_format_override: Option<String>,
     ) -> Result<StreamCheckResult, AppError> {
-        // 合并供应商单独配置和全局配置
+        // Combina configuración separada de proveedor y configuración global
         let effective_config = Self::merge_provider_config(provider, config);
         let mut last_result = None;
 
@@ -120,7 +120,7 @@ impl StreamCheckService {
                     });
                 }
                 Ok(r) => {
-                    // 失败但非异常，判断是否重试
+                    // Falló pero no es anómalo, determina si reintentar
                     if Self::should_retry(&r.message) && attempt < effective_config.max_retries {
                         last_result = Some(r.clone());
                         continue;
@@ -153,9 +153,9 @@ impl StreamCheckService {
         }))
     }
 
-    /// 合并供应商单独配置和全局配置
+    /// Combina configuración separada de proveedor y configuración global
     ///
-    /// 如果供应商配置了 meta.testConfig 且 enabled 为 true，则使用供应商配置覆盖全局配置
+    /// Si proveedor configuró meta.testConfig y enabled es true, usa configuración de proveedor para sobrescribir configuración global
     fn merge_provider_config(
         provider: &Provider,
         global_config: &StreamCheckConfig,
@@ -194,7 +194,7 @@ impl StreamCheckService {
         }
     }
 
-    /// 单次流式检查
+    /// Verificación en streaming única
     async fn check_once(
         app_type: &AppType,
         provider: &Provider,
@@ -205,9 +205,9 @@ impl StreamCheckService {
     ) -> Result<StreamCheckResult, AppError> {
         let start = Instant::now();
 
-        // OpenCode / OpenClaw 的 settings_config 结构与 Claude/Codex/Gemini 不同
-        // （baseUrl / apiKey 直接作为根字段而非嵌套在 env），并且协议由 `api`
-        // 或 `npm` 字段显式指定。它们不走 get_adapter 路径，而是直接分发。
+        // Estructura settings_config de OpenCode / OpenClaw difiere de Claude/Codex/Gemini
+        // (baseUrl / apiKey directamente como campos raíz en vez de anidados en env), y protocolo se especifica explícitamente por campo `api`
+        // o `npm`. No siguen ruta get_adapter, sino que se despachan directamente.
         if matches!(
             app_type,
             AppType::OpenCode | AppType::OpenClaw | AppType::Hermes
@@ -232,7 +232,7 @@ impl StreamCheckService {
             .or_else(|| adapter.extract_auth(provider))
             .ok_or_else(|| AppError::Message("API Key not found".to_string()))?;
 
-        // 获取 HTTP 客户端
+        // Obtiene cliente HTTP
         let client = crate::proxy::http_client::get();
         let request_timeout = std::time::Duration::from_secs(config.timeout_secs);
 
@@ -280,7 +280,7 @@ impl StreamCheckService {
             }
             AppType::OpenCode | AppType::OpenClaw | AppType::Hermes => {
                 // Already handled via early dispatch above
-                unreachable!("OpenCode/OpenClaw/Hermes 已通过 check_once_without_adapter 处理")
+                unreachable!("OpenCode/OpenClaw/Hermes ya procesados mediante check_once_without_adapter")
             }
         };
 
@@ -293,17 +293,17 @@ impl StreamCheckService {
         ))
     }
 
-    /// Claude 流式检查
+    /// Verificación en streaming Claude
     ///
-    /// 根据供应商的 api_format 选择请求格式：
-    /// - "anthropic" (默认): Anthropic Messages API (/v1/messages)
+    /// Selecciona formato de solicitud según api_format del proveedor:
+    /// - "anthropic" (predeterminado): Anthropic Messages API (/v1/messages)
     /// - "openai_chat": OpenAI Chat Completions API (/v1/chat/completions)
     /// - "openai_responses": OpenAI Responses API (/v1/responses)
     /// - "gemini_native": Gemini Native streamGenerateContent
     ///
-    /// `extra_headers` 是一个可选的供应商级自定义 header 集合（从 OpenClaw
-    /// 的 `settings_config.headers` 或 OpenCode 的 `settings_config.options.headers`
-    /// 读取），在所有内置 header 之后追加，用于覆盖或补充（例如自定义 User-Agent）。
+    /// `extra_headers` es una colección opcional de headers personalizados a nivel de proveedor (leídos desde OpenClaw
+    /// `settings_config.headers` o `settings_config.options.headers` de OpenCode
+    /// ), agregados después de todos los headers integrados, usados para sobrescribir o complementar (por ejemplo User-Agent personalizado).
     #[allow(clippy::too_many_arguments)]
     async fn check_claude_stream(
         client: &Client,
@@ -359,8 +359,8 @@ impl StreamCheckService {
             "messages": [{ "role": "user", "content": test_prompt }],
             "stream": true
         });
-        // Codex OAuth (ChatGPT Plus/Pro 反代) 需要 store:false + include 标记，
-        // 否则 Stream Check 会和生产路径一样被服务端 400 拒绝。
+        // Codex OAuth (proxy inverso ChatGPT Plus/Pro) necesita store:false + marca include,
+        // Sino Stream Check será rechazado por servidor con 400 igual que ruta de producción.
         let is_codex_oauth = provider.is_codex_oauth();
         let codex_fast_mode = provider.codex_fast_mode_enabled();
 
@@ -385,7 +385,7 @@ impl StreamCheckService {
         let mut request_builder = client.post(&url);
 
         if is_github_copilot {
-            // 生成请求追踪 ID
+            // Genera ID de rastreo de solicitud
             let request_id = uuid::Uuid::new_v4().to_string();
             request_builder = request_builder
                 .header("authorization", format!("Bearer {}", auth.api_key))
@@ -403,7 +403,7 @@ impl StreamCheckService {
                     copilot_auth::COPILOT_INTEGRATION_ID,
                 )
                 .header("x-github-api-version", copilot_auth::COPILOT_API_VERSION)
-                // 260401 新增copilot 的关键 headers
+                // 260401 agrega headers clave de copilot
                 .header("openai-intent", "conversation-agent")
                 .header("x-initiator", "user")
                 .header("x-interaction-type", "conversation-agent")
@@ -439,14 +439,14 @@ impl StreamCheckService {
             let os_name = Self::get_os_name();
             let arch_name = Self::get_arch_name();
 
-            // 鉴权头复用 ClaudeAdapter::get_auth_headers，与代理路径（forwarder）保持单一真理来源。
+            // Header de autenticación reutiliza ClaudeAdapter::get_auth_headers, mantiene fuente única de verdad con ruta proxy (forwarder).
             // - AuthStrategy::Anthropic  → x-api-key
             // - AuthStrategy::ClaudeAuth → Authorization: Bearer
             // - AuthStrategy::Bearer     → Authorization: Bearer
-            // 避免之前"无条件 Bearer + 条件 x-api-key 双发"导致的假阴性 / auth conflict。
+            // Evita falsos negativos / conflicto auth causado por anterior "Bearer incondicional + x-api-key condicional doble envío".
             let auth_headers = ClaudeAdapter::new()
                 .get_auth_headers(auth)
-                .map_err(|e| AppError::Message(format!("stream check 构造鉴权头失败: {e}")))?;
+                .map_err(|e| AppError::Message(format!("stream check falló construir header de autenticación: {e}")))?;
             for (name, value) in auth_headers {
                 request_builder = request_builder.header(name, value);
             }
@@ -480,7 +480,7 @@ impl StreamCheckService {
                 .header("sec-fetch-mode", "cors");
         }
 
-        // 供应商自定义 headers 最后追加，允许覆盖内置默认值（例如 user-agent）
+        // Headers personalizados de proveedor agregados al final, permite sobrescribir valores predeterminados integrados (por ejemplo user-agent)
         if let Some(headers) = extra_headers {
             for (key, value) in headers {
                 if let Some(v) = value.as_str() {
@@ -503,7 +503,7 @@ impl StreamCheckService {
             return Err(Self::http_status_error(status, error_text));
         }
 
-        // 流式读取：只需首个 chunk
+        // Lectura en streaming: solo necesita primer chunk
         let mut stream = response.bytes_stream();
         if let Some(chunk) = stream.next().await {
             match chunk {
@@ -515,9 +515,9 @@ impl StreamCheckService {
         }
     }
 
-    /// Codex 流式检查
+    /// Verificación en streaming Codex
     ///
-    /// 严格按照 Codex CLI 真实请求格式构建请求 (Responses API)
+    /// Construye solicitud estrictamente según formato de solicitud real Codex CLI (Responses API)
     async fn check_codex_stream(
         client: &Client,
         base_url: &str,
@@ -534,27 +534,27 @@ impl StreamCheckService {
             .unwrap_or(false);
         let urls = Self::resolve_codex_stream_urls(base_url, is_full_url);
 
-        // 解析模型名和推理等级 (支持 model@level 或 model#level 格式)
+        // Parsea nombre de modelo y nivel de razonamiento (soporta formato model@level o model#level)
         let (actual_model, reasoning_effort) = Self::parse_model_with_effort(model);
 
-        // 获取本地系统信息
+        // Obtiene información del sistema local
         let os_name = Self::get_os_name();
         let arch_name = Self::get_arch_name();
 
-        // Responses API 请求体格式 (input 必须是数组)
+        // Formato de cuerpo de solicitud Responses API (input debe ser array)
         let mut body = json!({
             "model": actual_model,
             "input": [{ "role": "user", "content": test_prompt }],
             "stream": true
         });
 
-        // 如果是推理模型，添加 reasoning_effort
+        // Si es modelo de razonamiento, agrega reasoning_effort
         if let Some(effort) = reasoning_effort {
             body["reasoning"] = json!({ "effort": effort });
         }
 
         for (i, url) in urls.iter().enumerate() {
-            // 严格按照 Codex CLI 请求格式设置 headers
+            // Configura headers estrictamente según formato de solicitud Codex CLI
             let response = client
                 .post(url)
                 .header("authorization", format!("Bearer {}", auth.api_key))
@@ -576,7 +576,7 @@ impl StreamCheckService {
 
             if !response.status().is_success() {
                 let error_text = response.text().await.unwrap_or_default();
-                // 回退策略：仅当首选 URL 返回 404 时尝试下一个
+                // Estrategia de fallback: intenta siguiente solo cuando URL preferido devuelve 404
                 if i == 0 && status == 404 && urls.len() > 1 {
                     continue;
                 }
@@ -599,9 +599,9 @@ impl StreamCheckService {
         ))
     }
 
-    /// Gemini 流式检查
+    /// Verificación en streaming Gemini
     ///
-    /// 使用 Gemini 原生 API 格式 (streamGenerateContent)
+    /// Usa formato API nativo Gemini (streamGenerateContent)
     async fn check_gemini_stream(
         client: &Client,
         base_url: &str,
@@ -615,16 +615,16 @@ impl StreamCheckService {
         // Strip `models/` resource-name prefix from the model id — see
         // `normalize_gemini_model_id` for rationale.
         let normalized_model = normalize_gemini_model_id(model);
-        // Gemini 原生 API: /v1beta/models/{model}:streamGenerateContent?alt=sse
-        // 智能处理 /v1beta 路径：如果 base_url 不包含版本路径，则添加 /v1beta
-        // alt=sse 参数使 API 返回 SSE 格式（text/event-stream）而非 JSON 数组
+        // API nativo Gemini: /v1beta/models/{model}:streamGenerateContent?alt=sse
+        // Manejo inteligente de ruta /v1beta: si base_url no contiene ruta de versión, agrega /v1beta
+        // Parámetro alt=sse hace que API devuelva formato SSE (text/event-stream) en vez de array JSON
         let url = if base.contains("/v1beta") || base.contains("/v1/") {
             format!("{base}/models/{normalized_model}:streamGenerateContent?alt=sse")
         } else {
             format!("{base}/v1beta/models/{normalized_model}:streamGenerateContent?alt=sse")
         };
 
-        // Gemini 原生请求体格式
+        // Formato de cuerpo de solicitud nativo Gemini
         let body = json!({
             "contents": [{
                 "role": "user",
@@ -638,7 +638,7 @@ impl StreamCheckService {
             .header("Content-Type", "application/json")
             .header("Accept", "text/event-stream");
 
-        // 供应商自定义 headers 最后追加
+        // Headers personalizados de proveedor agregados al final
         if let Some(headers) = extra_headers {
             for (key, value) in headers {
                 if let Some(v) = value.as_str() {
@@ -672,21 +672,21 @@ impl StreamCheckService {
         }
     }
 
-    /// OpenCode / OpenClaw 的独立分发入口（绕过 `get_adapter`）
+    /// Entrada de despacho independiente de OpenCode / OpenClaw (evita `get_adapter`)
     ///
-    /// 这两个应用的 `settings_config` 与 Claude/Codex/Gemini 完全不同：
-    /// - OpenClaw: `{ baseUrl, apiKey, api, models: [...] }`，`api` 字段标识协议
-    /// - OpenCode: `{ npm, options: { baseURL, apiKey }, models: {...} }`，`npm` 字段标识协议
+    /// `settings_config` de estas dos aplicaciones completamente diferente de Claude/Codex/Gemini:
+    /// - OpenClaw: `{ baseUrl, apiKey, api, models: [...] }`, el campo `api` indica el protocolo
+    /// - OpenCode: `{ npm, options: { baseURL, apiKey }, models: {...} }`, campo `npm` identifica protocolo
     ///
-    /// 因此不能复用 `get_adapter`（会 fallback 到 CodexAdapter 而提取失败），
-    /// 改为独立解析 base_url/api_key/协议，再分发到现有的 check_*_stream 函数。
+    /// Por lo tanto no puede reutilizar `get_adapter` (hará fallback a CodexAdapter y extracción fallará),
+    /// Cambiado a parseo independiente de base_url/api_key/protocolo, luego despacha a funciones check_*_stream existentes.
     async fn check_once_without_adapter(
         app_type: &AppType,
         provider: &Provider,
         config: &StreamCheckConfig,
         start: Instant,
     ) -> Result<StreamCheckResult, AppError> {
-        // 获取 HTTP 客户端
+        // Obtiene cliente HTTP
         let client = crate::proxy::http_client::get();
         let request_timeout = std::time::Duration::from_secs(config.timeout_secs);
 
@@ -724,7 +724,7 @@ impl StreamCheckService {
                 )
                 .await
             }
-            _ => unreachable!("check_once_without_adapter 只处理 OpenCode/OpenClaw/Hermes"),
+            _ => unreachable!("check_once_without_adapter solo procesa OpenCode/OpenClaw/Hermes"),
         };
 
         let response_time = start.elapsed().as_millis() as u64;
@@ -736,12 +736,12 @@ impl StreamCheckService {
         ))
     }
 
-    /// 将 check_*_stream 的原始结果包装成 StreamCheckResult
+    /// Envuelve resultado crudo de check_*_stream en StreamCheckResult
     ///
-    /// 抽取自 check_once 的末尾逻辑，以便 OpenCode/OpenClaw 的独立分支复用。
+    /// Extraído de lógica final de check_once, para que ramas independientes OpenCode/OpenClaw puedan reutilizar.
     ///
-    /// `model_tested` 是本次探测使用的模型名，用于在失败场景下仍能把模型信息透传给前端，
-    /// 方便针对"模型不存在 / 已下架"这类错误渲染专门的提示。
+    /// `model_tested` es nombre de modelo usado en prueba actual, usado para transmitir información de modelo a frontend incluso en escenarios fallidos,
+    /// facilita renderizar avisos especializados para errores como "modelo no existe / descontinuado".
     fn build_stream_check_result(
         result: Result<(u16, String), AppError>,
         response_time: u64,
@@ -788,13 +788,13 @@ impl StreamCheckService {
         }
     }
 
-    /// 基于 HTTP 状态码和响应体识别细粒度错误分类。
+    /// Identifica clasificación de error de grano fino basada en código de estado HTTP y cuerpo de respuesta.
     ///
-    /// 目前仅识别"模型不存在 / 已下架"：各厂商该类错误通常返回 4xx，body 中会包含
-    /// 如 `model_not_found`（OpenAI）、`does not exist`、`invalid model`、`not_found_error`
-    /// + `model` 字样（Anthropic）等标记。
+    /// Actualmente solo identifica "modelo no existe / descontinuado": ese tipo de error de varios proveedores usualmente devuelve 4xx, body contendrá
+    /// como `model_not_found` (OpenAI), `does not exist`, `invalid model`, `not_found_error`
+    /// + palabras `model` (Anthropic) etc marcadores.
     pub(crate) fn detect_error_category(status: u16, body: &str) -> Option<&'static str> {
-        // 只检查 4xx；5xx 的错误信息里可能巧合出现"model"之类的词，容易误判
+        // Solo verifica 4xx; mensaje de error 5xx puede coincidir con palabras como "model", fácil malinterpretar
         if !(400..500).contains(&status) {
             return None;
         }
@@ -808,7 +808,7 @@ impl StreamCheckService {
             return Some("quotaExceeded");
         }
 
-        // 必须提到 "model"，避免通用 404 / 400 被误判
+        // Debe mencionar "model", evita que 404 / 400 genérico sea malinterpretado
         if !lower.contains("model") {
             return None;
         }
@@ -821,7 +821,7 @@ impl StreamCheckService {
             "unknown_model",
             "unknown model",
             "is not a valid model",
-            "not_found_error", // Anthropic 的 type 字段
+            "not_found_error", // campo type de Anthropic
         ];
         if indicators.iter().any(|s| lower.contains(s)) {
             return Some("modelNotFound");
@@ -829,15 +829,15 @@ impl StreamCheckService {
         None
     }
 
-    /// OpenClaw 流式检查分发器
+    /// Despachador de verificación en streaming OpenClaw
     ///
-    /// 根据 `settings_config.api` 字段分发到对应协议的检查器。
-    /// 取值参见 `openclawApiProtocols` (前端 openclawProviderPresets.ts):
+    /// Despacha a verificador de protocolo correspondiente según campo `settings_config.api`.
+    /// Ver valores en `openclawApiProtocols` (frontend openclawProviderPresets.ts):
     /// - `openai-completions`   → check_claude_stream + api_format="openai_chat"
     /// - `openai-responses`     → check_claude_stream + api_format="openai_responses"
-    /// - `anthropic-messages`   → check_claude_stream + api_format="anthropic" (ClaudeAuth 策略)
-    /// - `google-generative-ai` → check_gemini_stream (Google API Key 策略)
-    /// - `bedrock-converse-stream` → 不支持（需要 AWS SigV4 签名）
+    /// - `anthropic-messages`   → check_claude_stream + api_format="anthropic" (estrategia ClaudeAuth)
+    /// - `google-generative-ai` → check_gemini_stream (estrategia Google API Key)
+    /// - `bedrock-converse-stream` → no soportado (requiere firma AWS SigV4)
     async fn check_additive_app_stream(
         client: &Client,
         provider: &Provider,
@@ -845,13 +845,13 @@ impl StreamCheckService {
         test_prompt: &str,
         timeout: std::time::Duration,
     ) -> Result<(u16, String), AppError> {
-        // 自定义认证头（如 Longcat 的 `apikey` 头）不走标准 Bearer，
-        // 具体头名由 OpenClaw 网关内部决定，cc-switch 无法准确构造，
-        // 因此直接返回友好错误而不是让用户看到一个误导性的 401。
+        // Headers de autenticación personalizados (como header `apikey` de Longcat) no usan Bearer estándar,
+        // nombre exacto del header lo decide internamente gateway OpenClaw, cc-switch no puede construir con precisión,
+        // por lo tanto devuelve error amigable directamente en vez de dejar usuario ver 401 engañoso.
         if Self::additive_app_uses_auth_header(provider) {
             return Err(AppError::localized(
                 "openclaw_auth_header_not_supported",
-                "该供应商使用自定义认证头，暂不支持流式健康检查。建议直接通过 OpenClaw 测试。",
+                "Este proveedor usa header de autenticación personalizado, actualmente no soporta verificación de salud en streaming. Se recomienda probar directamente mediante OpenClaw.",
                 "This provider uses a custom auth header; stream health check is not supported. Please test it directly via OpenClaw.",
             ));
         }
@@ -893,9 +893,9 @@ impl StreamCheckService {
                 .await
             }
             Some("anthropic-messages") => {
-                // 使用 ClaudeAuth（Bearer-only）以兼容 Claude 中转服务。
-                // 某些中转同时收到 Authorization 和 x-api-key 会报错，ClaudeAuth
-                // 策略保证只下发 Bearer。官方 Anthropic 也接受纯 Bearer。
+                // Usa ClaudeAuth (Bearer-only) para compatibilidad con servicio de relay Claude.
+                // Algunos relays reportan error al recibir Authorization y x-api-key simultáneamente, estrategia ClaudeAuth
+                // garantiza solo enviar Bearer. Anthropic oficial también acepta Bearer puro.
                 let auth = AuthInfo::new(api_key, AuthStrategy::ClaudeAuth);
                 Self::check_claude_stream(
                     client,
@@ -925,23 +925,23 @@ impl StreamCheckService {
             }
             Some("bedrock-converse-stream") => Err(AppError::localized(
                 "openclaw_bedrock_not_supported",
-                "AWS Bedrock 需要 SigV4 签名，当前不支持健康检查。请通过 AWS 控制台或 OpenClaw 验证连通性。",
+                "AWS Bedrock requiere firma SigV4, actualmente no soporta verificación de salud. Verifique conectividad mediante consola AWS u OpenClaw.",
                 "AWS Bedrock requires SigV4 signing and is not supported by stream health check. Please verify connectivity via AWS console or OpenClaw.",
             )),
             Some(other) => Err(AppError::localized(
                 "openclaw_protocol_not_yet_supported",
-                format!("OpenClaw 暂不支持协议: {other}"),
+                format!("OpenClaw actualmente no soporta protocolo: {other}"),
                 format!("OpenClaw protocol not yet supported: {other}"),
             )),
             None => Err(AppError::localized(
                 "openclaw_protocol_missing",
-                "OpenClaw 供应商缺少 api 字段",
+                "Proveedor OpenClaw carece de campo api",
                 "OpenClaw provider is missing the `api` field",
             )),
         }
     }
 
-    /// 判断 additive-mode 供应商是否使用自定义认证头（`authHeader: true`）
+    /// Determina si proveedor additive-mode usa header de autenticación personalizado (`authHeader: true`)
     fn additive_app_uses_auth_header(provider: &Provider) -> bool {
         provider
             .settings_config
@@ -950,7 +950,7 @@ impl StreamCheckService {
             .unwrap_or(false)
     }
 
-    /// 提取 OpenClaw 供应商的自定义 headers（来自 `settings_config.headers`）
+    /// Extrae headers personalizados de proveedor OpenClaw (desde `settings_config.headers`)
     fn extract_openclaw_headers(
         provider: &Provider,
     ) -> Option<&serde_json::Map<String, serde_json::Value>> {
@@ -971,7 +971,7 @@ impl StreamCheckService {
             .ok_or_else(|| {
                 AppError::localized(
                     "openclaw_base_url_missing",
-                    "OpenClaw 供应商缺少 baseUrl",
+                    "Proveedor OpenClaw carece de baseUrl",
                     "OpenClaw provider is missing `baseUrl`",
                 )
             })
@@ -987,7 +987,7 @@ impl StreamCheckService {
             .ok_or_else(|| {
                 AppError::localized(
                     "openclaw_api_key_missing",
-                    "OpenClaw 供应商缺少 apiKey",
+                    "Proveedor OpenClaw carece de apiKey",
                     "OpenClaw provider is missing `apiKey`",
                 )
             })
@@ -1002,9 +1002,9 @@ impl StreamCheckService {
             .filter(|s| !s.is_empty())
     }
 
-    // Hermes 的 settings_config 用 snake_case（base_url / api_key / api_mode），
-    // 与 OpenClaw 的 camelCase（baseUrl / apiKey / api）是两套独立命名。
-    // 见 src/config/hermesProviderPresets.ts 的 HermesProviderSettingsConfig。
+    // settings_config de Hermes usa snake_case (base_url / api_key / api_mode),
+    // con camelCase de OpenClaw (baseUrl / apiKey / api) son dos nomenclaturas independientes.
+    // Ver HermesProviderSettingsConfig en src/config/hermesProviderPresets.ts.
     fn extract_hermes_base_url(provider: &Provider) -> Result<String, AppError> {
         provider
             .settings_config
@@ -1015,7 +1015,7 @@ impl StreamCheckService {
             .ok_or_else(|| {
                 AppError::localized(
                     "hermes_base_url_missing",
-                    "Hermes 供应商缺少 base_url",
+                    "Proveedor Hermes carece de base_url",
                     "Hermes provider is missing `base_url`",
                 )
             })
@@ -1031,7 +1031,7 @@ impl StreamCheckService {
             .ok_or_else(|| {
                 AppError::localized(
                     "hermes_api_key_missing",
-                    "Hermes 供应商缺少 api_key",
+                    "Proveedor Hermes carece de api_key",
                     "Hermes provider is missing `api_key`",
                 )
             })
@@ -1046,14 +1046,14 @@ impl StreamCheckService {
             .filter(|s| !s.is_empty())
     }
 
-    /// Hermes 流式检查分发器
+    /// Despachador de verificación en streaming Hermes
     ///
-    /// Hermes 以 `api_mode` 字段显式指定协议，取值来自
+    /// Hermes especifica explícitamente protocolo con campo `api_mode`, valores de
     /// `HermesApiMode`（hermesProviderPresets.ts）：
     /// - `chat_completions`   → check_claude_stream + api_format="openai_chat"（Bearer）
-    /// - `anthropic_messages` → check_claude_stream + api_format="anthropic"（ClaudeAuth，与 OpenClaw 的 anthropic-messages 同策略）
+    /// - `anthropic_messages` → check_claude_stream + api_format="anthropic" (ClaudeAuth, misma estrategia que anthropic-messages de OpenClaw)
     /// - `codex_responses`    → check_claude_stream + api_format="openai_responses"（Bearer）
-    /// - `bedrock_converse`   → 不支持（需要 AWS SigV4 签名）
+    /// - `bedrock_converse`   → no soportado (requiere firma AWS SigV4)
     async fn check_hermes_stream(
         client: &Client,
         provider: &Provider,
@@ -1061,9 +1061,9 @@ impl StreamCheckService {
         test_prompt: &str,
         timeout: std::time::Duration,
     ) -> Result<(u16, String), AppError> {
-        // 先把 api_mode 路由出协议格式与认证策略。
-        // 纯错误路径（bedrock / 未知 / 缺失）直接 return，避免在用户
-        // 选了 bedrock_converse 时被"缺 base_url"的二级错误盖住真正原因。
+        // Primero enruta api_mode a formato de protocolo y estrategia de autenticación.
+        // Ruta de solo error (bedrock / desconocido / faltante) devuelve directamente, evita cuando usuario
+        // eligió bedrock_converse ser cubierto por error secundario "falta base_url" ocultando razón real.
         let (api_format, auth_strategy) = match Self::extract_hermes_api_mode(provider).as_deref() {
             Some("chat_completions") => ("openai_chat", AuthStrategy::Bearer),
             Some("anthropic_messages") => ("anthropic", AuthStrategy::ClaudeAuth),
@@ -1071,21 +1071,21 @@ impl StreamCheckService {
             Some("bedrock_converse") => {
                 return Err(AppError::localized(
                     "hermes_bedrock_not_supported",
-                    "AWS Bedrock 需要 SigV4 签名，当前不支持健康检查。",
+                    "AWS Bedrock requiere firma SigV4, actualmente no soporta verificación de salud.",
                     "AWS Bedrock requires SigV4 signing and is not supported by stream health check.",
                 ));
             }
             Some(other) => {
                 return Err(AppError::localized(
                     "hermes_protocol_not_yet_supported",
-                    format!("Hermes 暂不支持协议: {other}"),
+                    format!("Hermes actualmente no soporta protocolo: {other}"),
                     format!("Hermes protocol not yet supported: {other}"),
                 ));
             }
             None => {
                 return Err(AppError::localized(
                     "hermes_api_mode_missing",
-                    "Hermes 供应商缺少 api_mode 字段",
+                    "Proveedor Hermes carece de campo api_mode",
                     "Hermes provider is missing the `api_mode` field",
                 ));
             }
@@ -1108,18 +1108,18 @@ impl StreamCheckService {
         .await
     }
 
-    /// OpenCode 流式检查分发器
+    /// Despachador de verificación en streaming OpenCode
     ///
-    /// OpenCode 用 `npm` 字段（AI SDK 包名）隐式指定协议。映射关系参见
-    /// `opencodeNpmPackages` (前端 opencodeProviderPresets.ts):
+    /// OpenCode especifica implícitamente protocolo con campo `npm` (nombre de paquete AI SDK). Ver relación de mapeo en
+    /// `opencodeNpmPackages` (frontend opencodeProviderPresets.ts):
     /// - `@ai-sdk/openai-compatible` → check_claude_stream + api_format="openai_chat"
     /// - `@ai-sdk/openai`            → check_claude_stream + api_format="openai_responses"
     /// - `@ai-sdk/anthropic`         → check_claude_stream + api_format="anthropic"
-    /// - `@ai-sdk/google`            → check_gemini_stream (Google API Key 策略)
-    /// - `@ai-sdk/amazon-bedrock`    → 不支持（需要 AWS SigV4 签名）
+    /// - `@ai-sdk/google`            → check_gemini_stream (estrategia Google API Key)
+    /// - `@ai-sdk/amazon-bedrock`    → no soportado (requiere firma AWS SigV4)
     ///
-    /// URL/API Key 存放在 `settings_config.options.{baseURL,apiKey}`，注意
-    /// `baseURL` 大写 L（与 OpenClaw 的 `baseUrl` 首字母小写 u 不同）。
+    /// URL/API Key se almacenan en `settings_config.options.{baseURL,apiKey}`, nota
+    /// `baseURL` L mayúscula (diferente de `baseUrl` de OpenClaw con u minúscula).
     async fn check_opencode_stream(
         client: &Client,
         provider: &Provider,
@@ -1128,7 +1128,7 @@ impl StreamCheckService {
         timeout: std::time::Duration,
     ) -> Result<(u16, String), AppError> {
         let npm = Self::extract_opencode_npm(provider);
-        // 若用户未显式填 baseURL，则根据 npm 回退到 AI SDK 包自带的默认端点
+        // Si usuario no llenó explícitamente baseURL, hace fallback según npm a endpoint predeterminado del paquete AI SDK
         let base_url = Self::resolve_opencode_base_url(provider, npm.as_deref())?;
         let api_key = Self::extract_opencode_api_key(provider)?;
         let extra_headers = Self::extract_opencode_headers(provider);
@@ -1165,8 +1165,8 @@ impl StreamCheckService {
                 .await
             }
             Some("@ai-sdk/anthropic") => {
-                // 见 check_additive_app_stream 对 anthropic-messages 的处理：
-                // 用 ClaudeAuth（Bearer-only）兼容中转服务。
+                // Ver procesamiento de anthropic-messages en check_additive_app_stream:
+                // Usa ClaudeAuth (Bearer-only) compatible con servicio de relay.
                 let auth = AuthInfo::new(api_key, AuthStrategy::ClaudeAuth);
                 Self::check_claude_stream(
                     client,
@@ -1196,31 +1196,31 @@ impl StreamCheckService {
             }
             Some("@ai-sdk/amazon-bedrock") => Err(AppError::localized(
                 "opencode_bedrock_not_supported",
-                "AWS Bedrock 需要 SigV4 签名，当前不支持健康检查。请通过 AWS 控制台或 OpenCode 验证连通性。",
+                "AWS Bedrock requiere firma SigV4, actualmente no soporta verificación de salud. Verifique conectividad mediante consola AWS u OpenCode.",
                 "AWS Bedrock requires SigV4 signing and is not supported by stream health check. Please verify connectivity via AWS console or OpenCode.",
             )),
             Some(other) => Err(AppError::localized(
                 "opencode_npm_not_yet_supported",
-                format!("OpenCode 暂不支持 SDK 包: {other}"),
+                format!("OpenCode actualmente no soporta paquete SDK: {other}"),
                 format!("OpenCode SDK package not yet supported: {other}"),
             )),
             None => Err(AppError::localized(
                 "opencode_npm_missing",
-                "OpenCode 供应商缺少 npm 字段",
+                "Proveedor OpenCode carece de campo npm",
                 "OpenCode provider is missing the `npm` field",
             )),
         }
     }
 
-    /// 按 OpenCode 的实际 SDK 包特性确定 baseURL：
-    /// - 用户显式填写的 `options.baseURL` 总是优先
-    /// - 否则根据 `npm` 返回 AI SDK 包自带的默认端点
-    /// - `@ai-sdk/openai-compatible` 没有默认端点，必须显式填
+    /// Determina baseURL según características reales de paquete SDK de OpenCode:
+    /// - `options.baseURL` llenado explícitamente por usuario siempre tiene prioridad
+    /// - Sino devuelve endpoint predeterminado del paquete AI SDK según `npm`
+    /// - `@ai-sdk/openai-compatible` no tiene endpoint predeterminado, debe llenarse explícitamente
     ///
-    /// 注意：这里的默认端点对应 AI SDK 包的行为（例如 `@ai-sdk/openai`
-    /// 自带 `/v1` 路径后缀），与 `proxy/providers/mod.rs` 里的
-    /// `ProviderType::default_endpoint()` 语义不同——后者是代理层的上游
-    /// 默认值，不带 `/v1`。两者维护的是不同系统的默认值，不能简单共享。
+    /// Nota: endpoint predeterminado aquí corresponde al comportamiento del paquete AI SDK (por ejemplo `@ai-sdk/openai`
+    /// viene con sufijo de ruta `/v1`), con `proxy/providers/mod.rs`
+    /// semántica de `ProviderType::default_endpoint()` es diferente — este último es upstream de capa proxy
+    /// valor predeterminado, sin `/v1`. Ambos mantienen valores predeterminados de sistemas diferentes, no pueden compartirse simplemente.
     fn resolve_opencode_base_url(
         provider: &Provider,
         npm: Option<&str>,
@@ -1239,7 +1239,7 @@ impl StreamCheckService {
         fallback.map(|s| s.to_string()).ok_or_else(|| {
             AppError::localized(
                 "opencode_base_url_missing",
-                "OpenCode 供应商缺少 options.baseURL，且当前 SDK 包没有默认端点",
+                "Proveedor OpenCode carece de options.baseURL, y paquete SDK actual no tiene endpoint predeterminado",
                 "OpenCode provider is missing `options.baseURL` and the SDK package has no default endpoint",
             )
         })
@@ -1255,7 +1255,7 @@ impl StreamCheckService {
             .filter(|s| !s.is_empty())
     }
 
-    /// 提取 OpenCode 供应商的自定义 headers（来自 `settings_config.options.headers`）
+    /// Extrae headers personalizados de proveedor OpenCode (desde `settings_config.options.headers`)
     fn extract_opencode_headers(
         provider: &Provider,
     ) -> Option<&serde_json::Map<String, serde_json::Value>> {
@@ -1278,7 +1278,7 @@ impl StreamCheckService {
             .ok_or_else(|| {
                 AppError::localized(
                     "opencode_api_key_missing",
-                    "OpenCode 供应商缺少 options.apiKey",
+                    "Proveedor OpenCode carece de options.apiKey",
                     "OpenCode provider is missing `options.apiKey`",
                 )
             })
@@ -1301,8 +1301,8 @@ impl StreamCheckService {
         }
     }
 
-    /// 解析模型名和推理等级 (支持 model@level 或 model#level 格式)
-    /// 返回 (实际模型名, Option<推理等级>)
+    /// Parsea nombre de modelo y nivel de razonamiento (soporta formato model@level o model#level)
+    /// Devuelve (nombre real de modelo, Option<nivel de razonamiento>)
     fn parse_model_with_effort(model: &str) -> (String, Option<String>) {
         if let Some(pos) = model.find('@').or_else(|| model.find('#')) {
             let actual_model = model[..pos].to_string();
@@ -1329,10 +1329,10 @@ impl StreamCheckService {
         }
     }
 
-    /// 构造 HTTP 状态码错误，截断过长的响应体
+    /// Construye error de código de estado HTTP, trunca cuerpo de respuesta demasiado largo
     fn http_status_error(status: u16, body: String) -> AppError {
         let body = if body.len() > 200 {
-            // 安全截断：找到 200 字节内最近的 char 边界
+            // Truncado seguro: encuentra límite de char más cercano dentro de 200 bytes
             let mut end = 200;
             while end > 0 && !body.is_char_boundary(end) {
                 end -= 1;
@@ -1344,7 +1344,7 @@ impl StreamCheckService {
         AppError::HttpStatus { status, body }
     }
 
-    /// 将 HTTP 状态码映射为简短的分类标签
+    /// Mapea código de estado HTTP a etiqueta de clasificación corta
     pub(crate) fn classify_http_status(status: u16) -> &'static str {
         match status {
             400 => "Bad request (400)",
@@ -1442,7 +1442,7 @@ impl StreamCheckService {
             .filter(|value| !value.is_empty())
     }
 
-    /// 获取操作系统名称（映射为 Claude CLI 使用的格式）
+    /// Obtiene nombre de sistema operativo (mapeado a formato usado por Claude CLI)
     fn get_os_name() -> &'static str {
         match std::env::consts::OS {
             "macos" => "MacOS",
@@ -1452,7 +1452,7 @@ impl StreamCheckService {
         }
     }
 
-    /// 获取 CPU 架构名称（映射为 Claude CLI 使用的格式）
+    /// Obtiene nombre de arquitectura CPU (mapeado a formato usado por Claude CLI)
     fn get_arch_name() -> &'static str {
         match std::env::consts::ARCH {
             "aarch64" => "arm64",
@@ -1603,7 +1603,7 @@ mod tests {
 
     #[test]
     fn test_resolve_opencode_base_url_errors_for_openai_compatible_without_url() {
-        // @ai-sdk/openai-compatible 没有默认端点，必须显式填
+        // @ai-sdk/openai-compatible no tiene endpoint predeterminado, debe llenarse explícitamente
         let p = make_provider(serde_json::json!({
             "npm": "@ai-sdk/openai-compatible",
             "options": { "apiKey": "k" },
@@ -1693,17 +1693,17 @@ mod tests {
 
     #[test]
     fn test_parse_model_with_effort() {
-        // 带 @ 分隔符
+        // Con separador @
         let (model, effort) = StreamCheckService::parse_model_with_effort("gpt-5.1-codex@low");
         assert_eq!(model, "gpt-5.1-codex");
         assert_eq!(effort, Some("low".to_string()));
 
-        // 带 # 分隔符
+        // Con separador #
         let (model, effort) = StreamCheckService::parse_model_with_effort("o1-preview#high");
         assert_eq!(model, "o1-preview");
         assert_eq!(effort, Some("high".to_string()));
 
-        // 无分隔符
+        // Sin separador
         let (model, effort) = StreamCheckService::parse_model_with_effort("gpt-4o-mini");
         assert_eq!(model, "gpt-4o-mini");
         assert_eq!(effort, None);
@@ -1711,42 +1711,42 @@ mod tests {
 
     #[test]
     fn test_detect_model_not_found() {
-        // OpenAI 典型响应：404 + model_not_found 错误码
+        // Respuesta típica OpenAI: 404 + código de error model_not_found
         let openai_404 = r#"{"error":{"message":"The model `gpt-5.1-codex` does not exist or you do not have access to it","type":"invalid_request_error","param":null,"code":"model_not_found"}}"#;
         assert_eq!(
             StreamCheckService::detect_error_category(404, openai_404),
             Some("modelNotFound")
         );
 
-        // Anthropic 典型响应：404 + not_found_error + 提到 model
+        // Respuesta típica Anthropic: 404 + not_found_error + menciona model
         let anthropic_404 = r#"{"type":"error","error":{"type":"not_found_error","message":"model: claude-deprecated"}}"#;
         assert_eq!(
             StreamCheckService::detect_error_category(404, anthropic_404),
             Some("modelNotFound")
         );
 
-        // 400 + invalid model 也算
+        // 400 + invalid model también cuenta
         let bad_req = r#"{"error":{"message":"invalid model specified"}}"#;
         assert_eq!(
             StreamCheckService::detect_error_category(400, bad_req),
             Some("modelNotFound")
         );
 
-        // 通用 404（比如 Base URL 错误），body 里没有 model 字样 → 不应误判
+        // 404 genérico (por ejemplo error Base URL), body sin palabras model → no debería malinterpretar
         let generic_404 = r#"{"error":"Not Found"}"#;
         assert_eq!(
             StreamCheckService::detect_error_category(404, generic_404),
             None
         );
 
-        // 5xx 就算 body 里有 "model does not exist" 也不分类（避免误判）
+        // 5xx incluso si body tiene "model does not exist" no se clasifica (evita malinterpretación)
         let server_error = r#"{"error":"model does not exist"}"#;
         assert_eq!(
             StreamCheckService::detect_error_category(500, server_error),
             None
         );
 
-        // 401 鉴权错误（body 里没有 model 字样）
+        // Error de autenticación 401 (body sin palabras model)
         let auth_err = r#"{"error":"Invalid API key"}"#;
         assert_eq!(
             StreamCheckService::detect_error_category(401, auth_err),
@@ -1773,15 +1773,15 @@ mod tests {
     #[test]
     fn test_get_os_name() {
         let os_name = StreamCheckService::get_os_name();
-        // 确保返回非空字符串
+        // Asegura devolver string no vacío
         assert!(!os_name.is_empty());
-        // 在 macOS 上应该返回 "MacOS"
+        // En macOS debería devolver "MacOS"
         #[cfg(target_os = "macos")]
         assert_eq!(os_name, "MacOS");
-        // 在 Linux 上应该返回 "Linux"
+        // En Linux debería devolver "Linux"
         #[cfg(target_os = "linux")]
         assert_eq!(os_name, "Linux");
-        // 在 Windows 上应该返回 "Windows"
+        // En Windows debería devolver "Windows"
         #[cfg(target_os = "windows")]
         assert_eq!(os_name, "Windows");
     }
@@ -1789,29 +1789,29 @@ mod tests {
     #[test]
     fn test_get_arch_name() {
         let arch_name = StreamCheckService::get_arch_name();
-        // 确保返回非空字符串
+        // Asegura devolver string no vacío
         assert!(!arch_name.is_empty());
-        // 在 ARM64 上应该返回 "arm64"
+        // En ARM64 debería devolver "arm64"
         #[cfg(target_arch = "aarch64")]
         assert_eq!(arch_name, "arm64");
-        // 在 x86_64 上应该返回 "x86_64"
+        // En x86_64 debería devolver "x86_64"
         #[cfg(target_arch = "x86_64")]
         assert_eq!(arch_name, "x86_64");
     }
 
     #[test]
     fn test_auth_strategy_imports() {
-        // 验证 AuthStrategy 枚举可以正常使用
+        // Verifica que enum AuthStrategy puede usarse normalmente
         let anthropic = AuthStrategy::Anthropic;
         let claude_auth = AuthStrategy::ClaudeAuth;
         let bearer = AuthStrategy::Bearer;
 
-        // 验证不同的策略是不相等的
+        // Verifica que estrategias diferentes no son iguales
         assert_ne!(anthropic, claude_auth);
         assert_ne!(anthropic, bearer);
         assert_ne!(claude_auth, bearer);
 
-        // 验证相同策略是相等的
+        // Verifica que misma estrategia es igual
         assert_eq!(anthropic, AuthStrategy::Anthropic);
         assert_eq!(claude_auth, AuthStrategy::ClaudeAuth);
         assert_eq!(bearer, AuthStrategy::Bearer);

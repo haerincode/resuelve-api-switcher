@@ -21,7 +21,7 @@ export function AutoFailoverConfigPanel({
   const { data: config, isLoading, error } = useAppProxyConfig(appType);
   const updateConfig = useUpdateAppProxyConfig();
 
-  // 使用字符串状态以支持完全清空数字输入框
+  // Usar estado de string para soportar campos vacíos
   const [formData, setFormData] = useState({
     autoFailoverEnabled: false,
     maxRetries: "3",
@@ -31,7 +31,7 @@ export function AutoFailoverConfigPanel({
     circuitFailureThreshold: "5",
     circuitSuccessThreshold: "2",
     circuitTimeoutSeconds: "60",
-    circuitErrorRateThreshold: "50", // 存储百分比值
+    circuitErrorRateThreshold: "50", // Almacena valor porcentual
     circuitMinRequests: "10",
   });
 
@@ -56,15 +56,15 @@ export function AutoFailoverConfigPanel({
 
   const handleSave = async () => {
     if (!config) return;
-    // 解析数字，返回 NaN 表示无效输入
+    // Parsear números, retorna NaN para entrada inválida
     const parseNum = (val: string) => {
       const trimmed = val.trim();
-      // 必须是纯数字
+      // Debe ser solo números
       if (!/^-?\d+$/.test(trimmed)) return NaN;
       return parseInt(trimmed);
     };
 
-    // 定义各字段的有效范围
+    // Definir rangos válidos para cada campo
     const ranges = {
       maxRetries: { min: 0, max: 10 },
       streamingFirstByteTimeout: { min: 1, max: 120 },
@@ -77,7 +77,7 @@ export function AutoFailoverConfigPanel({
       circuitMinRequests: { min: 5, max: 100 },
     };
 
-    // 解析原始值
+    // Parsear valores crudos
     const raw = {
       maxRetries: parseNum(formData.maxRetries),
       streamingFirstByteTimeout: parseNum(formData.streamingFirstByteTimeout),
@@ -90,7 +90,7 @@ export function AutoFailoverConfigPanel({
       circuitMinRequests: parseNum(formData.circuitMinRequests),
     };
 
-    // 校验是否超出范围（NaN 也视为无效）
+    // Validar si está fuera del rango (NaN también se considera inválido)
     const errors: string[] = [];
     const checkRange = (
       value: number,
@@ -105,54 +105,54 @@ export function AutoFailoverConfigPanel({
     checkRange(
       raw.maxRetries,
       ranges.maxRetries,
-      t("proxy.autoFailover.maxRetries", "最大重试次数"),
+      t("proxy.autoFailover.maxRetries", "Reintentos máximos"),
     );
     checkRange(
       raw.streamingFirstByteTimeout,
       ranges.streamingFirstByteTimeout,
-      t("proxy.autoFailover.streamingFirstByte", "流式首字节超时"),
+      t("proxy.autoFailover.streamingFirstByte", "Timeout primer byte streaming"),
     );
     checkRange(
       raw.streamingIdleTimeout,
       ranges.streamingIdleTimeout,
-      t("proxy.autoFailover.streamingIdle", "流式静默超时"),
+      t("proxy.autoFailover.streamingIdle", "Timeout inactividad streaming"),
     );
     checkRange(
       raw.nonStreamingTimeout,
       ranges.nonStreamingTimeout,
-      t("proxy.autoFailover.nonStreaming", "非流式超时"),
+      t("proxy.autoFailover.nonStreaming", "Timeout no streaming"),
     );
     checkRange(
       raw.circuitFailureThreshold,
       ranges.circuitFailureThreshold,
-      t("proxy.autoFailover.failureThreshold", "失败阈值"),
+      t("proxy.autoFailover.failureThreshold", "Umbral de fallos"),
     );
     checkRange(
       raw.circuitSuccessThreshold,
       ranges.circuitSuccessThreshold,
-      t("proxy.autoFailover.successThreshold", "恢复成功阈值"),
+      t("proxy.autoFailover.successThreshold", "Umbral de éxitos"),
     );
     checkRange(
       raw.circuitTimeoutSeconds,
       ranges.circuitTimeoutSeconds,
-      t("proxy.autoFailover.timeout", "恢复等待时间"),
+      t("proxy.autoFailover.timeout", "Tiempo de espera"),
     );
     checkRange(
       raw.circuitErrorRateThreshold,
       ranges.circuitErrorRateThreshold,
-      t("proxy.autoFailover.errorRate", "错误率阈值"),
+      t("proxy.autoFailover.errorRate", "Umbral de tasa de error"),
     );
     checkRange(
       raw.circuitMinRequests,
       ranges.circuitMinRequests,
-      t("proxy.autoFailover.minRequests", "最小请求数"),
+      t("proxy.autoFailover.minRequests", "Solicitudes mínimas"),
     );
 
     if (errors.length > 0) {
       toast.error(
         t("proxy.autoFailover.validationFailed", {
           fields: errors.join("; "),
-          defaultValue: `以下字段超出有效范围: ${errors.join("; ")}`,
+          defaultValue: `Los siguientes campos están fuera del rango válido: ${errors.join("; ")}`,
         }),
       );
       return;
@@ -174,12 +174,12 @@ export function AutoFailoverConfigPanel({
         circuitMinRequests: raw.circuitMinRequests,
       });
       toast.success(
-        t("proxy.autoFailover.configSaved", "自动故障转移配置已保存"),
+        t("proxy.autoFailover.configSaved", "Configuración de conmutación automática guardada"),
         { closeButton: true },
       );
     } catch (e) {
       toast.error(
-        t("proxy.autoFailover.configSaveFailed", "保存失败") + ": " + String(e),
+        t("proxy.autoFailover.configSaveFailed", "Error al guardar") + ": " + String(e),
       );
     }
   };
@@ -227,21 +227,21 @@ export function AutoFailoverConfigPanel({
           <AlertDescription className="text-sm">
             {t(
               "proxy.autoFailover.info",
-              "当故障转移队列中配置了多个供应商时，系统会在请求失败时按优先级顺序依次尝试。当某个供应商连续失败达到阈值时，熔断器会打开并在一段时间内跳过该供应商。",
+              "Cuando se configuran múltiples proveedores en la cola de conmutación, el sistema intentará cada uno en orden de prioridad cuando una solicitud falle. Cuando un proveedor falla consecutivamente alcanzando el umbral, el circuit breaker se abrirá y omitirá ese proveedor por un tiempo.",
             )}
           </AlertDescription>
         </Alert>
 
-        {/* 重试与超时配置 */}
+        {/* Configuración de reintentos y timeouts */}
         <div className="space-y-4 rounded-lg border border-white/10 bg-muted/30 p-4">
           <h4 className="text-sm font-semibold">
-            {t("proxy.autoFailover.retrySettings", "重试与超时设置")}
+            {t("proxy.autoFailover.retrySettings", "Configuración de reintentos y timeouts")}
           </h4>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor={`maxRetries-${appType}`}>
-                {t("proxy.autoFailover.maxRetries", "最大重试次数")}
+                {t("proxy.autoFailover.maxRetries", "Reintentos máximos")}
               </Label>
               <Input
                 id={`maxRetries-${appType}`}
@@ -257,14 +257,14 @@ export function AutoFailoverConfigPanel({
               <p className="text-xs text-muted-foreground">
                 {t(
                   "proxy.autoFailover.maxRetriesHint",
-                  "请求失败时的重试次数（0-10）",
+                  "Número de reintentos cuando falla una solicitud (0-10)",
                 )}
               </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor={`failureThreshold-${appType}`}>
-                {t("proxy.autoFailover.failureThreshold", "失败阈值")}
+                {t("proxy.autoFailover.failureThreshold", "Umbral de fallos")}
               </Label>
               <Input
                 id={`failureThreshold-${appType}`}
@@ -283,17 +283,17 @@ export function AutoFailoverConfigPanel({
               <p className="text-xs text-muted-foreground">
                 {t(
                   "proxy.autoFailover.failureThresholdHint",
-                  "连续失败多少次后打开熔断器（建议: 3-10）",
+                  "Después de cuántos fallos consecutivos se abre el circuit breaker (recomendado: 3-10)",
                 )}
               </p>
             </div>
           </div>
         </div>
 
-        {/* 超时配置 */}
+        {/* Configuración de timeouts */}
         <div className="space-y-4 rounded-lg border border-white/10 bg-muted/30 p-4">
           <h4 className="text-sm font-semibold">
-            {t("proxy.autoFailover.timeoutSettings", "超时配置")}
+            {t("proxy.autoFailover.timeoutSettings", "Configuración de timeouts")}
           </h4>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -301,7 +301,7 @@ export function AutoFailoverConfigPanel({
               <Label htmlFor={`streamingFirstByte-${appType}`}>
                 {t(
                   "proxy.autoFailover.streamingFirstByte",
-                  "流式首字节超时（秒）",
+                  "Timeout primer byte streaming (s)",
                 )}
               </Label>
               <Input
@@ -321,14 +321,14 @@ export function AutoFailoverConfigPanel({
               <p className="text-xs text-muted-foreground">
                 {t(
                   "proxy.autoFailover.streamingFirstByteHint",
-                  "等待首个数据块的最大时间，范围 1-120 秒，默认 60 秒",
+                  "Tiempo máximo de espera del primer bloque de datos, rango 1-120 s, por defecto 60 s",
                 )}
               </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor={`streamingIdle-${appType}`}>
-                {t("proxy.autoFailover.streamingIdle", "流式静默超时（秒）")}
+                {t("proxy.autoFailover.streamingIdle", "Timeout inactividad streaming (s)")}
               </Label>
               <Input
                 id={`streamingIdle-${appType}`}
@@ -347,14 +347,14 @@ export function AutoFailoverConfigPanel({
               <p className="text-xs text-muted-foreground">
                 {t(
                   "proxy.autoFailover.streamingIdleHint",
-                  "数据块之间的最大间隔，范围 60-600 秒，填 0 禁用（防止中途卡住）",
+                  "Intervalo máximo entre bloques de datos, rango 60-600 s, 0 para deshabilitar (prevenir bloqueo)",
                 )}
               </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor={`nonStreaming-${appType}`}>
-                {t("proxy.autoFailover.nonStreaming", "非流式超时（秒）")}
+                {t("proxy.autoFailover.nonStreaming", "Timeout no streaming (s)")}
               </Label>
               <Input
                 id={`nonStreaming-${appType}`}
@@ -373,23 +373,23 @@ export function AutoFailoverConfigPanel({
               <p className="text-xs text-muted-foreground">
                 {t(
                   "proxy.autoFailover.nonStreamingHint",
-                  "非流式请求的总超时时间，范围 60-1200 秒，默认 600 秒（10 分钟）",
+                  "Timeout total para solicitudes no streaming, rango 60-1200 s, por defecto 600 s (10 min)",
                 )}
               </p>
             </div>
           </div>
         </div>
 
-        {/* 熔断器配置 */}
+        {/* Configuración del circuit breaker */}
         <div className="space-y-4 rounded-lg border border-white/10 bg-muted/30 p-4">
           <h4 className="text-sm font-semibold">
-            {t("proxy.autoFailover.circuitBreakerSettings", "熔断器配置")}
+            {t("proxy.autoFailover.circuitBreakerSettings", "Configuración del circuit breaker")}
           </h4>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor={`successThreshold-${appType}`}>
-                {t("proxy.autoFailover.successThreshold", "恢复成功阈值")}
+                {t("proxy.autoFailover.successThreshold", "Umbral de éxitos")}
               </Label>
               <Input
                 id={`successThreshold-${appType}`}
@@ -408,14 +408,14 @@ export function AutoFailoverConfigPanel({
               <p className="text-xs text-muted-foreground">
                 {t(
                   "proxy.autoFailover.successThresholdHint",
-                  "半开状态下成功多少次后关闭熔断器",
+                  "Cuántos éxitos en estado semi-abierto cierran el circuit breaker",
                 )}
               </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor={`timeoutSeconds-${appType}`}>
-                {t("proxy.autoFailover.timeout", "恢复等待时间（秒）")}
+                {t("proxy.autoFailover.timeout", "Tiempo de espera (s)")}
               </Label>
               <Input
                 id={`timeoutSeconds-${appType}`}
@@ -434,14 +434,14 @@ export function AutoFailoverConfigPanel({
               <p className="text-xs text-muted-foreground">
                 {t(
                   "proxy.autoFailover.timeoutHint",
-                  "熔断器打开后，等待多久后尝试恢复（建议: 30-120）",
+                  "Después de abierto el circuit breaker, cuánto tiempo esperar antes de intentar recuperar (recomendado: 30-120)",
                 )}
               </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor={`errorRateThreshold-${appType}`}>
-                {t("proxy.autoFailover.errorRate", "错误率阈值 (%)")}
+                {t("proxy.autoFailover.errorRate", "Umbral de tasa de error (%)")}
               </Label>
               <Input
                 id={`errorRateThreshold-${appType}`}
@@ -461,14 +461,14 @@ export function AutoFailoverConfigPanel({
               <p className="text-xs text-muted-foreground">
                 {t(
                   "proxy.autoFailover.errorRateHint",
-                  "错误率超过此值时打开熔断器",
+                  "Abrir circuit breaker cuando la tasa de error supera este valor",
                 )}
               </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor={`minRequests-${appType}`}>
-                {t("proxy.autoFailover.minRequests", "最小请求数")}
+                {t("proxy.autoFailover.minRequests", "Solicitudes mínimas")}
               </Label>
               <Input
                 id={`minRequests-${appType}`}
@@ -487,28 +487,28 @@ export function AutoFailoverConfigPanel({
               <p className="text-xs text-muted-foreground">
                 {t(
                   "proxy.autoFailover.minRequestsHint",
-                  "计算错误率前的最小请求数",
+                  "Número mínimo de solicitudes antes de calcular tasa de error",
                 )}
               </p>
             </div>
           </div>
         </div>
 
-        {/* 操作按钮 */}
+        {/* Botones de acción */}
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="outline" onClick={handleReset} disabled={isDisabled}>
-            {t("common.reset", "重置")}
+            {t("common.reset", "Restablecer")}
           </Button>
           <Button onClick={handleSave} disabled={isDisabled}>
             {updateConfig.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t("common.saving", "保存中...")}
+                {t("common.saving", "Guardando...")}
               </>
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />
-                {t("common.save", "保存")}
+                {t("common.save", "Guardar")}
               </>
             )}
           </Button>

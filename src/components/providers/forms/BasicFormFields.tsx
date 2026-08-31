@@ -51,7 +51,7 @@ export function BasicFormFields({
 
   return (
     <>
-      {/* 图标选择区域 - 顶部居中，可选 */}
+      {/* Área de selección de icono - centrada arriba, opcional */}
       <div className="flex justify-center mb-6">
         <Dialog open={iconDialogOpen} onOpenChange={setIconDialogOpen}>
           <DialogTrigger asChild>
@@ -61,10 +61,10 @@ export function BasicFormFields({
               title={
                 currentIcon
                   ? t("providerIcon.clickToChange", {
-                      defaultValue: "点击更换图标",
+                      defaultValue: "Hacer clic para cambiar icono",
                     })
                   : t("providerIcon.clickToSelect", {
-                      defaultValue: "点击选择图标",
+                      defaultValue: "Hacer clic para seleccionar icono",
                     })
               }
             >
@@ -92,7 +92,7 @@ export function BasicFormFields({
                   </DialogClose>
                   <p className="text-lg font-semibold leading-tight">
                     {t("providerIcon.selectIcon", {
-                      defaultValue: "选择图标",
+                      defaultValue: "Seleccionar icono",
                     })}
                   </p>
                 </div>
@@ -107,7 +107,7 @@ export function BasicFormFields({
                   <div className="flex justify-end gap-2">
                     <DialogClose asChild>
                       <Button type="button" variant="outline">
-                        {t("common.done", { defaultValue: "完成" })}
+                        {t("common.done", { defaultValue: "Listo" })}
                       </Button>
                     </DialogClose>
                   </div>
@@ -121,7 +121,7 @@ export function BasicFormFields({
       {/* Slot for additional fields between icon and name */}
       {beforeNameSlot}
 
-      {/* 基础信息 - 网格布局 */}
+      {/* Información básica - diseño de cuadrícula */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField
           control={form.control}

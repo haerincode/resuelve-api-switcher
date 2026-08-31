@@ -1,7 +1,7 @@
 /**
- * 从各种错误对象中提取错误信息
- * @param error 错误对象
- * @returns 提取的错误信息字符串
+ * Extrae información de error de varios objetos de error
+ * @param error Objeto de error
+ * @returns Cadena de mensaje de error extraída
  */
 export const extractErrorMessage = (error: unknown): string => {
   if (!error) return "";
@@ -38,9 +38,9 @@ export const extractErrorMessage = (error: unknown): string => {
 };
 
 /**
- * 将已知的 MCP 相关后端错误（通常为中文硬编码）映射为 i18n 文案
- * 采用包含式匹配，尽量稳健地覆盖不同上下文的相似消息。
- * 若无法识别，返回空字符串以便调用方回退到原始 detail 或默认 i18n。
+ * Mapea errores de backend MCP conocidos (normalmente hardcoded en chino) a texto i18n
+ * Usa coincidencia inclusiva para cubrir mensajes similares en diferentes contextos de forma robusta.
+ * Si no se puede reconocer, retorna cadena vacía para que el caller retroceda al detail original o al i18n predeterminado.
  */
 export const translateMcpBackendError = (
   message: string,
@@ -49,7 +49,7 @@ export const translateMcpBackendError = (
   if (!message) return "";
   const msg = String(message).trim();
 
-  // 基础字段与结构校验相关
+  // Validación de campos básicos y estructura
   if (msg.includes("MCP 服务器 ID 不能为空")) {
     return t("mcp.error.idRequired");
   }
@@ -75,7 +75,7 @@ export const translateMcpBackendError = (
     return t("mcp.error.jsonInvalid");
   }
 
-  // 必填字段
+  // Campos requeridos
   if (
     msg.includes("stdio 类型的 MCP 服务器缺少 command 字段") ||
     msg.includes("必须包含 command 字段")
@@ -91,7 +91,7 @@ export const translateMcpBackendError = (
     return t("mcp.wizard.urlRequired");
   }
 
-  // 文件解析/序列化
+  // Análisis/serialización de archivos
   if (
     msg.includes("解析 ~/.claude.json 失败") ||
     msg.includes("解析 config.toml 失败") ||

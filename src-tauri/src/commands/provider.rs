@@ -11,13 +11,13 @@ use crate::services::{
 use crate::store::AppState;
 use std::str::FromStr;
 
-// 常量定义
+// Definiciones de constantes
 const TEMPLATE_TYPE_GITHUB_COPILOT: &str = "github_copilot";
 const TEMPLATE_TYPE_TOKEN_PLAN: &str = "token_plan";
 const TEMPLATE_TYPE_BALANCE: &str = "balance";
 const COPILOT_UNIT_PREMIUM: &str = "requests";
 
-/// 获取所有供应商
+/// Obtener todos los proveedores
 #[tauri::command]
 pub fn get_providers(
     state: State<'_, AppState>,
@@ -112,7 +112,7 @@ fn import_default_config_internal(state: &AppState, app_type: AppType) -> Result
     let imported = ProviderService::import_default_config(state, app_type.clone())?;
 
     if imported {
-        // Extract common config snippet (mirrors old startup logic in lib.rs)
+        // Extraer fragmento de configuración común (replica la lógica antigua de inicio en lib.rs)
         if state
             .db
             .should_auto_extract_config_snippet(app_type.as_str())?
@@ -206,9 +206,9 @@ pub fn import_claude_desktop_providers_from_claude(
         imported += 1;
     }
 
-    // Safety net: 用户可能手动删除过 claude-desktop-official seed。
-    // 用户主动点 import 是"重新整理 ClaudeDesktop 表"的隐式信号，把官方入口补回来。
-    // 失败只 warn，不影响 imported 主流程；imported 计数语义保持纯净。
+    // Safety net: el usuario pudo haber eliminado manualmente el seed claude-desktop-official.
+    // Cuando el usuario hace clic activamente en import es una señal implícita de "reorganizar la tabla ClaudeDesktop", restauramos el punto de entrada oficial.
+    // Si falla solo advertimos, no afecta el flujo principal de imported; la semántica del contador de imported se mantiene pura.
     if let Err(e) = state.db.ensure_official_seed_by_id(
         crate::database::CLAUDE_DESKTOP_OFFICIAL_PROVIDER_ID,
         AppType::ClaudeDesktop,
@@ -273,8 +273,8 @@ pub(crate) fn suggested_claude_desktop_routes(
             return;
         };
 
-        // Claude 端 env 值可能带 [1M] 后缀；Claude Desktop schema 不接受后缀，
-        // 改用 supports1m 字段表达 1M 能力。在 import 边界做单向翻译。
+        // env de lado Claude puede llevar sufijo [1M]; esquema de Claude Desktop no acepta sufijo,
+        // usa en cambio el campo supports1m para expresar capacidad 1M. Se hace traducción unidireccional en el borde de import.
         let marker = crate::claude_desktop_config::ONE_M_CONTEXT_MARKER.as_bytes();
         let raw_bytes = raw_model.as_bytes();
         let has_1m_marker = raw_bytes.len() >= marker.len()
@@ -299,8 +299,8 @@ pub(crate) fn suggested_claude_desktop_routes(
                 .then(|| stripped_model.to_string())
         });
 
-        // 何时覆盖既有 label_override：原本为空 / 这次来的是 explicit _NAME /
-        // 既有值只是 stripped_model 派生的占位（被 explicit 或更具体的值挤掉）。
+        // Cuándo sobrescribir label_override existente: originalmente vacío / esta vez viene explicit _NAME /
+        // valor existente es solo placeholder derivado de stripped_model (desplazado por explicit o valor más específico).
         let should_overwrite = |existing: Option<&str>| {
             existing.is_none()
                 || explicit_label_override.is_some()
@@ -343,7 +343,7 @@ pub(crate) fn suggested_claude_desktop_routes(
         );
     }
 
-    // 三个 default env_key 全空时用 ANTHROPIC_MODEL 派生兜底路由。
+    // Tres default env_key todos vacíos, usar ANTHROPIC_MODEL para derivar ruta de respaldo.
     if routes.is_empty() {
         let primary_route = crate::claude_desktop_config::DEFAULT_PROXY_ROUTES[0].route_id;
         add_route(
@@ -364,16 +364,17 @@ pub async fn queryProviderUsage(
     app_handle: tauri::AppHandle,
     state: State<'_, AppState>,
     copilot_state: State<'_, CopilotAuthState>,
-    #[allow(non_snake_case)] providerId: String, // 使用 camelCase 匹配前端
+    #[allow(non_snake_case)] providerId: String, // Usar camelCase para coincidir con frontend
     app: String,
 ) -> Result<crate::provider::UsageResult, String> {
     let app_type = AppType::from_str(&app).map_err(|e| e.to_string())?;
-    // inner 可能以两种形式失败：
-    //   1) 返回 Ok(UsageResult { success: false, .. }) —— 业务失败（401、脚本报错等）
-    //   2) 返回 Err(String) —— RPC/DB/Copilot fetch_usage 等 transport 层失败
-    // 两种都要把"失败"写进 UsageCache 并刷新托盘，让 format_script_summary 的
-    // success 守卫生效、suffix 自然消失，避免旧 success 快照长期滞留。
-    // 同时保持原始 Err 返回给前端 React Query 的 onError 回调，不吞错误。
+    // inner puede fallar de dos formas:
+    //   1) Retornar Ok(UsageResult { success: false, .. }) — fallo de negocio (401, error de script, etc.)
+    //   2) Retornar Err(String) — fallo de capa de transporte de RPC/DB/Copilot fetch_usage, etc.
+    // Ambos tipos deben escribir el "fallo" en UsageCache y refrescar el tray, para que el
+    // guardia success de format_script_summary funcione y el sufijo desaparezca naturalmente,
+    // evitando que instantáneas success antiguas permanezcan por mucho tiempo.
+    // Al mismo tiempo mantener el Err original para retornar al callback onError de React Query del frontend, no tragar error.
     let inner =
         query_provider_usage_inner(&state, &copilot_state, app_type.clone(), &providerId).await;
     let snapshot = match &inner {
@@ -391,7 +392,7 @@ pub async fn queryProviderUsage(
         "data": &snapshot,
     });
     if let Err(e) = app_handle.emit("usage-cache-updated", payload) {
-        log::error!("emit usage-cache-updated (script) 失败: {e}");
+        log::error!("Error al emitir usage-cache-updated (script): {e}");
     }
     state.usage_cache.put_script(app_type, providerId, snapshot);
     crate::tray::schedule_tray_refresh(&app_handle);
@@ -404,7 +405,7 @@ async fn query_provider_usage_inner(
     app_type: AppType,
     provider_id: &str,
 ) -> Result<crate::provider::UsageResult, String> {
-    // 从数据库读取供应商信息，检查特殊模板类型
+    // Leer información del proveedor desde la base de datos, verificar tipo de plantilla especial
     let providers = state
         .db
         .get_all_providers(app_type.as_str())
@@ -417,7 +418,7 @@ async fn query_provider_usage_inner(
         .and_then(|s| s.template_type.as_deref())
         .unwrap_or("");
 
-    // ── GitHub Copilot 专用路径 ──
+    // ── Ruta exclusiva de GitHub Copilot ──
     if template_type == TEMPLATE_TYPE_GITHUB_COPILOT {
         let copilot_account_id = provider
             .and_then(|p| p.meta.as_ref())
@@ -453,9 +454,9 @@ async fn query_provider_usage_inner(
         });
     }
 
-    // ── Coding Plan 专用路径 ──
+    // ── Ruta exclusiva de Coding Plan ──
     if template_type == TEMPLATE_TYPE_TOKEN_PLAN {
-        // 从供应商配置中提取 API Key 和 Base URL
+        // Extraer API Key y Base URL de la configuración del proveedor
         let settings_config = provider
             .map(|p| &p.settings_config)
             .cloned()
@@ -477,7 +478,7 @@ async fn query_provider_usage_inner(
             .await
             .map_err(|e| format!("Failed to query coding plan: {e}"))?;
 
-        // 将 SubscriptionQuota 转换为 UsageResult
+        // Convertir SubscriptionQuota a UsageResult
         if !quota.success {
             return Ok(crate::provider::UsageResult {
                 success: false,
@@ -513,7 +514,7 @@ async fn query_provider_usage_inner(
         });
     }
 
-    // ── 官方余额查询路径 ──
+    // ── Ruta de consulta de saldo oficial ──
     if template_type == TEMPLATE_TYPE_BALANCE {
         let settings_config = provider
             .map(|p| &p.settings_config)
@@ -537,7 +538,7 @@ async fn query_provider_usage_inner(
             .map_err(|e| format!("Failed to query balance: {e}"));
     }
 
-    // ── 通用 JS 脚本路径 ──
+    // ── Ruta de script JS genérico ──
     ProviderService::query_usage(state, app_type, provider_id)
         .await
         .map_err(|e| e.to_string())
@@ -740,7 +741,7 @@ pub fn get_opencode_live_provider_ids() -> Result<Vec<String>, String> {
 }
 
 // ============================================================================
-// OpenClaw 专属命令 → 已迁移至 commands/openclaw.rs
+// Comandos exclusivos de OpenClaw → ya migrados a commands/openclaw.rs
 // ============================================================================
 
 #[cfg(test)]
@@ -800,7 +801,7 @@ mod import_claude_desktop_tests {
             .expect("sonnet route present");
         assert_eq!(r.model, "kimi-k2");
         assert_eq!(r.label_override.as_deref(), Some("kimi-k2"));
-        // 默认 provider_type 缺省 → supports_1m_default = true
+        // provider_type por defecto ausente → supports_1m_default = true
         assert_eq!(r.supports_1m, Some(true));
     }
 
@@ -823,7 +824,7 @@ mod import_claude_desktop_tests {
 
     #[test]
     fn route_1m_suffix_overrides_provider_type_default() {
-        // github_copilot 默认 supports_1m_default = false，但 [1M] 后缀应强制 true
+        // github_copilot por defecto supports_1m_default = false, pero sufijo [1M] debe forzar a true
         let p = make_provider(
             json!({
                 "ANTHROPIC_DEFAULT_SONNET_MODEL": "gpt-5-codex[1M]",
@@ -877,7 +878,7 @@ mod import_claude_desktop_tests {
 
     #[test]
     fn same_upstream_with_partial_1m_marker_takes_or_aggregation() {
-        // sonnet 带 [1M]，opus/haiku 不带 → 合并后 supports_1m == Some(true)
+        // sonnet con [1M], opus/haiku sin → después de fusionar supports_1m == Some(true)
         let p = make_provider(
             json!({
                 "ANTHROPIC_DEFAULT_SONNET_MODEL": "MiniMax-M2[1M]",
@@ -921,7 +922,7 @@ mod import_claude_desktop_tests {
 
     #[test]
     fn anthropic_model_fallback_only_triggers_when_empty() {
-        // 三个 default env_key 都不填，仅 ANTHROPIC_MODEL
+        // Tres default env_key todos no rellenados, solo ANTHROPIC_MODEL
         let p = make_provider(
             json!({
                 "ANTHROPIC_MODEL": "kimi-k2",

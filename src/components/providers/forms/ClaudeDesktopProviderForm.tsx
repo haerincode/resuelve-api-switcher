@@ -396,15 +396,15 @@ export function ClaudeDesktopProviderForm({
 
   const presetCategoryLabels: Record<string, string> = useMemo(
     () => ({
-      official: t("providerForm.categoryOfficial", { defaultValue: "官方" }),
+      official: t("providerForm.categoryOfficial", { defaultValue: "Oficial" }),
       cn_official: t("providerForm.categoryCnOfficial", {
-        defaultValue: "国内官方",
+        defaultValue: "Oficial nacional",
       }),
       aggregator: t("providerForm.categoryAggregation", {
-        defaultValue: "聚合服务",
+        defaultValue: "Servicio agregado",
       }),
       third_party: t("providerForm.categoryThirdParty", {
-        defaultValue: "第三方",
+        defaultValue: "Terceros",
       }),
     }),
     [t],
@@ -541,7 +541,7 @@ export function ClaudeDesktopProviderForm({
       toast.success(
         t("providerForm.fetchModelsSuccess", {
           count: models.length,
-          defaultValue: `已获取 ${models.length} 个模型`,
+          defaultValue: `Se obtuvieron ${models.length} modelos`,
         }),
       );
     } catch (error) {
@@ -558,15 +558,15 @@ export function ClaudeDesktopProviderForm({
     if (!values.name.trim()) {
       toast.error(
         t("providerForm.fillSupplierName", {
-          defaultValue: "请填写供应商名称",
+          defaultValue: "Rellene el nombre del proveedor",
         }),
       );
       return;
     }
     if (isOfficial) {
-      // 官方供应商使用 Claude Desktop 内置 1P 模式，保持空 env 占位；
-      // 不写 claudeDesktopMode / claudeDesktopModelRoutes / apiFormat，
-      // 与启动 seed 的 OFFICIAL_SEEDS 占位语义一致。
+      // Proveedor oficial usa modo 1P integrado en Claude Desktop, mantener env vacío como placeholder;
+      // no escribir claudeDesktopMode / claudeDesktopModelRoutes / apiFormat,
+      // coherente con la semántica de placeholder OFFICIAL_SEEDS del seed de arranque.
       const settingsConfig = clonePlainRecord(initialData?.settingsConfig);
       settingsConfig.env = {};
       const meta: ProviderMeta = { ...(initialData?.meta ?? {}) };
@@ -590,7 +590,7 @@ export function ClaudeDesktopProviderForm({
     if (!baseUrl.trim()) {
       toast.error(
         t("providerForm.fetchModelsNeedEndpoint", {
-          defaultValue: "请先填写接口地址",
+          defaultValue: "Por favor rellene primero la dirección del endpoint",
         }),
       );
       return;
@@ -598,7 +598,7 @@ export function ClaudeDesktopProviderForm({
     if (!usesManagedOAuth && !apiKey.trim()) {
       toast.error(
         t("providerForm.fetchModelsNeedApiKey", {
-          defaultValue: "请先填写 API Key",
+          defaultValue: "Por favor rellene primero el API Key",
         }),
       );
       return;
@@ -621,7 +621,7 @@ export function ClaudeDesktopProviderForm({
       if (invalid) {
         toast.error(
           t("claudeDesktop.routeInvalid", {
-            defaultValue: "请填写 Desktop 显示模型和实际请求模型",
+            defaultValue: "Rellene el modelo mostrado en Desktop y el modelo de solicitud real",
           }),
         );
         return;
@@ -629,7 +629,7 @@ export function ClaudeDesktopProviderForm({
       if (routeEntries.length === 0) {
         toast.error(
           t("claudeDesktop.routesRequired", {
-            defaultValue: "至少填写一个模型映射",
+            defaultValue: "Rellene al menos un mapeo de modelo",
           }),
         );
         return;
@@ -642,7 +642,7 @@ export function ClaudeDesktopProviderForm({
         toast.error(
           t("claudeDesktop.directModelInvalid", {
             defaultValue:
-              "直连模型必须使用 claude-* / anthropic/claude-* 模型名",
+              "El modelo directo debe usar nombres de modelo claude-* / anthropic/claude-*",
           }),
         );
         return;
@@ -734,7 +734,7 @@ export function ClaudeDesktopProviderForm({
           ) : (
             <Download className="h-3.5 w-3.5" />
           )}
-          {t("providerForm.fetchModels", { defaultValue: "获取模型" })}
+          {t("providerForm.fetchModels", { defaultValue: "Obtener modelos" })}
         </Button>
       )}
       <Button
@@ -773,7 +773,7 @@ export function ClaudeDesktopProviderForm({
           <div className="rounded-lg border border-border-default bg-muted/20 p-3 text-sm text-muted-foreground">
             {t("claudeDesktop.officialNotice", {
               defaultValue:
-                "Claude Desktop 官方供应商使用应用内置的 1P 登录，无需配置 API Key 和接口地址。",
+                "El proveedor oficial de Claude Desktop usa el inicio de sesión 1P integrado en la aplicación, no requiere configurar API Key ni dirección de endpoint.",
             })}
           </div>
         )}
@@ -831,18 +831,18 @@ export function ClaudeDesktopProviderForm({
                 <div className="space-y-1">
                   <Label>
                     {t("claudeDesktop.modelMappingToggle", {
-                      defaultValue: "需要模型映射",
+                      defaultValue: "Requiere mapeo de modelos",
                     })}
                   </Label>
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     {needsModelMapping
                       ? t("claudeDesktop.modelMappingOnHint", {
                           defaultValue:
-                            "Claude Desktop 目前对模型 ID 进行了限制，如果您的供应商提供的模型不是 Claude 系列模型，则需要打开本开关，并在使用过程中保持本地路由开启。",
+                            "Claude Desktop actualmente limita los ID de modelo. Si su proveedor ofrece modelos que no son de la serie Claude, debe activar este interruptor y mantener el enrutamiento local activo durante el uso.",
                         })
                       : t("claudeDesktop.modelMappingOffHint", {
                           defaultValue:
-                            "适合供应商已经暴露并接受 claude-* / anthropic/claude-* 模型名的 Anthropic Messages API；请求会由 Claude Desktop 直连供应商。",
+                            "Adecuado para proveedores que ya exponen y aceptan nombres de modelo claude-* / anthropic/claude-* de la API Anthropic Messages; las solicitudes serán enviadas directamente por Claude Desktop al proveedor.",
                         })}
                   </p>
                 </div>
@@ -850,7 +850,7 @@ export function ClaudeDesktopProviderForm({
                   checked={needsModelMapping}
                   onCheckedChange={handleModelMappingChange}
                   aria-label={t("claudeDesktop.modelMappingToggle", {
-                    defaultValue: "需要模型映射",
+                    defaultValue: "Requiere mapeo de modelos",
                   })}
                 />
               </div>
@@ -860,7 +860,7 @@ export function ClaudeDesktopProviderForm({
               <div className="space-y-4 rounded-lg border border-border-default p-4">
                 <div className="space-y-2">
                   <Label>
-                    {t("providerForm.apiFormat", { defaultValue: "API 格式" })}
+                    {t("providerForm.apiFormat", { defaultValue: "Formato API" })}
                   </Label>
                   <Select
                     value={apiFormat}
@@ -874,23 +874,23 @@ export function ClaudeDesktopProviderForm({
                     <SelectContent>
                       <SelectItem value="anthropic">
                         {t("providerForm.apiFormatAnthropic", {
-                          defaultValue: "Anthropic Messages (原生)",
+                          defaultValue: "Anthropic Messages (nativo)",
                         })}
                       </SelectItem>
                       <SelectItem value="openai_chat">
                         {t("providerForm.apiFormatOpenAIChat", {
-                          defaultValue: "OpenAI Chat Completions (需开启路由)",
+                          defaultValue: "OpenAI Chat Completions (requiere activar enrutamiento)",
                         })}
                       </SelectItem>
                       <SelectItem value="openai_responses">
                         {t("providerForm.apiFormatOpenAIResponses", {
-                          defaultValue: "OpenAI Responses API (需开启路由)",
+                          defaultValue: "OpenAI Responses API (requiere activar enrutamiento)",
                         })}
                       </SelectItem>
                       <SelectItem value="gemini_native">
                         {t("providerForm.apiFormatGeminiNative", {
                           defaultValue:
-                            "Gemini Native generateContent (需开启路由)",
+                            "Gemini Native generateContent (requiere activar enrutamiento)",
                         })}
                       </SelectItem>
                     </SelectContent>
@@ -902,7 +902,7 @@ export function ClaudeDesktopProviderForm({
                     <div className="flex items-center justify-between">
                       <Label>
                         {t("claudeDesktop.routeMapTitle", {
-                          defaultValue: "模型映射",
+                          defaultValue: "Mapeo de modelos",
                         })}
                       </Label>
                       {renderActionButtons(
@@ -912,14 +912,14 @@ export function ClaudeDesktopProviderForm({
                             nextRouteRow(current, defaultProxyRouteRows),
                           ]),
                         t("claudeDesktop.addRoute", {
-                          defaultValue: "添加模型",
+                          defaultValue: "Agregar modelo",
                         }),
                       )}
                     </div>
                     <p className="text-xs leading-relaxed text-muted-foreground">
                       {t("claudeDesktop.routeMapHint", {
                         defaultValue:
-                          "选择模型角色后，Resuelve-API Switcher 会自动生成 Claude Desktop 兼容路由；菜单显示名可以写 DeepSeek、Kimi 等品牌模型，实际请求模型按右侧填写内容发送。",
+                          "Después de seleccionar el rol del modelo, Resuelve-API Switcher generará automáticamente una ruta compatible con Claude Desktop; el nombre mostrado en el menú puede ser marcas de modelo como DeepSeek, Kimi, etc., el modelo de solicitud real se envía según el contenido rellenado a la derecha.",
                       })}
                     </p>
                   </div>
@@ -927,22 +927,22 @@ export function ClaudeDesktopProviderForm({
                   <div className="hidden grid-cols-[140px_1fr_1fr_116px_36px] gap-2 px-1 text-xs font-medium text-muted-foreground md:grid">
                     <span>
                       {t("claudeDesktop.routeModelLabel", {
-                        defaultValue: "模型角色",
+                        defaultValue: "Rol de modelo",
                       })}
                     </span>
                     <span>
                       {t("claudeDesktop.labelOverrideLabel", {
-                        defaultValue: "菜单显示名",
+                        defaultValue: "Nombre mostrado en menú",
                       })}
                     </span>
                     <span>
                       {t("claudeDesktop.upstreamModelLabel", {
-                        defaultValue: "实际请求模型",
+                        defaultValue: "Modelo de solicitud real",
                       })}
                     </span>
                     <span>
                       {t("claudeDesktop.supports1mLabel", {
-                        defaultValue: "声明支持 1M",
+                        defaultValue: "Declarar soporte 1M",
                       })}
                     </span>
                     <span />
@@ -1063,7 +1063,7 @@ export function ClaudeDesktopProviderForm({
                     )}
                     {t("claudeDesktop.directModelListTitle", {
                       defaultValue:
-                        "手动指定 Claude Desktop 模型列表（高级，可选）",
+                        "Especificar manualmente lista de modelos de Claude Desktop (avanzado, opcional)",
                     })}
                   </Button>
                 </CollapsibleTrigger>
@@ -1071,7 +1071,7 @@ export function ClaudeDesktopProviderForm({
                   <p className="ml-1 mt-1 text-xs text-muted-foreground">
                     {t("claudeDesktop.directModelListCollapsedHint", {
                       defaultValue:
-                        "原生 Claude 模型供应商通常不用填写，Claude Desktop 会自动读取 /v1/models。",
+                        "Proveedores de modelos Claude nativos normalmente no necesitan rellenar esto, Claude Desktop leerá automáticamente /v1/models.",
                     })}
                   </p>
                 )}
@@ -1081,7 +1081,7 @@ export function ClaudeDesktopProviderForm({
                       <p className="flex-1 text-xs leading-relaxed text-muted-foreground">
                         {t("claudeDesktop.directModelListHint", {
                           defaultValue:
-                            "仅当供应商的 /v1/models 不可用或没有返回 Claude Desktop 可识别的 claude-* 模型名时填写；这些模型名会原样发送给供应商。",
+                            "Solo rellene cuando el /v1/models del proveedor no esté disponible o no devuelva nombres de modelo claude-* reconocibles por Claude Desktop; estos nombres de modelo se enviarán tal cual al proveedor.",
                         })}
                       </p>
                       {renderActionButtons(
@@ -1096,7 +1096,7 @@ export function ClaudeDesktopProviderForm({
                             }),
                           ]),
                         t("claudeDesktop.addModel", {
-                          defaultValue: "添加模型",
+                          defaultValue: "Agregar modelo",
                         }),
                       )}
                     </div>

@@ -41,7 +41,7 @@ export function useProviderActions(
   const deleteProviderMutation = useDeleteProviderMutation(activeApp);
   const switchProviderMutation = useSwitchProviderMutation(activeApp);
 
-  // Claude 插件同步逻辑
+  // Lógica de sincronización del plugin Claude
   const syncClaudePlugin = useCallback(
     async (provider: Provider) => {
       if (activeApp !== "claude") return;
@@ -55,12 +55,12 @@ export function useProviderActions(
         const isOfficial = provider.category === "official";
         await settingsApi.applyClaudePluginConfig({ official: isOfficial });
 
-        // 静默执行，不显示成功通知
+        // Ejecutar silenciosamente, no mostrar notificación de éxito
       } catch (error) {
         const detail =
           extractErrorMessage(error) ||
           t("notifications.syncClaudePluginFailed", {
-            defaultValue: "同步 Claude 插件失败",
+            defaultValue: "Error al sincronizar plugin Claude",
           });
         toast.error(detail, { duration: 4200 });
       }
@@ -68,7 +68,7 @@ export function useProviderActions(
     [activeApp, t],
   );
 
-  // 添加供应商
+  // Agregar proveedor
   const addProvider = useCallback(
     async (
       provider: Omit<Provider, "id"> & {
@@ -108,17 +108,17 @@ export function useProviderActions(
             }
           }
 
-          // Show success toast if models were registered
+          // Mostrar toast de éxito si se registraron modelos
           if (modelsRegistered) {
             toast.success(
               t("notifications.openclawModelsRegistered", {
-                defaultValue: "模型已注册到 /model 列表",
+                defaultValue: "Modelos registrados en la lista /model",
               }),
               { closeButton: true },
             );
           }
         } catch (error) {
-          // Log warning but don't block main flow - provider config is already saved
+          // Registrar advertencia pero no bloquear flujo principal - la configuración del proveedor ya está guardada
           console.warn(
             "[OpenClaw] Failed to register models to allowlist:",
             error,
@@ -129,12 +129,12 @@ export function useProviderActions(
     [addProviderMutation, activeApp, queryClient, t],
   );
 
-  // 更新供应商
+  // Actualizar proveedor
   const updateProvider = useCallback(
     async (provider: Provider, originalId?: string) => {
       await updateProviderMutation.mutateAsync({ provider, originalId });
 
-      // 更新托盘菜单（失败不影响主操作）
+      // Actualizar menú de bandeja (fallo no afecta operación principal)
       try {
         await providersApi.updateTrayMenu();
       } catch (trayError) {
@@ -147,7 +147,7 @@ export function useProviderActions(
     [updateProviderMutation],
   );
 
-  // 切换供应商
+  // Cambiar proveedor
   const switchProvider = useCallback(
     async (provider: Provider) => {
       const isCopilotProvider =
@@ -164,44 +164,44 @@ export function useProviderActions(
               ),
             )));
 
-      // Determine why this provider requires the proxy
+      // Determinar por qué este proveedor requiere el proxy
       let proxyRequiredReason: string | null = null;
       if (!isProxyRunning && provider.category !== "official") {
         if (isCopilotProvider) {
           proxyRequiredReason = t("notifications.proxyReasonCopilot", {
-            defaultValue: "使用 GitHub Copilot 作为 Claude 供应商",
+            defaultValue: "Usar GitHub Copilot como proveedor Claude",
           });
         } else if (
           provider.meta?.apiFormat === "openai_chat" &&
           activeApp === "claude"
         ) {
           proxyRequiredReason = t("notifications.proxyReasonOpenAIChat", {
-            defaultValue: "使用 OpenAI Chat 接口格式",
+            defaultValue: "Usar formato de interfaz OpenAI Chat",
           });
         } else if (
           provider.meta?.apiFormat === "openai_responses" &&
           activeApp === "claude"
         ) {
           proxyRequiredReason = t("notifications.proxyReasonOpenAIResponses", {
-            defaultValue: "使用 OpenAI Responses 接口格式",
+            defaultValue: "Usar formato de interfaz OpenAI Responses",
           });
         } else if (isCodexChatFormat) {
           proxyRequiredReason = t("notifications.proxyReasonOpenAIChat", {
-            defaultValue: "使用 OpenAI Chat 接口格式",
+            defaultValue: "Usar formato de interfaz OpenAI Chat",
           });
         } else if (
           activeApp === "claude-desktop" &&
           provider.meta?.claudeDesktopMode === "proxy"
         ) {
           proxyRequiredReason = t("notifications.proxyReasonClaudeDesktop", {
-            defaultValue: "使用 Claude Desktop 本地路由模式",
+            defaultValue: "Usar modo de enrutamiento local Claude Desktop",
           });
         } else if (
           provider.meta?.isFullUrl &&
           (activeApp === "claude" || activeApp === "codex")
         ) {
           proxyRequiredReason = t("notifications.proxyReasonFullUrl", {
-            defaultValue: "开启了完整 URL 连接模式",
+            defaultValue: "Modo de conexión URL completa activado",
           });
         }
       }
@@ -211,17 +211,17 @@ export function useProviderActions(
           t("notifications.proxyRequiredForSwitch", {
             reason: proxyRequiredReason,
             defaultValue:
-              "此供应商{{reason}}，需要代理服务才能正常使用，请先启动代理",
+              "Este proveedor{{reason}}, requiere servicio proxy para funcionar correctamente, por favor inicie primero el proxy",
           }),
         );
       }
 
-      // Block official providers when proxy takeover is active
+      // Bloquear proveedores oficiales cuando el proxy takeover está activo
       if (isProxyTakeover && provider.category === "official") {
         toast.error(
           t("notifications.officialBlockedByProxy", {
             defaultValue:
-              "代理接管模式下不能切换到官方供应商，使用代理访问官方 API 可能导致账号被封禁",
+              "No se puede cambiar a proveedor oficial en modo proxy takeover, usar proxy para acceder a API oficial puede resultar en bloqueo de cuenta",
           }),
           { duration: 6000 },
         );
@@ -232,40 +232,40 @@ export function useProviderActions(
         const result = await switchProviderMutation.mutateAsync(provider.id);
         await syncClaudePlugin(provider);
 
-        // Show backfill warning if present
+        // Mostrar advertencia de backfill si está presente
         if (result?.warnings?.length) {
           toast.warning(
             t("notifications.backfillWarning", {
               defaultValue:
-                "切换成功，但旧供应商配置回填失败，您手动修改的配置可能未保存",
+                "Cambio exitoso, pero falló el backfill de configuración del proveedor anterior, su configuración modificada manualmente puede no haberse guardado",
             }),
             { duration: 5000 },
           );
         }
 
-        // 若已弹过 proxyRequired 警告则不再弹 success
+        // Si ya se mostró advertencia proxyRequired no mostrar success
         if (!proxyRequiredReason) {
           let messageKey = "notifications.switchSuccess";
-          let defaultMessage = "切换成功！";
+          let defaultMessage = "¡Cambio exitoso!";
           if (activeApp === "claude-desktop") {
             if (provider.meta?.claudeDesktopMode === "proxy") {
               messageKey = "notifications.claudeDesktopProxyRestartRequired";
               defaultMessage =
-                "切换成功，请保持 Resuelve-API Switcher 运行，并重启 Claude Desktop 后生效";
+                "Cambio exitoso, mantenga Resuelve-API Switcher en ejecución y reinicie Claude Desktop para que surta efecto";
             } else {
               messageKey = "notifications.claudeDesktopRestartRequired";
-              defaultMessage = "切换成功，重启 Claude Desktop 后生效";
+              defaultMessage = "Cambio exitoso, reinicie Claude Desktop para que surta efecto";
             }
           } else if (activeApp === "opencode" || activeApp === "openclaw") {
             messageKey = "notifications.addToConfigSuccess";
-            defaultMessage = "已添加到配置";
+            defaultMessage = "Agregado a configuración";
           }
           toast.success(t(messageKey, { defaultValue: defaultMessage }), {
             closeButton: true,
           });
         }
       } catch {
-        // 错误提示由 mutation 处理
+        // El mensaje de error es manejado por mutation
       }
     },
     [
@@ -278,7 +278,7 @@ export function useProviderActions(
     ],
   );
 
-  // 删除供应商
+  // Eliminar proveedor
   const deleteProvider = useCallback(
     async (id: string) => {
       await deleteProviderMutation.mutateAsync(id);
@@ -286,7 +286,7 @@ export function useProviderActions(
     [deleteProviderMutation],
   );
 
-  // 保存用量脚本
+  // Guardar script de uso
   const saveUsageScript = useCallback(
     async (provider: Provider, script: UsageScript) => {
       try {
@@ -302,14 +302,14 @@ export function useProviderActions(
         await queryClient.invalidateQueries({
           queryKey: ["providers", activeApp],
         });
-        // 🔧 保存用量脚本后，也应该失效该 provider 的用量查询缓存
-        // 这样主页列表会使用新配置重新查询，而不是使用测试时的缓存
+        // 🔧 Después de guardar script de uso, también debe invalidar el caché de consulta de uso de ese proveedor
+        // Así la lista de la página principal volverá a consultar usando la nueva configuración, en lugar de usar el caché de prueba
         await queryClient.invalidateQueries({
           queryKey: ["usage", provider.id, activeApp],
         });
         toast.success(
           t("provider.usageSaved", {
-            defaultValue: "用量查询配置已保存",
+            defaultValue: "Configuración de consulta de uso guardada",
           }),
           { closeButton: true },
         );
@@ -317,7 +317,7 @@ export function useProviderActions(
         const detail =
           extractErrorMessage(error) ||
           t("provider.usageSaveFailed", {
-            defaultValue: "用量查询配置保存失败",
+            defaultValue: "Error al guardar configuración de consulta de uso",
           });
         toast.error(detail);
       }
@@ -325,14 +325,14 @@ export function useProviderActions(
     [activeApp, queryClient, t],
   );
 
-  // Set provider as default model (OpenClaw only)
+  // Establecer proveedor como modelo predeterminado (solo OpenClaw)
   const setAsDefaultModel = useCallback(
     async (provider: Provider) => {
       const config = provider.settingsConfig as OpenClawProviderConfig;
       if (!config.models || config.models.length === 0) {
         toast.error(
           t("notifications.openclawNoModels", {
-            defaultValue: "该供应商没有配置模型",
+            defaultValue: "Este proveedor no tiene modelos configurados",
           }),
         );
         return;
@@ -353,7 +353,7 @@ export function useProviderActions(
         });
         toast.success(
           t("notifications.openclawDefaultModelSet", {
-            defaultValue: "已设为默认模型",
+            defaultValue: "Establecido como modelo predeterminado",
           }),
           { closeButton: true },
         );
@@ -361,7 +361,7 @@ export function useProviderActions(
         const detail =
           extractErrorMessage(error) ||
           t("notifications.openclawDefaultModelSetFailed", {
-            defaultValue: "设置默认模型失败",
+            defaultValue: "Error al establecer modelo predeterminado",
           });
         toast.error(detail);
       }

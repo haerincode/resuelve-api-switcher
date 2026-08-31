@@ -120,7 +120,7 @@ export function CodexFormFields({
 
   return (
     <>
-      {/* Codex API Key 输入框 */}
+      {/* Campo de entrada Codex API Key */}
       <ApiKeySection
         id="codexApiKey"
         label="API Key"
@@ -133,15 +133,15 @@ export function CodexFormFields({
         partnerPromotionKey={partnerPromotionKey}
         placeholder={{
           official: t("providerForm.codexOfficialNoApiKey", {
-            defaultValue: "官方供应商无需 API Key",
+            defaultValue: "Proveedor oficial no requiere API Key",
           }),
           thirdParty: t("providerForm.codexApiKeyAutoFill", {
-            defaultValue: "输入 API Key，将自动填充到配置",
+            defaultValue: "Ingresar API Key, se completará automáticamente en la configuración",
           }),
         }}
       />
 
-      {/* Codex Base URL 输入框 */}
+      {/* Campo de entrada Codex Base URL */}
       {shouldShowSpeedTest && (
         <EndpointField
           id="codexBaseUrl"
@@ -157,11 +157,11 @@ export function CodexFormFields({
         />
       )}
 
-      {/* Codex API 格式选择 */}
+      {/* Selección de formato API Codex */}
       {shouldShowSpeedTest && (
         <div className="space-y-2">
           <FormLabel htmlFor="codexApiFormat">
-            {t("providerForm.apiFormat", { defaultValue: "API 格式" })}
+            {t("providerForm.apiFormat", { defaultValue: "Formato API" })}
           </FormLabel>
           <Select
             value={apiFormat}
@@ -175,12 +175,12 @@ export function CodexFormFields({
             <SelectContent>
               <SelectItem value="openai_responses">
                 {t("providerForm.codexApiFormatResponses", {
-                  defaultValue: "OpenAI Responses API (原生)",
+                  defaultValue: "OpenAI Responses API (nativo)",
                 })}
               </SelectItem>
               <SelectItem value="openai_chat">
                 {t("providerForm.codexApiFormatOpenAIChat", {
-                  defaultValue: "OpenAI Chat Completions (需开启路由)",
+                  defaultValue: "OpenAI Chat Completions (requiere enrutamiento)",
                 })}
               </SelectItem>
             </SelectContent>
@@ -188,13 +188,13 @@ export function CodexFormFields({
           <p className="text-xs text-muted-foreground">
             {t("providerForm.codexApiFormatHint", {
               defaultValue:
-                "选择供应商真实支持的 Codex API 格式；Chat Completions 会通过本地路由自动转换为 Responses。",
+                "Seleccionar formato API Codex que el proveedor realmente soporta; Chat Completions se convertirá automáticamente a Responses mediante enrutamiento local.",
             })}
           </p>
         </div>
       )}
 
-      {/* Codex Model Name 输入框 */}
+      {/* Campo del nombre de modelo de Codex */}
       {shouldShowModelField && onModelNameChange && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -202,7 +202,7 @@ export function CodexFormFields({
               htmlFor="codexModelName"
               className="block text-sm font-medium text-foreground"
             >
-              {t("codexConfig.modelName", { defaultValue: "模型名称" })}
+              {t("codexConfig.modelName", { defaultValue: "Nombre del modelo" })}
             </label>
             <Button
               type="button"
@@ -225,7 +225,7 @@ export function CodexFormFields({
             value={modelName}
             onChange={(v) => onModelNameChange!(v)}
             placeholder={t("codexConfig.modelNamePlaceholder", {
-              defaultValue: "例如: gpt-5.4",
+              defaultValue: "Por ejemplo: gpt-5.4",
             })}
             fetchedModels={fetchedModels}
             isLoading={isFetchingModels}
@@ -233,16 +233,16 @@ export function CodexFormFields({
           <p className="text-xs text-muted-foreground">
             {modelName.trim()
               ? t("codexConfig.modelNameHint", {
-                  defaultValue: "指定使用的模型，将自动更新到 config.toml 中",
+                  defaultValue: "Especificar modelo a usar, se actualizará automáticamente en config.toml",
                 })
               : t("providerForm.modelHint", {
-                  defaultValue: "💡 留空将使用供应商的默认模型",
+                  defaultValue: "💡 Dejar vacío usará el modelo predeterminado del proveedor",
                 })}
           </p>
         </div>
       )}
 
-      {/* 端点测速弹窗 - Codex */}
+      {/* Diálogo de prueba de velocidad de endpoint - Codex */}
       {shouldShowSpeedTest && isEndpointModalOpen && (
         <EndpointSpeedTest
           appId="codex"

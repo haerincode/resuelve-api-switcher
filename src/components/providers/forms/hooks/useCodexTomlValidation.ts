@@ -2,20 +2,20 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import TOML from "smol-toml";
 
 /**
- * Codex config.toml 格式校验 Hook
- * 使用 smol-toml 进行实时 TOML 语法校验（带 debounce）
+ * Hook para validación de formato config.toml de Codex
+ * Usar smol-toml para validación de sintaxis TOML en tiempo real (con debounce)
  */
 export function useCodexTomlValidation() {
   const [configError, setConfigError] = useState("");
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   /**
-   * 校验 TOML 格式
-   * @param tomlText - 待校验的 TOML 文本
-   * @returns 是否校验通过
+   * Validar formato TOML
+   * @param tomlText - Texto TOML a validar
+   * @returns Si la validación pasó
    */
   const validateToml = useCallback((tomlText: string): boolean => {
-    // 空字符串视为合法（允许为空）
+    // Cadena vacía se considera válida (permitir vacío)
     if (!tomlText.trim()) {
       setConfigError("");
       return true;
@@ -27,24 +27,24 @@ export function useCodexTomlValidation() {
       return true;
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "TOML 格式错误";
+        error instanceof Error ? error.message : "Error de formato TOML";
       setConfigError(errorMessage);
       return false;
     }
   }, []);
 
   /**
-   * 带 debounce 的校验函数（500ms 延迟）
-   * @param tomlText - 待校验的 TOML 文本
+   * Función de validación con debounce (retraso de 500ms)
+   * @param tomlText - Texto TOML a validar
    */
   const debouncedValidate = useCallback(
     (tomlText: string) => {
-      // 清除之前的定时器
+      // Limpiar temporizador anterior
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
 
-      // 设置新的定时器
+      // Establecer nuevo temporizador
       debounceTimerRef.current = setTimeout(() => {
         validateToml(tomlText);
       }, 500);
@@ -53,13 +53,13 @@ export function useCodexTomlValidation() {
   );
 
   /**
-   * 清空错误信息
+   * Limpiar mensaje de error
    */
   const clearError = useCallback(() => {
     setConfigError("");
   }, []);
 
-  // 清理定时器
+  // Limpiar temporizador
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {

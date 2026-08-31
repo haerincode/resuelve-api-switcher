@@ -1,4 +1,4 @@
-//! 流式响应转换模块
+//! 流式respuesta转换模块
 //!
 //! 实现 OpenAI SSE → Anthropic SSE 格式转换
 
@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 
-/// OpenAI 流式响应数据结构
+/// OpenAI 流式respuesta数据结构
 #[derive(Debug, Deserialize)]
 struct OpenAIStreamChunk {
     #[serde(default)]
@@ -59,7 +59,7 @@ struct DeltaFunction {
     arguments: Option<String>,
 }
 
-/// OpenAI 流式响应的 usage 信息（完整版）
+/// OpenAI 流式respuesta的 usage 信息（完整版）
 #[derive(Debug, Deserialize)]
 struct Usage {
     #[serde(default)]
@@ -625,7 +625,7 @@ pub fn create_anthropic_sse_stream<E: std::error::Error + Send + 'static>(
         }
 
         // 流自然结束但未收到 [DONE] 时，确保发送缓存的 message_delta 和 message_stop。
-        // 若上游已显式报错，则只保留 error 事件，避免把失败伪装成成功完成。
+        // 若上游已显式报错，则只保留 error 事件，避免把falló伪装成成功完成。
         if !stream_ended_with_error {
             let emitted_pending_message_delta = if let Some((stop_reason, usage_json)) =
                 pending_message_delta.take()

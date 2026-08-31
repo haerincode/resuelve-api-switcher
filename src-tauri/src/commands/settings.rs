@@ -7,13 +7,13 @@ fn merge_settings_for_save(
     existing: &crate::settings::AppSettings,
 ) -> crate::settings::AppSettings {
     match (&mut incoming.webdav_sync, &existing.webdav_sync) {
-        // incoming 没有 webdav → 保留现有
+        // incoming no tiene webdav → conservar existente
         (None, _) => {
             incoming.webdav_sync = existing.webdav_sync.clone();
         }
-        // incoming 有 webdav 但密码为空，且现有有密码 → 填回现有密码
-        // （get_settings_for_frontend 总是清空密码，所以通过 save_settings
-        //   传入的空密码意味着"保持现有"而非"用户主动清空"）
+        // incoming tiene webdav pero contraseña vacía, y existente tiene contraseña → rellenar con contraseña existente
+        // (get_settings_for_frontend siempre limpia la contraseña, por lo que una contraseña vacía enviada
+        //  a través de save_settings significa "mantener existente" no "el usuario la vació activamente")
         (Some(incoming_sync), Some(existing_sync))
             if incoming_sync.password.is_empty() && !existing_sync.password.is_empty() =>
         {
@@ -24,13 +24,13 @@ fn merge_settings_for_save(
     incoming
 }
 
-/// 获取设置
+/// Obtener configuración
 #[tauri::command]
 pub async fn get_settings() -> Result<crate::settings::AppSettings, String> {
     Ok(crate::settings::get_settings_for_frontend())
 }
 
-/// 保存设置
+/// Guardar configuración
 #[tauri::command]
 pub async fn save_settings(settings: crate::settings::AppSettings) -> Result<bool, String> {
     let existing = crate::settings::get_settings();
@@ -39,12 +39,12 @@ pub async fn save_settings(settings: crate::settings::AppSettings) -> Result<boo
     Ok(true)
 }
 
-/// 重启应用程序（当 app_config_dir 变更后使用）
+/// Reiniciar aplicación (usar cuando app_config_dir cambie)
 #[tauri::command]
 pub async fn restart_app(app: AppHandle) -> Result<bool, String> {
     crate::save_window_state_before_exit(&app);
 
-    // 在后台延迟重启，让函数有时间返回响应
+    // Reiniciar con retraso en segundo plano para dar tiempo a responder
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         app.restart();
@@ -52,14 +52,14 @@ pub async fn restart_app(app: AppHandle) -> Result<bool, String> {
     Ok(true)
 }
 
-/// 获取 app_config_dir 覆盖配置 (从 Store)
+/// Obtener configuración de sobrescritura de app_config_dir (desde Store)
 #[tauri::command]
 pub async fn get_app_config_dir_override(app: AppHandle) -> Result<Option<String>, String> {
     Ok(crate::app_store::refresh_app_config_dir_override(&app)
         .map(|p| p.to_string_lossy().to_string()))
 }
 
-/// 设置 app_config_dir 覆盖配置 (到 Store)
+/// Establecer configuración de sobrescritura de app_config_dir (a Store)
 #[tauri::command]
 pub async fn set_app_config_dir_override(
     app: AppHandle,
@@ -69,13 +69,13 @@ pub async fn set_app_config_dir_override(
     Ok(true)
 }
 
-/// 设置开机自启
+/// Configurar inicio automático
 #[tauri::command]
 pub async fn set_auto_launch(enabled: bool) -> Result<bool, String> {
     if enabled {
-        crate::auto_launch::enable_auto_launch().map_err(|e| format!("启用开机自启失败: {e}"))?;
+        crate::auto_launch::enable_auto_launch().map_err(|e| format!("Error al habilitar inicio automático: {e}"))?;
     } else {
-        crate::auto_launch::disable_auto_launch().map_err(|e| format!("禁用开机自启失败: {e}"))?;
+        crate::auto_launch::disable_auto_launch().map_err(|e| format!("Error al deshabilitar inicio automático: {e}"))?;
     }
     Ok(true)
 }
@@ -206,13 +206,13 @@ mod tests {
     }
 }
 
-/// 获取开机自启状态
+/// Obtener estado de inicio automático
 #[tauri::command]
 pub async fn get_auto_launch_status() -> Result<bool, String> {
-    crate::auto_launch::is_auto_launch_enabled().map_err(|e| format!("获取开机自启状态失败: {e}"))
+    crate::auto_launch::is_auto_launch_enabled().map_err(|e| format!("Error al obtener estado de inicio automático: {e}"))
 }
 
-/// 获取整流器配置
+/// Obtener configuración de rectificador
 #[tauri::command]
 pub async fn get_rectifier_config(
     state: tauri::State<'_, crate::AppState>,
@@ -220,7 +220,7 @@ pub async fn get_rectifier_config(
     state.db.get_rectifier_config().map_err(|e| e.to_string())
 }
 
-/// 设置整流器配置
+/// Establecer configuración de rectificador
 #[tauri::command]
 pub async fn set_rectifier_config(
     state: tauri::State<'_, crate::AppState>,
@@ -233,7 +233,7 @@ pub async fn set_rectifier_config(
     Ok(true)
 }
 
-/// 获取优化器配置
+/// Obtener configuración de optimizador
 #[tauri::command]
 pub async fn get_optimizer_config(
     state: tauri::State<'_, crate::AppState>,
@@ -241,13 +241,13 @@ pub async fn get_optimizer_config(
     state.db.get_optimizer_config().map_err(|e| e.to_string())
 }
 
-/// 设置优化器配置
+/// Establecer configuración de optimizador
 #[tauri::command]
 pub async fn set_optimizer_config(
     state: tauri::State<'_, crate::AppState>,
     config: crate::proxy::types::OptimizerConfig,
 ) -> Result<bool, String> {
-    // Validate cache_ttl: only allow known values
+    // Validar cache_ttl: solo permitir valores conocidos
     match config.cache_ttl.as_str() {
         "5m" | "1h" => {}
         other => {
@@ -263,7 +263,7 @@ pub async fn set_optimizer_config(
     Ok(true)
 }
 
-/// 获取 Copilot 优化器配置
+/// Obtener configuración de optimizador de Copilot
 #[tauri::command]
 pub async fn get_copilot_optimizer_config(
     state: tauri::State<'_, crate::AppState>,
@@ -274,7 +274,7 @@ pub async fn get_copilot_optimizer_config(
         .map_err(|e| e.to_string())
 }
 
-/// 设置 Copilot 优化器配置
+/// Establecer configuración de optimizador de Copilot
 #[tauri::command]
 pub async fn set_copilot_optimizer_config(
     state: tauri::State<'_, crate::AppState>,
@@ -287,7 +287,7 @@ pub async fn set_copilot_optimizer_config(
     Ok(true)
 }
 
-/// 获取日志配置
+/// Obtener configuración de logs
 #[tauri::command]
 pub async fn get_log_config(
     state: tauri::State<'_, crate::AppState>,
@@ -295,7 +295,7 @@ pub async fn get_log_config(
     state.db.get_log_config().map_err(|e| e.to_string())
 }
 
-/// 设置日志配置
+/// Establecer configuración de logs
 #[tauri::command]
 pub async fn set_log_config(
     state: tauri::State<'_, crate::AppState>,
@@ -307,7 +307,7 @@ pub async fn set_log_config(
         .map_err(|e| e.to_string())?;
     log::set_max_level(config.to_level_filter());
     log::info!(
-        "日志配置已更新: enabled={}, level={}",
+        "Configuración de logs actualizada: enabled={}, level={}",
         config.enabled,
         config.level
     );

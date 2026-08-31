@@ -82,11 +82,11 @@ export function EnvWarningBanner({
         closeButton: true,
       });
 
-      // 清空选择并通知父组件
+      // Limpiar selección y notificar al componente padre
       setSelectedConflicts(new Set());
       onDeleted();
     } catch (error) {
-      console.error("删除环境变量失败:", error);
+      console.error("Error al eliminar variables de entorno:", error);
       toast.error(t("env.delete.error"), {
         description: String(error),
       });

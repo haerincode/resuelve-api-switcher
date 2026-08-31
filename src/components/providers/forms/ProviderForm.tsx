@@ -336,11 +336,11 @@ function ProviderFormFull({
     },
   );
 
-  // 软校验：收集"业务约束"类问题（空值/缺项），由用户决定是否仍要保存
+  // Validación blanda: recolectar problemas de "restricciones de negocio" (valores vacíos/faltantes), que el usuario decida si aún quiere guardar
   const [softIssues, setSoftIssues] = useState<string[] | null>(null);
   const [pendingFormValues, setPendingFormValues] =
     useState<ProviderFormData | null>(null);
-  // 确认框走的提交路径绕过了 react-hook-form 的 isSubmitting，单独追踪
+  // La ruta de envío del cuadro de confirmación omite el isSubmitting de react-hook-form, seguimiento independiente
   const [isConfirmSubmitting, setIsConfirmSubmitting] = useState(false);
 
   useEffect(() => {
@@ -416,18 +416,18 @@ function ProviderFormFull({
     [localApiKeyField, form, handleSettingsConfigChange],
   );
 
-  // Copilot OAuth 认证状态（仅 Claude 应用需要）
+  // Estado de autenticación OAuth de Copilot (solo necesario para aplicación Claude)
   const { isAuthenticated: isCopilotAuthenticated } = useCopilotAuth();
 
-  // Codex OAuth 认证状态（ChatGPT Plus/Pro 反代）
+  // Estado de autenticación OAuth de Codex (proxy inverso ChatGPT Plus/Pro)
   const { isAuthenticated: isCodexOauthAuthenticated } = useCodexOauth();
 
-  // 选中的 GitHub 账号 ID（多账号支持）
+  // ID de cuenta GitHub seleccionada (soporte multi-cuenta)
   const [selectedGitHubAccountId, setSelectedGitHubAccountId] = useState<
     string | null
   >(() => resolveManagedAccountId(initialData?.meta, "github_copilot"));
 
-  // 选中的 ChatGPT 账号 ID（Codex OAuth 多账号支持）
+  // ID de cuenta ChatGPT seleccionada (soporte multi-cuenta Codex OAuth)
   const [selectedCodexAccountId, setSelectedCodexAccountId] = useState<
     string | null
   >(() => resolveManagedAccountId(initialData?.meta, "codex_oauth"));
@@ -511,16 +511,16 @@ function ProviderFormFull({
   const presetCategoryLabels: Record<string, string> = useMemo(
     () => ({
       official: t("providerForm.categoryOfficial", {
-        defaultValue: "官方",
+        defaultValue: "Oficial",
       }),
       cn_official: t("providerForm.categoryCnOfficial", {
-        defaultValue: "国内官方",
+        defaultValue: "Oficial nacional",
       }),
       aggregator: t("providerForm.categoryAggregation", {
-        defaultValue: "聚合服务",
+        defaultValue: "Servicio agregado",
       }),
       third_party: t("providerForm.categoryThirdParty", {
-        defaultValue: "第三方",
+        defaultValue: "Terceros",
       }),
       omo: "OMO",
     }),
@@ -851,27 +851,27 @@ function ProviderFormFull({
   const [isCommonConfigModalOpen, setIsCommonConfigModalOpen] = useState(false);
 
   const handleSubmit = async (values: ProviderFormData) => {
-    // 软性问题（业务约束，用户可选择仍要保存）
+    // Problemas blandos (restricciones de negocio, el usuario puede elegir guardar de todos modos)
     const issues: string[] = [];
 
-    // 模板变量未填：A 类（空值）
+    // Variables de plantilla sin rellenar: Clase A (valores vacíos)
     if (appId === "claude" && templateValueEntries.length > 0) {
       const validation = validateTemplateValues();
       if (!validation.isValid && validation.missingField) {
         issues.push(
           t("providerForm.fillParameter", {
             label: validation.missingField.label,
-            defaultValue: `请填写 ${validation.missingField.label}`,
+            defaultValue: `Rellene ${validation.missingField.label}`,
           }),
         );
       }
     }
 
-    // 供应商名空：A 类
+    // Nombre de proveedor vacío: tipo A
     if (!values.name.trim()) {
       issues.push(
         t("providerForm.fillSupplierName", {
-          defaultValue: "请填写供应商名称",
+          defaultValue: "Rellene el nombre del proveedor",
         }),
       );
     }
@@ -884,19 +884,19 @@ function ProviderFormFull({
     ) {
       toast.error(
         t("settings.globalProxy.defaultCostMultiplierInvalid", {
-          defaultValue: "成本倍率必须为非负数",
+          defaultValue: "El multiplicador de costo debe ser no negativo",
         }),
       );
       return;
     }
 
-    // opencode / openclaw / hermes: providerKey 相关
-    // A 类（空）归到 issues；B 类（正则不合法 / 重复 / 状态加载中）仍硬拒绝
+    // opencode / openclaw / hermes: relacionado con providerKey
+    // Clase A (vacío) va a issues; Clase B (regex inválido / duplicado / estado cargando) se rechaza duro
     const keyPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
     if (appId === "opencode" && !isAnyOmoCategory) {
-      // providerKey 是 opencode / openclaw / hermes 的主键 ID，空或格式不合法
-      // 都属于完整性约束，保留硬拒绝（mutations 层也会 throw，软化只会让错误更晦涩）
+      // providerKey es el ID de clave primaria de opencode / openclaw / hermes, vacío o formato inválido
+      // ambos son restricciones de integridad, se mantiene rechazo duro (la capa mutations también lanza, suavizar solo hace el error más confuso)
       if (!opencodeForm.opencodeProviderKey.trim()) {
         toast.error(t("opencode.providerKeyRequired"));
         return;
@@ -908,7 +908,7 @@ function ProviderFormFull({
       if (isProviderKeyLockStateLoading) {
         toast.error(
           t("providerForm.providerKeyStatusLoading", {
-            defaultValue: "正在加载供应商标识状态，请稍后再试",
+            defaultValue: "Cargando estado de identificador de proveedor, intente más tarde",
           }),
         );
         return;
@@ -937,7 +937,7 @@ function ProviderFormFull({
       if (isProviderKeyLockStateLoading) {
         toast.error(
           t("providerForm.providerKeyStatusLoading", {
-            defaultValue: "正在加载供应商标识状态，请稍后再试",
+            defaultValue: "Cargando estado de identificador de proveedor, intente más tarde",
           }),
         );
         return;
@@ -963,7 +963,7 @@ function ProviderFormFull({
       if (isProviderKeyLockStateLoading) {
         toast.error(
           t("providerForm.providerKeyStatusLoading", {
-            defaultValue: "正在加载供应商标识状态，请稍后再试",
+            defaultValue: "Cargando estado de identificador de proveedor, intente más tarde",
           }),
         );
         return;
@@ -977,7 +977,7 @@ function ProviderFormFull({
       }
     }
 
-    // OAuth 未登录：B 类（token 根本不存在，保存了也没法建立）
+    // OAuth sin iniciar sesión: Clase B (el token no existe, guardar no puede establecer)
     const isCopilotProvider =
       templatePreset?.providerType === "github_copilot" ||
       initialData?.meta?.providerType === "github_copilot" ||
@@ -988,7 +988,7 @@ function ProviderFormFull({
     if (isCopilotProvider && !isCopilotAuthenticated) {
       toast.error(
         t("copilot.loginRequired", {
-          defaultValue: "请先登录 GitHub Copilot",
+          defaultValue: "Por favor inicie sesión en GitHub Copilot primero",
         }),
       );
       return;
@@ -996,13 +996,13 @@ function ProviderFormFull({
     if (isCodexOauthProvider && !isCodexOauthAuthenticated) {
       toast.error(
         t("codexOauth.loginRequired", {
-          defaultValue: "请先登录 ChatGPT 账号",
+          defaultValue: "Por favor inicie sesión en cuenta ChatGPT primero",
         }),
       );
       return;
     }
 
-    // OMO Other Fields JSON：B 类（格式错了保存下去数据就坏了）
+    // OMO Other Fields JSON: Clase B (formato incorrecto, los datos se corrompen si se guardan)
     if (
       appId === "opencode" &&
       isAnyOmoCategory &&
@@ -1033,21 +1033,21 @@ function ProviderFormFull({
       }
     }
 
-    // 非官方供应商端点 / API Key 空：A 类
-    // cloud_provider（如 Bedrock）通过模板变量处理认证，跳过通用校验
+    // Endpoint / API Key de proveedor no oficial vacío: Clase A
+    // cloud_provider (como Bedrock) maneja autenticación por variables de plantilla, omitir validación genérica
     if (category !== "official" && category !== "cloud_provider") {
       if (appId === "claude") {
         if (!isCodexOauthProvider && !baseUrl.trim()) {
           issues.push(
             t("providerForm.endpointRequired", {
-              defaultValue: "非官方供应商请填写 API 端点",
+              defaultValue: "Por favor rellene el endpoint API para proveedor no oficial",
             }),
           );
         }
         if (!isCopilotProvider && !isCodexOauthProvider && !apiKey.trim()) {
           issues.push(
             t("providerForm.apiKeyRequired", {
-              defaultValue: "非官方供应商请填写 API Key",
+              defaultValue: "Por favor rellene API Key para proveedor no oficial",
             }),
           );
         }
@@ -1055,14 +1055,14 @@ function ProviderFormFull({
         if (!codexBaseUrl.trim()) {
           issues.push(
             t("providerForm.endpointRequired", {
-              defaultValue: "非官方供应商请填写 API 端点",
+              defaultValue: "Por favor rellene el endpoint API para proveedor no oficial",
             }),
           );
         }
         if (!codexApiKey.trim()) {
           issues.push(
             t("providerForm.apiKeyRequired", {
-              defaultValue: "非官方供应商请填写 API Key",
+              defaultValue: "Por favor rellene API Key para proveedor no oficial",
             }),
           );
         }
@@ -1070,14 +1070,14 @@ function ProviderFormFull({
         if (!geminiBaseUrl.trim()) {
           issues.push(
             t("providerForm.endpointRequired", {
-              defaultValue: "非官方供应商请填写 API 端点",
+              defaultValue: "Por favor rellene el endpoint API para proveedor no oficial",
             }),
           );
         }
         if (!geminiApiKey.trim()) {
           issues.push(
             t("providerForm.apiKeyRequired", {
-              defaultValue: "非官方供应商请填写 API Key",
+              defaultValue: "Por favor rellene API Key para proveedor no oficial",
             }),
           );
         }
@@ -1085,7 +1085,7 @@ function ProviderFormFull({
     }
 
     if (issues.length > 0) {
-      // 弹确认框让用户决定是否仍要保存
+      // Mostrar cuadro de confirmación para que el usuario decida si aún desea guardar
       setSoftIssues(issues);
       setPendingFormValues(values);
       return;
@@ -1095,7 +1095,7 @@ function ProviderFormFull({
   };
 
   const performSubmit = async (values: ProviderFormData) => {
-    // OAuth / 其它身份识别（与 handleSubmit 保持一致）
+    // OAuth / otra identificación de identidad (mantener consistente con handleSubmit)
     const isCopilotProvider =
       templatePreset?.providerType === "github_copilot" ||
       initialData?.meta?.providerType === "github_copilot" ||
@@ -1148,7 +1148,7 @@ function ProviderFormFull({
         omoConfig.categories = omoDraft.omoCategories;
       }
       if (omoDraft.omoOtherFieldsStr.trim()) {
-        // 格式已在 handleSubmit 前置校验中验证过，此处可以安全解析
+        // El formato ya fue validado en la pre-validación de handleSubmit, aquí se puede analizar de forma segura
         const otherFields = parseOmoOtherFieldsObject(
           omoDraft.omoOtherFieldsStr,
         );
@@ -1252,7 +1252,7 @@ function ProviderFormFull({
     const baseMeta: ProviderMeta | undefined =
       payload.meta ?? (initialData?.meta ? { ...initialData.meta } : undefined);
 
-    // 确定 providerType（新建时从预设获取，编辑时从现有数据获取）
+    // Determinar providerType (obtener de preset al crear, obtener de datos existentes al editar)
     const providerType =
       templatePreset?.providerType || initialData?.meta?.providerType;
 
@@ -1268,7 +1268,7 @@ function ProviderFormFull({
               : undefined,
       endpointAutoSelect,
       claudeDesktopMode: undefined,
-      // 保存 providerType（用于识别 Copilot / Codex OAuth 等特殊供应商）
+      // Guardar providerType (para identificar proveedores especiales como Copilot / Codex OAuth)
       providerType,
       authBinding: isCopilotProvider
         ? {
@@ -1283,7 +1283,7 @@ function ProviderFormFull({
               accountId: selectedCodexAccountId ?? undefined,
             }
           : undefined,
-      // GitHub Copilot 多账号：保存关联的账号 ID
+      // Multi-cuenta GitHub Copilot: guardar ID de cuenta asociada
       githubAccountId:
         isCopilotProvider && selectedGitHubAccountId
           ? selectedGitHubAccountId
@@ -1379,7 +1379,7 @@ function ProviderFormFull({
     formWebsiteUrl: form.watch("websiteUrl") || "",
   });
 
-  // 使用 API Key 链接 hook (OpenClaw)
+  // Usar hook de enlace de API Key (OpenClaw)
   const {
     shouldShowApiKeyLink: shouldShowOpenclawApiKeyLink,
     websiteUrl: openclawWebsiteUrl,
@@ -1393,7 +1393,7 @@ function ProviderFormFull({
     formWebsiteUrl: form.watch("websiteUrl") || "",
   });
 
-  // 使用 API Key 链接 hook (Hermes)
+  // Usar hook de enlace de API Key (Hermes)
   const {
     shouldShowApiKeyLink: shouldShowHermesApiKeyLink,
     websiteUrl: hermesWebsiteUrl,
@@ -1407,7 +1407,7 @@ function ProviderFormFull({
     formWebsiteUrl: form.watch("websiteUrl") || "",
   });
 
-  // 使用端点测速候选 hook
+  // Usar hook de candidatos de prueba de velocidad de endpoint
   const speedTestEndpoints = useSpeedTestEndpoints({
     appId,
     selectedPresetId,
@@ -1438,7 +1438,7 @@ function ProviderFormFull({
         opencodeForm.resetOpencodeState();
         omoDraft.resetOmoDraftState();
       }
-      // OpenClaw 自定义模式：重置为空配置
+      // Modo personalizado OpenClaw: restablecer a configuración vacía
       if (appId === "openclaw") {
         openclawForm.resetOpenclawState();
       }
@@ -1690,7 +1690,7 @@ function ProviderFormFull({
                         {isProviderKeyLocked
                           ? t("opencode.providerKeyLockedHint", {
                               defaultValue:
-                                "该供应商已添加到应用配置中，供应商标识不可修改",
+                                "Este proveedor ya fue agregado a la configuración de la aplicación, el identificador del proveedor no se puede modificar",
                             })
                           : t("opencode.providerKeyHint")}
                       </p>
@@ -1756,7 +1756,7 @@ function ProviderFormFull({
                         {isProviderKeyLocked
                           ? t("openclaw.providerKeyLockedHint", {
                               defaultValue:
-                                "该供应商已添加到应用配置中，供应商标识不可修改",
+                                "Este proveedor ya fue agregado a la configuración de la aplicación, el identificador del proveedor no se puede modificar",
                             })
                           : t("openclaw.providerKeyHint")}
                       </p>
@@ -2015,7 +2015,7 @@ function ProviderFormFull({
               />
             )}
 
-          {/* OpenClaw 专属字段 */}
+          {/* Campos exclusivos de OpenClaw */}
           {appId === "openclaw" && (
             <OpenClawFormFields
               baseUrl={openclawForm.openclawBaseUrl}
@@ -2036,7 +2036,7 @@ function ProviderFormFull({
             />
           )}
 
-          {/* Hermes 专属字段 */}
+          {/* Campos exclusivos de Hermes */}
           {appId === "hermes" && (
             <HermesFormFields
               baseUrl={hermesForm.hermesBaseUrl}
@@ -2059,7 +2059,7 @@ function ProviderFormFull({
             />
           )}
 
-          {/* 配置编辑器：Codex、Claude、Gemini 分别使用不同的编辑器 */}
+          {/* Editor de configuración: Codex, Claude, Gemini usan editores diferentes */}
           {appId === "codex" ? (
             <>
               <CodexConfigEditor
@@ -2242,18 +2242,18 @@ function ProviderFormFull({
         isOpen={softIssues !== null && softIssues.length > 0}
         variant="info"
         title={t("providerForm.softValidation.title", {
-          defaultValue: "配置存在以下问题",
+          defaultValue: "La configuración tiene los siguientes problemas",
         })}
         message={
           (softIssues ?? []).map((issue) => `• ${issue}`).join("\n") +
           "\n\n" +
           t("providerForm.softValidation.hint", {
             defaultValue:
-              "仍要保存吗？保存后切换此供应商时可能失败，可以之后再补全。",
+              "¿Desea guardar de todos modos? Al cambiar a este proveedor después de guardar podría fallar, puede completarlo más tarde.",
           })
         }
         confirmText={t("providerForm.softValidation.saveAnyway", {
-          defaultValue: "仍要保存",
+          defaultValue: "Guardar de todos modos",
         })}
         cancelText={t("common.cancel")}
         onConfirm={async () => {
@@ -2270,7 +2270,7 @@ function ProviderFormFull({
             setPendingFormValues(null);
           } catch (error) {
             console.error("[ProviderForm] soft-confirm submit failed:", error);
-            // 保留确认框和 pending values，让用户可以重试或取消
+            // Mantener cuadro de confirmación y valores pendientes, permitir que el usuario reintente o cancele
           } finally {
             setIsConfirmSubmitting(false);
           }

@@ -30,7 +30,7 @@ export function DeepLinkImportDialog() {
   const [isImporting, setIsImporting] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  // 容错判断：MCP 导入结果可能缺少 type 字段
+  // Verificación de tolerancia a errores: el resultado de importación MCP puede no tener el campo type
   const isMcpImportResult = (
     value: unknown,
   ): value is {
@@ -49,11 +49,11 @@ export function DeepLinkImportDialog() {
   };
 
   useEffect(() => {
-    // Listen for deep link import events
+    // Escuchar eventos de importación por deep link
     const unlistenImport = listen<DeepLinkImportRequest>(
       "deeplink-import",
       async (event) => {
-        // If config is present, merge it to get the complete configuration
+        // Si hay config presente, fusionarla para obtener la configuración completa
         if (event.payload.config || event.payload.configUrl) {
           try {
             const mergedRequest = await deeplinkApi.mergeDeeplinkConfig(
@@ -66,7 +66,7 @@ export function DeepLinkImportDialog() {
               description:
                 error instanceof Error ? error.message : String(error),
             });
-            // Fall back to original request
+            // Volver a la solicitud original
             setRequest(event.payload);
           }
         } else {
@@ -77,7 +77,7 @@ export function DeepLinkImportDialog() {
       },
     );
 
-    // Listen for deep link error events
+    // Escuchar eventos de error por deep link
     const unlistenError = listen<DeeplinkError>("deeplink-error", (event) => {
       console.error("Deep link error:", event.payload);
       toast.error(t("deeplink.parseError"), {
@@ -103,7 +103,7 @@ export function DeepLinkImportDialog() {
         importedIds: string[];
         failed: Array<{ id: string; error: string }>;
       }) => {
-        // 强制刷新 MCP 相关缓存，确保管理页重新从数据库加载
+        // Forzar actualización de cachés relacionados con MCP, asegurar que la página de gestión recargue desde la base de datos
         await queryClient.invalidateQueries({
           queryKey: ["mcp", "all"],
           refetchType: "all",
@@ -130,7 +130,7 @@ export function DeepLinkImportDialog() {
         }
       };
 
-      // Handle different result types
+      // Manejar diferentes tipos de resultados
       if ("type" in result) {
         if (result.type === "provider") {
           await queryClient.invalidateQueries({
@@ -143,7 +143,7 @@ export function DeepLinkImportDialog() {
             closeButton: true,
           });
         } else if (result.type === "prompt") {
-          // Prompts don't use React Query, trigger a custom event for refresh
+          // Los prompts no usan React Query, disparar evento personalizado para actualizar
           window.dispatchEvent(
             new CustomEvent("prompt-imported", {
               detail: { app: request.app },
@@ -158,7 +158,7 @@ export function DeepLinkImportDialog() {
         } else if (result.type === "mcp") {
           await refreshMcp(result);
         } else if (result.type === "skill") {
-          // Refresh Skills with aggressive strategy
+          // Actualizar Skills con estrategia agresiva
           queryClient.invalidateQueries({
             queryKey: ["skills"],
             refetchType: "all",
@@ -175,10 +175,10 @@ export function DeepLinkImportDialog() {
           });
         }
       } else if (isMcpImportResult(result)) {
-        // 兜底处理：旧版本后端可能未返回 type 字段
+        // Manejo de respaldo: versiones antiguas del backend pueden no devolver el campo type
         await refreshMcp(result);
       } else {
-        // Legacy return type (string ID) - assume provider
+        // Tipo de retorno heredado (ID string) - asumir proveedor
         await queryClient.invalidateQueries({
           queryKey: ["providers", request.app],
         });
@@ -190,7 +190,7 @@ export function DeepLinkImportDialog() {
         });
       }
 
-      // Close dialog after all refreshes complete
+      // Cerrar diálogo después de que todas las actualizaciones se completen
       setIsOpen(false);
     } catch (error) {
       console.error("Failed to import from deep link:", error);
@@ -206,13 +206,13 @@ export function DeepLinkImportDialog() {
     setIsOpen(false);
   };
 
-  // Mask API key for display (show first 4 chars + ***)
+  // Enmascarar API key para mostrar (mostrar primeros 4 caracteres + ***)
   const maskedApiKey =
     request?.apiKey && request.apiKey.length > 4
       ? `${request.apiKey.substring(0, 4)}${"*".repeat(20)}`
       : "****";
 
-  // Check if config file is present
+  // Verificar si el archivo de configuración está presente
   const hasConfigFile = !!(request?.config || request?.configUrl);
   const configSource = request?.config
     ? "base64"
@@ -220,7 +220,7 @@ export function DeepLinkImportDialog() {
       ? "url"
       : null;
 
-  // Parse config file content for display
+  // Analizar contenido del archivo de configuración para mostrar
   interface ParsedConfig {
     type: "claude" | "codex" | "gemini";
     env?: Record<string, string>;
@@ -229,7 +229,7 @@ export function DeepLinkImportDialog() {
     raw: Record<string, unknown>;
   }
 
-  // Helper to decode base64 with UTF-8 support
+  // Helper para decodificar base64 con soporte UTF-8
   const b64ToUtf8 = (str: string): string => {
     try {
       const binString = atob(str);
@@ -248,14 +248,14 @@ export function DeepLinkImportDialog() {
       const parsed = JSON.parse(decoded) as Record<string, unknown>;
 
       if (request.app === "claude") {
-        // Claude 格式: { env: { ANTHROPIC_AUTH_TOKEN: ..., ... } }
+        // Formato Claude: { env: { ANTHROPIC_AUTH_TOKEN: ..., ... } }
         return {
           type: "claude",
           env: (parsed.env as Record<string, string>) || {},
           raw: parsed,
         };
       } else if (request.app === "codex") {
-        // Codex 格式: { auth: { OPENAI_API_KEY: ... }, config: "TOML string" }
+        // Formato Codex: { auth: { OPENAI_API_KEY: ... }, config: "TOML string" }
         return {
           type: "codex",
           auth: (parsed.auth as Record<string, string>) || {},
@@ -263,7 +263,7 @@ export function DeepLinkImportDialog() {
           raw: parsed,
         };
       } else if (request.app === "gemini") {
-        // Gemini 格式: 扁平结构 { GEMINI_API_KEY: ..., GEMINI_BASE_URL: ... }
+        // Formato Gemini: estructura plana { GEMINI_API_KEY: ..., GEMINI_BASE_URL: ... }
         return {
           type: "gemini",
           env: parsed as Record<string, string>,
@@ -277,7 +277,7 @@ export function DeepLinkImportDialog() {
     }
   }, [request?.config, request?.app]);
 
-  // Helper to mask sensitive values
+  // Helper para enmascarar valores sensibles
   const maskValue = (key: string, value: string): string => {
     const sensitiveKeys = ["TOKEN", "KEY", "SECRET", "PASSWORD"];
     const isSensitive = sensitiveKeys.some((k) =>
@@ -322,13 +322,13 @@ export function DeepLinkImportDialog() {
       <DialogContent className="sm:max-w-[500px]" zIndex="top">
         {request && (
           <>
-            {/* 标题显式左对齐，避免默认居中样式影响 */}
+            {/* Alinear título explícitamente a la izquierda, evitar que el estilo predeterminado centrado afecte */}
             <DialogHeader className="text-left sm:text-left">
               <DialogTitle>{getTitle()}</DialogTitle>
               <DialogDescription>{getDescription()}</DialogDescription>
             </DialogHeader>
 
-            {/* 主体内容整体右移，略大于标题内边距，让内容看起来不贴边 */}
+            {/* Desplazar el contenido del cuerpo hacia la derecha, ligeramente más que el padding interno del título, para que el contenido no quede pegado al borde */}
             <div className="space-y-4 px-8 py-4 max-h-[60vh] overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:block [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700">
               {request.resource === "prompt" && (
                 <PromptConfirmation request={request} />
@@ -340,10 +340,10 @@ export function DeepLinkImportDialog() {
                 <SkillConfirmation request={request} />
               )}
 
-              {/* Legacy Provider View */}
+              {/* Vista de Proveedor Heredada */}
               {(request.resource === "provider" || !request.resource) && (
                 <>
-                  {/* Provider Icon - enlarge and center near the top */}
+                  {/* Ícono del Proveedor - ampliar y centrar cerca de la parte superior */}
                   {request.icon && (
                     <div className="flex justify-center pt-2 pb-1">
                       <ProviderIcon
@@ -355,7 +355,7 @@ export function DeepLinkImportDialog() {
                     </div>
                   )}
 
-                  {/* App Type */}
+                  {/* Tipo de App */}
                   <div className="grid grid-cols-3 items-center gap-4">
                     <div className="font-medium text-sm text-muted-foreground">
                       {t("deeplink.app")}
@@ -365,7 +365,7 @@ export function DeepLinkImportDialog() {
                     </div>
                   </div>
 
-                  {/* Provider Name */}
+                  {/* Nombre del Proveedor */}
                   <div className="grid grid-cols-3 items-center gap-4">
                     <div className="font-medium text-sm text-muted-foreground">
                       {t("deeplink.providerName")}
@@ -375,7 +375,7 @@ export function DeepLinkImportDialog() {
                     </div>
                   </div>
 
-                  {/* Homepage */}
+                  {/* Página de inicio */}
                   <div className="grid grid-cols-3 items-center gap-4">
                     <div className="font-medium text-sm text-muted-foreground">
                       {t("deeplink.homepage")}
@@ -385,7 +385,7 @@ export function DeepLinkImportDialog() {
                     </div>
                   </div>
 
-                  {/* API Endpoint */}
+                  {/* Endpoint de API */}
                   <div className="grid grid-cols-3 items-start gap-4">
                     <div className="font-medium text-sm text-muted-foreground pt-0.5">
                       {t("deeplink.endpoint")}
@@ -410,7 +410,7 @@ export function DeepLinkImportDialog() {
                     </div>
                   </div>
 
-                  {/* API Key (masked) */}
+                  {/* API Key (enmascarada) */}
                   <div className="grid grid-cols-3 items-center gap-4">
                     <div className="font-medium text-sm text-muted-foreground">
                       {t("deeplink.apiKey")}
@@ -420,10 +420,10 @@ export function DeepLinkImportDialog() {
                     </div>
                   </div>
 
-                  {/* Model Fields - 根据应用类型显示不同的模型字段 */}
+                  {/* Campos de Modelo - mostrar diferentes campos de modelo según el tipo de aplicación */}
                   {request.app === "claude" ? (
                     <>
-                      {/* Claude 四种模型字段 */}
+                      {/* Cuatro campos de modelo de Claude */}
                       {request.haikuModel && (
                         <div className="grid grid-cols-3 items-center gap-4">
                           <div className="font-medium text-sm text-muted-foreground">
@@ -467,7 +467,7 @@ export function DeepLinkImportDialog() {
                     </>
                   ) : (
                     <>
-                      {/* Codex 和 Gemini 使用通用 model 字段 */}
+                      {/* Codex y Gemini usan campo model genérico */}
                       {request.model && (
                         <div className="grid grid-cols-3 items-center gap-4">
                           <div className="font-medium text-sm text-muted-foreground">
@@ -481,7 +481,7 @@ export function DeepLinkImportDialog() {
                     </>
                   )}
 
-                  {/* Notes (if present) */}
+                  {/* Notas (si están presentes) */}
                   {request.notes && (
                     <div className="grid grid-cols-3 items-start gap-4">
                       <div className="font-medium text-sm text-muted-foreground">
@@ -493,7 +493,7 @@ export function DeepLinkImportDialog() {
                     </div>
                   )}
 
-                  {/* Config File Details (v3.8+) */}
+                  {/* Detalles del Archivo de Configuración (v3.8+) */}
                   {hasConfigFile && (
                     <div className="space-y-3 pt-2 border-t border-border-default">
                       <div className="grid grid-cols-3 items-center gap-4">
@@ -521,7 +521,7 @@ export function DeepLinkImportDialog() {
                             {t("deeplink.configDetails")}
                           </div>
 
-                          {/* Claude config */}
+                          {/* Configuración de Claude */}
                           {parsedConfig.type === "claude" &&
                             parsedConfig.env && (
                               <div className="space-y-1.5">
@@ -543,7 +543,7 @@ export function DeepLinkImportDialog() {
                               </div>
                             )}
 
-                          {/* Codex config */}
+                          {/* Configuración de Codex */}
                           {parsedConfig.type === "codex" && (
                             <div className="space-y-2">
                               {parsedConfig.auth &&
@@ -584,7 +584,7 @@ export function DeepLinkImportDialog() {
                             </div>
                           )}
 
-                          {/* Gemini config */}
+                          {/* Configuración de Gemini */}
                           {parsedConfig.type === "gemini" &&
                             parsedConfig.env && (
                               <div className="space-y-1.5">
@@ -608,7 +608,7 @@ export function DeepLinkImportDialog() {
                         </div>
                       )}
 
-                      {/* Config URL (if remote) */}
+                      {/* Config URL (si es remota) */}
                       {request.configUrl && (
                         <div className="grid grid-cols-3 items-center gap-4">
                           <div className="font-medium text-sm text-muted-foreground">
@@ -622,13 +622,13 @@ export function DeepLinkImportDialog() {
                     </div>
                   )}
 
-                  {/* Usage Script Configuration (v3.9+) */}
+                  {/* Configuración de Script de Uso (v3.9+) */}
                   {request.usageScript && (
                     <div className="space-y-3 pt-2 border-t border-border-default">
                       <div className="grid grid-cols-3 items-center gap-4">
                         <div className="font-medium text-sm text-muted-foreground">
                           {t("deeplink.usageScript", {
-                            defaultValue: "用量查询",
+                            defaultValue: "Consulta de uso",
                           })}
                         </div>
                         <div className="col-span-2 text-sm">
@@ -641,22 +641,22 @@ export function DeepLinkImportDialog() {
                           >
                             {request.usageEnabled !== false
                               ? t("deeplink.usageScriptEnabled", {
-                                  defaultValue: "已启用",
+                                  defaultValue: "Habilitado",
                                 })
                               : t("deeplink.usageScriptDisabled", {
-                                  defaultValue: "未启用",
+                                  defaultValue: "No habilitado",
                                 })}
                           </span>
                         </div>
                       </div>
 
-                      {/* Usage API Key (if different from provider) */}
+                      {/* API Key de Uso (si es diferente del proveedor) */}
                       {request.usageApiKey &&
                         request.usageApiKey !== request.apiKey && (
                           <div className="grid grid-cols-3 items-center gap-4">
                             <div className="font-medium text-sm text-muted-foreground">
                               {t("deeplink.usageApiKey", {
-                                defaultValue: "用量 API Key",
+                                defaultValue: "API Key de Uso",
                               })}
                             </div>
                             <div className="col-span-2 text-sm font-mono text-muted-foreground">
@@ -667,13 +667,13 @@ export function DeepLinkImportDialog() {
                           </div>
                         )}
 
-                      {/* Usage Base URL (if different from provider) */}
+                      {/* URL Base de Uso (si es diferente del proveedor) */}
                       {request.usageBaseUrl &&
                         request.usageBaseUrl !== request.endpoint && (
                           <div className="grid grid-cols-3 items-center gap-4">
                             <div className="font-medium text-sm text-muted-foreground">
                               {t("deeplink.usageBaseUrl", {
-                                defaultValue: "用量查询地址",
+                                defaultValue: "Dirección de consulta de uso",
                               })}
                             </div>
                             <div className="col-span-2 text-sm break-all">
@@ -682,18 +682,18 @@ export function DeepLinkImportDialog() {
                           </div>
                         )}
 
-                      {/* Auto Query Interval */}
+                      {/* Intervalo de Consulta Automática */}
                       {request.usageAutoInterval &&
                         request.usageAutoInterval > 0 && (
                           <div className="grid grid-cols-3 items-center gap-4">
                             <div className="font-medium text-sm text-muted-foreground">
                               {t("deeplink.usageAutoInterval", {
-                                defaultValue: "自动查询",
+                                defaultValue: "Consulta automática",
                               })}
                             </div>
                             <div className="col-span-2 text-sm">
                               {t("deeplink.usageAutoIntervalValue", {
-                                defaultValue: "每 {{minutes}} 分钟",
+                                defaultValue: "Cada {{minutes}} minutos",
                                 minutes: request.usageAutoInterval,
                               })}
                             </div>
@@ -702,7 +702,7 @@ export function DeepLinkImportDialog() {
                     </div>
                   )}
 
-                  {/* Warning */}
+                  {/* Advertencia */}
                   <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 p-3 text-sm text-yellow-800 dark:text-yellow-200">
                     {t("deeplink.warning")}
                   </div>

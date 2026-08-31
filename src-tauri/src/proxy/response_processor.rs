@@ -1,6 +1,6 @@
-//! 响应处理器模块
+//! respuestaprocesar器模块
 //!
-//! 统一处理流式和非流式 API 响应
+//! 统一procesarstreamingy非streaming API respuesta
 
 use super::{
     forwarder::ActiveConnectionGuard,
@@ -29,12 +29,12 @@ use std::{
 use tokio::sync::Mutex;
 
 // ============================================================================
-// 响应解压
+// respuesta解压
 // ============================================================================
 
-/// 根据 content-encoding 解压响应体字节
+/// según content-encoding 解压respuesta体字节
 ///
-/// reqwest 自动解压已禁用（为了透传 accept-encoding），需要手动解压。
+/// reqwest 自动解压yadeshabilitar（para了透传 accept-encoding），需要手动解压。
 fn decompress_body(content_encoding: &str, body: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     match content_encoding {
         "gzip" | "x-gzip" => {
@@ -55,13 +55,13 @@ fn decompress_body(content_encoding: &str, body: &[u8]) -> Result<Vec<u8>, std::
             Ok(decompressed)
         }
         _ => {
-            log::warn!("未知的 content-encoding: {content_encoding}，跳过解压");
+            log::warn!("no知de content-encoding: {content_encoding}，跳过解压");
             Ok(body.to_vec())
         }
     }
 }
 
-/// 从响应头提取 content-encoding（忽略 identity 和 chunked）
+/// desderespuesta头提取 content-encoding（忽略 identity y chunked）
 fn get_content_encoding(headers: &HeaderMap) -> Option<String> {
     headers
         .get("content-encoding")
@@ -70,7 +70,7 @@ fn get_content_encoding(headers: &HeaderMap) -> Option<String> {
         .filter(|s| !s.is_empty() && s != "identity")
 }
 
-/// RFC 2616 / RFC 7230 中定义的不应被代理继续转发的响应头。
+/// RFC 2616 / RFC 7230 中定义de不应/代理continuar转发derespuesta头。
 const HOP_BY_HOP_RESPONSE_HEADERS: &[&str] = &[
     "connection",
     "keep-alive",
@@ -84,7 +84,7 @@ const HOP_BY_HOP_RESPONSE_HEADERS: &[&str] = &[
     "upgrade",
 ];
 
-/// 移除响应侧 hop-by-hop 头，以及 `Connection` 中点名的扩展头。
+/// 移除respuesta侧 hop-by-hop 头，以及 `Connection` 中点名de扩展头。
 pub(crate) fn strip_hop_by_hop_response_headers(headers: &mut HeaderMap) {
     let connection_listed_headers: Vec<HeaderName> = headers
         .get_all(axum::http::header::CONNECTION)
@@ -105,18 +105,18 @@ pub(crate) fn strip_hop_by_hop_response_headers(headers: &mut HeaderMap) {
     }
 }
 
-/// 移除在重建响应体后会失真的实体头。
+/// 移除en重建respuesta体后会失真de实体头。
 pub(crate) fn strip_entity_headers_for_rebuilt_body(headers: &mut HeaderMap) {
     headers.remove(axum::http::header::CONTENT_ENCODING);
     headers.remove(axum::http::header::CONTENT_LENGTH);
     headers.remove(axum::http::header::TRANSFER_ENCODING);
 }
 
-/// 读取响应体并在需要时解压，确保 headers 与返回 body 一致。
+/// leerrespuesta体并en需要/解压，确保 headers conretornar body 一致。
 ///
-/// `body_timeout`: 整包超时。当非零时用 `tokio::time::timeout` 包住 `.bytes()` 调用，
-/// 防止上游发完响应头后卡住 body 导致请求永远挂住。
-/// 传入 `Duration::ZERO` 表示不启用超时（故障转移关闭时）。
+/// `body_timeout`: 整包timeout。cuando非零/usar `tokio::time::timeout` 包住 `.bytes()` 调usar，
+/// 防止upstream发完respuesta头后卡住 body 导致solicitud永远挂住。
+/// 传入 `Duration::ZERO` 表示不habilitartimeout（故障转移关闭/）。
 pub(crate) async fn read_decoded_body(
     response: ProxyResponse,
     tag: &str,
@@ -131,14 +131,14 @@ pub(crate) async fn read_decoded_body(
             .await
             .map_err(|_| {
                 ProxyError::Timeout(format!(
-                    "响应体读取超时: {}s（上游发完响应头后 body 未到达）",
+                    "respuesta体leertimeout: {}s（upstream发完respuesta头后 body noa达）",
                     body_timeout.as_secs()
                 ))
             })??
     };
 
     log::debug!(
-        "[{tag}] 已接收上游响应体: status={}, bytes={}, headers={}",
+        "[{tag}] yarecibirupstreamrespuesta体: status={}, bytes={}, headers={}",
         status.as_u16(),
         raw_bytes.len(),
         format_headers(&headers)
@@ -148,14 +148,14 @@ pub(crate) async fn read_decoded_body(
     let mut decoded = false;
 
     if let Some(encoding) = get_content_encoding(&headers) {
-        log::debug!("[{tag}] 解压非流式响应: content-encoding={encoding}");
+        log::debug!("[{tag}] 解压非streamingrespuesta: content-encoding={encoding}");
         match decompress_body(&encoding, &raw_bytes) {
             Ok(decompressed) => {
                 body_bytes = Bytes::from(decompressed);
                 decoded = true;
             }
             Err(e) => {
-                log::warn!("[{tag}] 解压失败 ({encoding}): {e}，使用原始数据");
+                log::warn!("[{tag}] 解压falló ({encoding}): {e}，使usar原始数据");
             }
         }
     }
@@ -171,13 +171,13 @@ pub(crate) async fn read_decoded_body(
 // 公共接口
 // ============================================================================
 
-/// 检测响应是否为 SSE 流式响应
+/// 检测respuesta是否para SSE streamingrespuesta
 #[inline]
 pub fn is_sse_response(response: &ProxyResponse) -> bool {
     response.is_sse()
 }
 
-/// 处理流式响应
+/// procesarstreamingrespuesta
 pub async fn handle_streaming(
     response: ProxyResponse,
     ctx: &RequestContext,
@@ -187,16 +187,16 @@ pub async fn handle_streaming(
 ) -> Response {
     let status = response.status();
     log::debug!(
-        "[{}] 已接收上游流式响应: status={}, headers={}",
+        "[{}] yarecibirupstreamstreamingrespuesta: status={}, headers={}",
         ctx.tag,
         status.as_u16(),
         format_headers(response.headers())
     );
-    // 检查流式响应是否被压缩（SSE 通常不压缩，如果压缩则 SSE 解析会失败）
+    // verificarstreamingrespuesta是否/压缩（SSE 通常不压缩，si压缩entonces SSE analizar会falló）
     if let Some(encoding) = get_content_encoding(response.headers()) {
         log::warn!(
-            "[{}] 流式响应含 content-encoding={encoding}，SSE 解析可能失败。\
-             上游在 accept-encoding 透传后压缩了 SSE 流。",
+            "[{}] streamingrespuesta含 content-encoding={encoding}，SSE analizar可能falló。\
+             upstreamen accept-encoding 透传后压缩了 SSE 流。",
             ctx.tag
         );
     }
@@ -206,21 +206,21 @@ pub async fn handle_streaming(
 
     let mut builder = axum::response::Response::builder().status(status);
 
-    // 复制响应头
+    // 复制respuesta头
     for (key, value) in &response_headers {
         builder = builder.header(key, value);
     }
 
-    // 创建字节流
+    // crear字节流
     let stream = response.bytes_stream();
 
-    // 创建使用量收集器；关闭 usage logging 时不要在流式热路径上解析每个 SSE event。
+    // crear使usar量收集器；关闭 usage logging /不要enstreaming热路径上analizar每个 SSE event。
     let usage_collector = create_usage_collector(ctx, state, status.as_u16(), parser_config);
 
-    // 获取流式超时配置
+    // obtenerstreamingtimeoutconfiguración
     let timeout_config = ctx.streaming_timeout_config();
 
-    // 创建带日志和超时的透传流
+    // crear带日志ytimeoutde透传流
     let logged_stream = create_logged_passthrough_stream(
         stream,
         ctx.tag,
@@ -233,22 +233,22 @@ pub async fn handle_streaming(
     match builder.body(body) {
         Ok(resp) => resp,
         Err(e) => {
-            log::error!("[{}] 构建流式响应失败: {e}", ctx.tag);
+            log::error!("[{}] construirstreamingrespuestafalló: {e}", ctx.tag);
             ProxyError::Internal(format!("Failed to build streaming response: {e}")).into_response()
         }
     }
 }
 
-/// 处理非流式响应
+/// procesar非streamingrespuesta
 pub async fn handle_non_streaming(
     response: ProxyResponse,
     ctx: &RequestContext,
     state: &ProxyState,
     parser_config: &UsageParserConfig,
-    // guard 在函数 scope 内持有，整包响应读取完成后随函数返回一并 drop
+    // guard en函数 scope 内持有，整包respuestaleer完成后随函数retornar一并 drop
     _connection_guard: Option<ActiveConnectionGuard>,
 ) -> Result<Response, ProxyError> {
-    // 整包超时：仅在故障转移开启且配置值非零时生效
+    // 整包timeout：仅en故障转移开启且configuración值非零/生效
     let body_timeout =
         if ctx.app_config.auto_failover_enabled && ctx.app_config.non_streaming_timeout > 0 {
             Duration::from_secs(ctx.app_config.non_streaming_timeout as u64)
@@ -260,17 +260,17 @@ pub async fn handle_non_streaming(
     strip_hop_by_hop_response_headers(&mut response_headers);
 
     log::debug!(
-        "[{}] 上游响应体内容: {}",
+        "[{}] upstreamrespuesta体contenido: {}",
         ctx.tag,
         String::from_utf8_lossy(&body_bytes)
     );
 
-    // 解析并记录使用量。关闭 usage logging 时直接跳过，避免非流式响应整包 JSON parse。
+    // analizar并registrar使usar量。关闭 usage logging /直接跳过，避免非streamingrespuesta整包 JSON parse。
     if usage_logging_enabled(state) {
         if let Ok(json_value) = serde_json::from_slice::<Value>(&body_bytes) {
-            // 解析使用量
+            // analizar使usar量
             if let Some(usage) = (parser_config.response_parser)(&json_value) {
-                // 优先使用 usage 中解析出的模型名称，其次使用响应中的 model 字段，最后回退到请求模型
+                // 优先使usar usage 中analizar出demodelo名称，其次使usarrespuesta中de model 字段，最后回退asolicitudmodelo
                 let model = if let Some(ref m) = usage.model {
                     m.clone()
                 } else if let Some(m) = json_value.get("model").and_then(|m| m.as_str()) {
@@ -304,13 +304,13 @@ pub async fn handle_non_streaming(
                     false,
                 );
                 log::debug!(
-                    "[{}] 未能解析 usage 信息，跳过记录",
+                    "[{}] no能analizar usage 信息，跳过registrar",
                     parser_config.app_type_str
                 );
             }
         } else {
             log::debug!(
-                "[{}] <<< 响应 (非 JSON): {} bytes",
+                "[{}] <<< respuesta (非 JSON): {} bytes",
                 ctx.tag,
                 body_bytes.len()
             );
@@ -325,10 +325,10 @@ pub async fn handle_non_streaming(
             );
         }
     } else {
-        log::debug!("[{}] usage logging 已关闭，跳过非流式 usage 解析", ctx.tag);
+        log::debug!("[{}] usage logging ya关闭，跳过非streaming usage analizar", ctx.tag);
     }
 
-    // 构建响应
+    // construirrespuesta
     let mut builder = axum::response::Response::builder().status(status);
     for (key, value) in response_headers.iter() {
         builder = builder.header(key, value);
@@ -336,14 +336,14 @@ pub async fn handle_non_streaming(
 
     let body = axum::body::Body::from(body_bytes);
     builder.body(body).map_err(|e| {
-        log::error!("[{}] 构建响应失败: {e}", ctx.tag);
+        log::error!("[{}] construirrespuestafalló: {e}", ctx.tag);
         ProxyError::Internal(format!("Failed to build response: {e}"))
     })
 }
 
-/// 通用响应处理入口
+/// 通usarrespuestaprocesar入口
 ///
-/// 根据响应类型自动选择流式或非流式处理
+/// segúnrespuestatipo自动选择streamingo非streamingprocesar
 pub async fn process_response(
     response: ProxyResponse,
     ctx: &RequestContext,
@@ -359,12 +359,12 @@ pub async fn process_response(
 }
 
 // ============================================================================
-// SSE 使用量收集器
+// SSE 使usar量收集器
 // ============================================================================
 
 type UsageCallbackWithTiming = Arc<dyn Fn(Vec<Value>, Option<u64>) + Send + Sync + 'static>;
 
-/// SSE 使用量收集器
+/// SSE 使usar量收集器
 #[derive(Clone)]
 pub struct SseUsageCollector {
     inner: Arc<SseUsageCollectorInner>,
@@ -381,7 +381,7 @@ struct SseUsageCollectorInner {
 }
 
 impl SseUsageCollector {
-    /// 创建使用量收集器；`should_collect` 用来在 hot path 跳过与 usage 无关的事件。
+    /// crear使usar量收集器；`should_collect` usar来en hot path 跳过con usage sin关de事件。
     pub fn new(
         start_time: std::time::Instant,
         should_collect: Option<StreamUsageEventFilter>,
@@ -408,7 +408,7 @@ impl SseUsageCollector {
             .unwrap_or(true)
     }
 
-    /// 标记首个被收集的 SSE 事件时间，沿用 `first_token_ms` 的既有近似语义。
+    /// 标记首个/收集de SSE 事件/间，沿usar `first_token_ms` de既有近似语义。
     async fn mark_first_collected_event_time(&self) {
         if self.inner.first_event_set.load(Ordering::Acquire) {
             return;
@@ -471,7 +471,7 @@ impl Drop for SseUsageFinishGuard {
                     collector.finish().await;
                 });
             } else {
-                log::warn!("SSE 用量收尾保护触发时 Tokio runtime 不可用，跳过异步 finish");
+                log::warn!("SSE usar量收尾保护触发/ Tokio runtime 不disponible，跳过asíncrono finish");
             }
         }
     }
@@ -481,7 +481,7 @@ impl Drop for SseUsageFinishGuard {
 // 内部辅助函数
 // ============================================================================
 
-/// 创建使用量收集器
+/// crear使usar量收集器
 fn create_usage_collector(
     ctx: &RequestContext,
     state: &ProxyState,
@@ -560,13 +560,13 @@ fn create_usage_collector(
                     )
                     .await;
                 });
-                log::debug!("[{tag}] 流式响应缺少 usage 统计，跳过消费记录");
+                log::debug!("[{tag}] streamingrespuesta缺少 usage 统计，跳过消费registrar");
             }
         },
     ))
 }
 
-/// 异步记录使用量
+/// asíncronoregistrar使usar量
 fn spawn_log_usage(
     state: &ProxyState,
     ctx: &RequestContext,
@@ -617,7 +617,7 @@ pub(crate) fn usage_logging_enabled(state: &ProxyState) -> bool {
         .unwrap_or(true)
 }
 
-/// 内部使用量记录函数
+/// 内部使usar量registrar函数
 #[allow(clippy::too_many_arguments)]
 async fn log_usage_internal(
     state: &ProxyState,
@@ -646,7 +646,7 @@ async fn log_usage_internal(
     let request_id = usage.dedup_request_id();
 
     log::debug!(
-        "[{app_type}] 记录请求日志: id={request_id}, provider={provider_id}, model={model}, streaming={is_streaming}, status={status_code}, latency_ms={latency_ms}, first_token_ms={first_token_ms:?}, session={}, input={}, output={}, cache_read={}, cache_creation={}",
+        "[{app_type}] registrarsolicitud日志: id={request_id}, provider={provider_id}, model={model}, streaming={is_streaming}, status={status_code}, latency_ms={latency_ms}, first_token_ms={first_token_ms:?}, session={}, input={}, output={}, cache_read={}, cache_creation={}",
         session_id.as_deref().unwrap_or("none"),
         usage.input_tokens,
         usage.output_tokens,
@@ -670,11 +670,11 @@ async fn log_usage_internal(
         None, // provider_type
         is_streaming,
     ) {
-        log::warn!("[USG-001] 记录使用量失败: {e}");
+        log::warn!("[USG-001] registrar使usar量falló: {e}");
     }
 }
 
-/// 创建带日志记录和超时控制的透传流
+/// crear带日志registrarytimeout控制de透传流
 pub fn create_logged_passthrough_stream(
     stream: impl Stream<Item = Result<Bytes, std::io::Error>> + Send + 'static,
     tag: &'static str,
@@ -692,7 +692,7 @@ pub fn create_logged_passthrough_stream(
             collector.is_some() || log::log_enabled!(log::Level::Debug);
         let mut is_first_chunk = true;
 
-        // 超时配置
+        // timeoutconfiguración
         let first_byte_timeout = if timeout_config.first_byte_timeout > 0 {
             Some(Duration::from_secs(timeout_config.first_byte_timeout))
         } else {
@@ -707,7 +707,7 @@ pub fn create_logged_passthrough_stream(
         tokio::pin!(stream);
 
         loop {
-            // 选择超时时间：首字节超时或静默期超时
+            // 选择timeout/间：首字节timeouto静默期timeout
             let timeout_duration = if is_first_chunk {
                 first_byte_timeout
             } else {
@@ -720,22 +720,22 @@ pub fn create_logged_passthrough_stream(
                         Ok(Some(chunk)) => Some(chunk),
                         Ok(None) => None, // 流结束
                         Err(_) => {
-                            // 超时
+                            // timeout
                             let timeout_type = if is_first_chunk { "首字节" } else { "静默期" };
-                            log::error!("[{tag}] 流式响应{}超时 ({}秒)", timeout_type, duration.as_secs());
-                            yield Err(std::io::Error::other(format!("流式响应{timeout_type}超时")));
+                            log::error!("[{tag}] streamingrespuesta{}timeout ({}秒)", timeout_type, duration.as_secs());
+                            yield Err(std::io::Error::other(format!("streamingrespuesta{timeout_type}timeout")));
                             break;
                         }
                     }
                 }
-                None => stream.next().await, // 无超时限制
+                None => stream.next().await, // sintimeout限制
             };
 
             match chunk_result {
                 Some(Ok(bytes)) => {
                     if is_first_chunk {
                         log::debug!(
-                            "[{tag}] 已接收上游流式首包: bytes={}",
+                            "[{tag}] yarecibirupstreamstreaming首包: bytes={}",
                             bytes.len()
                         );
                     }
@@ -743,10 +743,10 @@ pub fn create_logged_passthrough_stream(
                     if inspect_sse_events {
                         crate::proxy::sse::append_utf8_safe(&mut buffer, &mut utf8_remainder, &bytes);
 
-                        // 尝试解析并记录完整的 SSE 事件
+                        // 尝试analizar并registrar完整de SSE 事件
                         while let Some(event_text) = take_sse_block(&mut buffer) {
                             if !event_text.trim().is_empty() {
-                                // 提取 data 部分；只有 usage collector 存在时才解析 JSON。
+                                // 提取 data 部分；只有 usage collector 存en/才analizar JSON。
                                 for line in event_text.lines() {
                                     if let Some(data) = strip_sse_field(line, "data") {
                                         if data.trim() != "[DONE]" {
@@ -779,7 +779,7 @@ pub fn create_logged_passthrough_stream(
                     yield Ok(bytes);
                 }
                 Some(Err(e)) => {
-                    log::error!("[{tag}] 流错误: {e}");
+                    log::error!("[{tag}] 流error: {e}");
                     yield Err(std::io::Error::other(e.to_string()));
                     break;
                 }

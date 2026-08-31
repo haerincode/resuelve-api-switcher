@@ -301,12 +301,12 @@ function App() {
   const handleDisableOmo = () => {
     disableOmoMutation.mutate(undefined, {
       onSuccess: () => {
-        toast.success(t("omo.disabled", { defaultValue: "OMO 已停用" }));
+        toast.success(t("omo.disabled", { defaultValue: "OMO desactivado" }));
       },
       onError: (error: Error) => {
         toast.error(
           t("omo.disableFailed", {
-            defaultValue: "停用 OMO 失败: {{error}}",
+            defaultValue: "Desactivar OMO falló: {{error}}",
             error: extractErrorMessage(error),
           }),
         );
@@ -318,12 +318,12 @@ function App() {
   const handleDisableOmoSlim = () => {
     disableOmoSlimMutation.mutate(undefined, {
       onSuccess: () => {
-        toast.success(t("omo.disabled", { defaultValue: "OMO 已停用" }));
+        toast.success(t("omo.disabled", { defaultValue: "OMO desactivado" }));
       },
       onError: (error: Error) => {
         toast.error(
           t("omo.disableFailed", {
-            defaultValue: "停用 OMO 失败: {{error}}",
+            defaultValue: "Desactivar OMO falló: {{error}}",
             error: extractErrorMessage(error),
           }),
         );
@@ -454,7 +454,7 @@ function App() {
         toast.warning(
           t("notifications.proxyOfficialWarning", {
             name: providerName,
-            defaultValue: `当前供应商 ${providerName} 是官方供应商，建议切换到第三方供应商后再使用代理接管`,
+            defaultValue: `El proveedor actual ${providerName} es oficial, se recomienda cambiar a un proveedor de terceros antes de usar proxy takeover`,
           }),
           { duration: 8000 },
         );
@@ -548,7 +548,7 @@ function App() {
         const migrated = await invoke<boolean>("get_migration_result");
         if (migrated) {
           toast.success(
-            t("migration.success", { defaultValue: "配置迁移成功" }),
+            t("migration.success", { defaultValue: "Migración de configuración exitosa" }),
             { closeButton: true },
           );
         }
@@ -664,7 +664,7 @@ function App() {
       const detail =
         extractErrorMessage(error) ||
         t("notifications.openLinkFailed", {
-          defaultValue: "链接打开失败",
+          defaultValue: "Error al abrir el enlace",
         });
       toast.error(detail);
     }
@@ -708,7 +708,7 @@ function App() {
       }
       toast.success(
         t("notifications.removeFromConfigSuccess", {
-          defaultValue: "已从配置移除",
+          defaultValue: "Removido de la configuración",
         }),
         { closeButton: true },
       );
@@ -785,7 +785,7 @@ function App() {
         const errorMessage = extractErrorMessage(error);
         toast.error(
           t("provider.duplicateLiveIdsLoadFailed", {
-            defaultValue: "读取配置中的供应商标识失败，请先修复配置后再试",
+            defaultValue: "Error al leer identificadores de proveedores en la configuración, repare la configuración antes de reintentar",
           }) + (errorMessage ? `: ${errorMessage}` : ""),
         );
         return;
@@ -820,7 +820,7 @@ function App() {
           console.error("[App] Failed to update sort order", error);
           toast.error(
             t("provider.sortUpdateFailed", {
-              defaultValue: "排序更新失败",
+              defaultValue: "Error al actualizar el orden",
             }),
           );
           return; // 如果排序更新失败，不继续添加
@@ -843,7 +843,7 @@ function App() {
       });
       toast.success(
         t("provider.terminalOpened", {
-          defaultValue: "终端已打开",
+          defaultValue: "Terminal abierto",
         }),
       );
     } catch (error) {
@@ -851,7 +851,7 @@ function App() {
       const errorMessage = extractErrorMessage(error);
       toast.error(
         t("provider.terminalOpenFailed", {
-          defaultValue: "打开终端失败",
+          defaultValue: "Error al abrir terminal",
         }) + (errorMessage ? `: ${errorMessage}` : ""),
       );
     }

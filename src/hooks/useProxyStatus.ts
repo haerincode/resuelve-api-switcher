@@ -1,5 +1,5 @@
 /**
- * 代理服务状态管理 Hook
+ * Hook de gestión de estado del servicio proxy
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,30 +14,30 @@ import type {
 import { extractErrorMessage } from "@/utils/errorUtils";
 
 /**
- * 代理服务状态管理
+ * Gestión de estado del servicio proxy
  */
 export function useProxyStatus() {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
 
-  // 查询状态（自动轮询）
+  // Consultar estado (polling automático)
   const { data: status, isLoading } = useQuery({
     queryKey: ["proxyStatus"],
     queryFn: () => invoke<ProxyStatus>("get_proxy_status"),
-    // 仅在服务运行时轮询
+    // Solo hacer polling cuando el servicio está en ejecución
     refetchInterval: (query) => (query.state.data?.running ? 2000 : false),
-    // 保持之前的数据，避免闪烁
+    // Mantener datos previos, evitar parpadeo
     placeholderData: (previousData) => previousData,
   });
 
-  // 查询各应用接管状态
+  // Consultar estado de takeover de cada aplicación
   const { data: takeoverStatus } = useQuery({
     queryKey: ["proxyTakeoverStatus"],
     queryFn: () => invoke<ProxyTakeoverStatus>("get_proxy_takeover_status"),
     placeholderData: (previousData) => previousData,
   });
 
-  // 启动服务器（总开关：仅启动服务，不接管）
+  // Iniciar servidor (interruptor general: solo iniciar servicio, no tomar control)
   const startProxyServerMutation = useMutation({
     mutationFn: () => invoke<ProxyServerInfo>("start_proxy_server"),
     onSuccess: (info) => {
@@ -45,7 +45,7 @@ export function useProxyStatus() {
         t("proxy.server.started", {
           address: info.address,
           port: info.port,
-          defaultValue: `代理服务已启动 - ${info.address}:${info.port}`,
+          defaultValue: `Servicio proxy iniciado - ${info.address}:${info.port}`,
         }),
         { closeButton: true },
       );
@@ -54,23 +54,23 @@ export function useProxyStatus() {
     onError: (error: Error) => {
       const detail =
         extractErrorMessage(error) ||
-        t("common.unknown", { defaultValue: "未知错误" });
+        t("common.unknown", { defaultValue: "Error desconocido" });
       toast.error(
         t("proxy.server.startFailed", {
           detail,
-          defaultValue: `启动代理服务失败: ${detail}`,
+          defaultValue: `Error al iniciar servicio proxy: ${detail}`,
         }),
       );
     },
   });
 
-  // 停止服务器（仅停止服务，不改写/恢复其它应用接管状态）
+  // Detener servidor (solo detener servicio, no modificar/restaurar estado de takeover de otras aplicaciones)
   const stopProxyServerMutation = useMutation({
     mutationFn: () => invoke("stop_proxy_server"),
     onSuccess: () => {
       toast.success(
         t("proxy.server.stopped", {
-          defaultValue: "代理服务已停止",
+          defaultValue: "Servicio proxy detenido",
         }),
         { closeButton: true },
       );
@@ -79,48 +79,48 @@ export function useProxyStatus() {
     onError: (error: Error) => {
       const detail =
         extractErrorMessage(error) ||
-        t("common.unknown", { defaultValue: "未知错误" });
+        t("common.unknown", { defaultValue: "Error desconocido" });
       toast.error(
         t("proxy.server.stopFailed", {
           detail,
-          defaultValue: `停止代理服务失败: ${detail}`,
+          defaultValue: `Error al detener servicio proxy: ${detail}`,
         }),
       );
     },
   });
 
-  // 停止服务器（总开关关闭：强制恢复所有已接管的 Live 配置）
+  // Detener servidor (cerrar interruptor general: forzar restauración de todas las configuraciones Live tomadas)
   const stopWithRestoreMutation = useMutation({
     mutationFn: () => invoke("stop_proxy_with_restore"),
     onSuccess: () => {
       toast.success(
         t("proxy.stoppedWithRestore", {
-          defaultValue: "代理服务已关闭，已恢复所有接管配置",
+          defaultValue: "Servicio proxy cerrado, todas las configuraciones de takeover han sido restauradas",
         }),
         { closeButton: true },
       );
       queryClient.invalidateQueries({ queryKey: ["proxyStatus"] });
       queryClient.invalidateQueries({ queryKey: ["proxyTakeoverStatus"] });
-      // 彻底删除所有供应商健康状态缓存（后端已清空数据库记录）
+      // Eliminar completamente todo el caché de estado de salud del proveedor (backend ya limpió registros de base de datos)
       queryClient.removeQueries({ queryKey: ["providerHealth"] });
-      // 彻底删除所有熔断器统计缓存（代理停止后熔断器状态已重置）
+      // Eliminar completamente todo el caché de estadísticas del circuit breaker (estado del circuit breaker se reinició después de detener proxy)
       queryClient.removeQueries({ queryKey: ["circuitBreakerStats"] });
-      // 注意：故障转移队列和开关状态会保留，不需要刷新
+      // Nota: la cola de failover y el estado del interruptor se conservarán, no necesita actualización
     },
     onError: (error: Error) => {
       const detail =
         extractErrorMessage(error) ||
-        t("common.unknown", { defaultValue: "未知错误" });
+        t("common.unknown", { defaultValue: "Error desconocido" });
       toast.error(
         t("proxy.stopWithRestoreFailed", {
           detail,
-          defaultValue: `停止失败: ${detail}`,
+          defaultValue: `Error al detener: ${detail}`,
         }),
       );
     },
   });
 
-  // 按应用开启/关闭接管
+  // Activar/desactivar takeover por aplicación
   const setTakeoverForAppMutation = useMutation({
     mutationFn: ({ appType, enabled }: { appType: string; enabled: boolean }) =>
       invoke("set_proxy_takeover_for_app", { appType, enabled }),
@@ -138,11 +138,11 @@ export function useProxyStatus() {
         variables.enabled
           ? t("proxy.takeover.enabled", {
               app: appLabel,
-              defaultValue: `已接管 ${appLabel} 配置（请求将走本地代理）`,
+              defaultValue: `Configuración de ${appLabel} tomada (las solicitudes pasarán por proxy local)`,
             })
           : t("proxy.takeover.disabled", {
               app: appLabel,
-              defaultValue: `已恢复 ${appLabel} 配置`,
+              defaultValue: `Configuración de ${appLabel} restaurada`,
             }),
         { closeButton: true },
       );
@@ -153,17 +153,17 @@ export function useProxyStatus() {
     onError: (error: Error) => {
       const detail =
         extractErrorMessage(error) ||
-        t("common.unknown", { defaultValue: "未知错误" });
+        t("common.unknown", { defaultValue: "Error desconocido" });
       toast.error(
         t("proxy.takeover.failed", {
           detail,
-          defaultValue: `操作失败: ${detail}`,
+          defaultValue: `Error en operación: ${detail}`,
         }),
       );
     },
   });
 
-  // 代理模式切换供应商（热切换）
+  // Cambiar proveedor en modo proxy (hot switch)
   const switchProxyProviderMutation = useMutation({
     mutationFn: ({
       appType,
@@ -178,17 +178,17 @@ export function useProxyStatus() {
     onError: (error: Error) => {
       const detail =
         extractErrorMessage(error) ||
-        t("common.unknown", { defaultValue: "未知错误" });
+        t("common.unknown", { defaultValue: "Error desconocido" });
       toast.error(
         t("proxy.switchFailed", {
           error: detail,
-          defaultValue: `切换失败: ${detail}`,
+          defaultValue: `Error al cambiar: ${detail}`,
         }),
       );
     },
   });
 
-  // 检查是否运行中
+  // Verificar si está en ejecución
   const checkRunning = async () => {
     try {
       return await invoke<boolean>("is_proxy_running");
@@ -197,7 +197,7 @@ export function useProxyStatus() {
     }
   };
 
-  // 检查接管状态
+  // Verificar estado de takeover
   const checkTakeoverActive = async () => {
     try {
       return await invoke<boolean>("is_live_takeover_active");

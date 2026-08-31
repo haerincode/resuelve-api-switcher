@@ -43,7 +43,7 @@ export const FullScreenPanel: React.FC<FullScreenPanelProps> = ({
     };
   }, [isOpen]);
 
-  // ESC 键关闭面板
+  // Cerrar panel con tecla ESC
   const onCloseRef = React.useRef(onClose);
 
   React.useEffect(() => {
@@ -55,21 +55,21 @@ export const FullScreenPanel: React.FC<FullScreenPanelProps> = ({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        // 子组件（例如 Radix 的 Select/Dialog/Dropdown）如果已经消费了 ESC，就不要再关闭整个面板
+        // Si un componente hijo (ej. Select/Dialog/Dropdown de Radix) ya consumió ESC, no cerrar el panel
         if (event.defaultPrevented) {
           return;
         }
 
         if (isTextEditableTarget(event.target)) {
-          return; // 让输入框自己处理 ESC（比如清空、失焦等）
+          return; // Dejar que el input maneje ESC (limpiar, desenfocar, etc.)
         }
 
-        event.stopPropagation(); // 阻止事件继续冒泡到 window，避免触发 App.tsx 的全局监听
+        event.stopPropagation(); // Evitar que el evento suba a window y dispare el listener global de App.tsx
         onCloseRef.current();
       }
     };
 
-    // 使用冒泡阶段监听，让子组件（如 Radix UI）优先处理 ESC
+    // Usar fase de bubbling para que componentes hijos (como Radix UI) manejen ESC primero
     window.addEventListener("keydown", handleKeyDown, false);
     return () => {
       window.removeEventListener("keydown", handleKeyDown, false);
@@ -87,8 +87,8 @@ export const FullScreenPanel: React.FC<FullScreenPanelProps> = ({
           className="fixed inset-0 z-[60] flex flex-col"
           style={{ backgroundColor: "hsl(var(--background))" }}
         >
-          {/* Drag region - match App.tsx. Linux 上 DRAG_BAR_HEIGHT=0，
-              直接跳过整个元素；macOS 保留 28px 拖拽占位。 */}
+          {/* Región de arrastre - coincidir con App.tsx. En Linux DRAG_BAR_HEIGHT=0,
+              se omite el elemento completo; en macOS se mantiene el espacio de 28px. */}
           {DRAG_BAR_HEIGHT > 0 && (
             <div
               data-tauri-drag-region

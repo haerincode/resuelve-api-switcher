@@ -172,7 +172,7 @@ export function SettingsPage({
         console.error("[SettingsPage] Failed to autosave settings", error);
         toast.error(
           t("settings.saveFailedGeneric", {
-            defaultValue: "保存失败，请重试",
+            defaultValue: "Error al guardar, intente nuevamente",
           }),
         );
       }
@@ -200,7 +200,7 @@ export function SettingsPage({
             </TabsTrigger>
             <TabsTrigger value="proxy">{t("settings.tabProxy")}</TabsTrigger>
             <TabsTrigger value="auth">
-              {t("settings.tabAuth", { defaultValue: "认证" })}
+              {t("settings.tabAuth", { defaultValue: "Autenticación" })}
             </TabsTrigger>
             <TabsTrigger value="advanced">
               {t("settings.tabAdvanced")}

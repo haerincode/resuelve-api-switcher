@@ -1,10 +1,10 @@
-//! Skills 数据访问对象
+//! Objeto de acceso a datos de Skills
 //!
-//! 提供 Skills 和 Skill Repos 的 CRUD 操作。
+//! Provee operaciones CRUD de Skills y Skill Repos.
 //!
-//! v3.10.0+ 统一管理架构：
-//! - Skills 使用统一的 id 主键，支持四应用启用标志
-//! - 实际文件存储在 ~/.cc-switch/skills/，同步到各应用目录
+//! Arquitectura de gestión unificada v3.10.0+:
+//! - Skills usa id unificado como clave primaria, soporta banderas de habilitación para cuatro aplicaciones
+//! - El almacenamiento real de archivos está en ~/.cc-switch/skills/, sincronizado a los directorios de cada aplicación
 
 use crate::app_config::{InstalledSkill, SkillApps};
 use crate::database::{lock_conn, Database};
@@ -14,9 +14,9 @@ use indexmap::IndexMap;
 use rusqlite::params;
 
 impl Database {
-    // ========== InstalledSkill CRUD ==========
+    // ========== CRUD de InstalledSkill ==========
 
-    /// 获取所有已安装的 Skills
+    /// Obtener todos los Skills instalados
     pub fn get_all_installed_skills(&self) -> Result<IndexMap<String, InstalledSkill>, AppError> {
         let conn = lock_conn!(self.conn);
         let mut stmt = conn
@@ -61,7 +61,7 @@ impl Database {
         Ok(skills)
     }
 
-    /// 获取单个已安装的 Skill
+    /// Obtener un Skill instalado individual
     pub fn get_installed_skill(&self, id: &str) -> Result<Option<InstalledSkill>, AppError> {
         let conn = lock_conn!(self.conn);
         let mut stmt = conn
@@ -103,7 +103,7 @@ impl Database {
         }
     }
 
-    /// 保存 Skill（添加或更新）
+    /// Guardar Skill (agregar o actualizar)
     pub fn save_skill(&self, skill: &InstalledSkill) -> Result<(), AppError> {
         let conn = lock_conn!(self.conn);
         conn.execute(
@@ -135,7 +135,7 @@ impl Database {
         Ok(())
     }
 
-    /// 删除 Skill
+    /// Eliminar Skill
     pub fn delete_skill(&self, id: &str) -> Result<bool, AppError> {
         let conn = lock_conn!(self.conn);
         let affected = conn
@@ -144,7 +144,7 @@ impl Database {
         Ok(affected > 0)
     }
 
-    /// 清空所有 Skills（用于迁移）
+    /// Limpiar todos los Skills (usar para migración)
     pub fn clear_skills(&self) -> Result<(), AppError> {
         let conn = lock_conn!(self.conn);
         conn.execute("DELETE FROM skills", [])
@@ -152,7 +152,7 @@ impl Database {
         Ok(())
     }
 
-    /// 更新 Skill 的应用启用状态
+    /// Actualizar estado de habilitación de aplicaciones del Skill
     pub fn update_skill_apps(&self, id: &str, apps: &SkillApps) -> Result<bool, AppError> {
         let conn = lock_conn!(self.conn);
         let affected = conn
@@ -164,7 +164,7 @@ impl Database {
         Ok(affected > 0)
     }
 
-    /// 更新 Skill 的内容哈希和更新时间
+    /// Actualizar hash de contenido y tiempo de actualización del Skill
     pub fn update_skill_hash(
         &self,
         id: &str,
@@ -181,9 +181,9 @@ impl Database {
         Ok(affected > 0)
     }
 
-    // ========== SkillRepo CRUD（保持原有） ==========
+    // ========== CRUD de SkillRepo (mantener original) ==========
 
-    /// 获取所有 Skill 仓库
+    /// Obtener todos los repositorios de Skill
     pub fn get_skill_repos(&self) -> Result<Vec<SkillRepo>, AppError> {
         let conn = lock_conn!(self.conn);
         let mut stmt = conn
@@ -210,7 +210,7 @@ impl Database {
         Ok(repos)
     }
 
-    /// 保存 Skill 仓库
+    /// Guardar repositorio de Skill
     pub fn save_skill_repo(&self, repo: &SkillRepo) -> Result<(), AppError> {
         let conn = lock_conn!(self.conn);
         conn.execute(
@@ -221,7 +221,7 @@ impl Database {
         Ok(())
     }
 
-    /// 删除 Skill 仓库
+    /// Eliminar repositorio de Skill
     pub fn delete_skill_repo(&self, owner: &str, name: &str) -> Result<(), AppError> {
         let conn = lock_conn!(self.conn);
         conn.execute(
@@ -232,31 +232,31 @@ impl Database {
         Ok(())
     }
 
-    /// 初始化默认的 Skill 仓库（启动时调用，补充缺失的默认仓库）
+    /// Inicializar repositorios de Skill predeterminados (llamar al inicio, complementar repositorios predeterminados faltantes)
     pub fn init_default_skill_repos(&self) -> Result<usize, AppError> {
-        // 获取已有仓库列表
+        // Obtener lista de repositorios existentes
         let existing = self.get_skill_repos()?;
         let existing_keys: std::collections::HashSet<(String, String)> = existing
             .iter()
             .map(|r| (r.owner.clone(), r.name.clone()))
             .collect();
 
-        // 获取默认仓库列表
+        // Obtener lista de repositorios predeterminados
         let default_store = crate::services::skill::SkillStore::default();
         let mut count = 0;
 
-        // 仅插入缺失的默认仓库
+        // Solo insertar repositorios predeterminados faltantes
         for repo in &default_store.repos {
             let key = (repo.owner.clone(), repo.name.clone());
             if !existing_keys.contains(&key) {
                 self.save_skill_repo(repo)?;
                 count += 1;
-                log::info!("补充默认 Skill 仓库: {}/{}", repo.owner, repo.name);
+                log::info!("Complementar repositorio Skill predeterminado: {}/{}", repo.owner, repo.name);
             }
         }
 
         if count > 0 {
-            log::info!("补充默认 Skill 仓库完成，新增 {count} 个");
+            log::info!("Complemento de repositorios Skill predeterminados completado, agregados {count}");
         }
         Ok(count)
     }

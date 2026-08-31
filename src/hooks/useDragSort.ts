@@ -18,7 +18,7 @@ export function useDragSort(providers: Record<string, Provider>, appId: AppId) {
   const { t, i18n } = useTranslation();
 
   const sortedProviders = useMemo(() => {
-    const locale = i18n.language === "zh" ? "zh-CN" : "en-US";
+    const locale = i18n.language === "es" ? "es-CL" : "en-US";
     return Object.values(providers).sort((a, b) => {
       if (a.sortIndex !== undefined && b.sortIndex !== undefined) {
         return a.sortIndex - b.sortIndex;
@@ -75,22 +75,22 @@ export function useDragSort(providers: Record<string, Provider>, appId: AppId) {
           queryKey: ["providers", appId],
         });
 
-        // 刷新故障转移队列（因为队列顺序依赖 sort_index）
+        // Refrescar cola de failover (porque el orden de la cola depende de sort_index)
         await queryClient.invalidateQueries({
           queryKey: ["failoverQueue", appId],
         });
 
-        // 更新托盘菜单以反映新的排序（失败不影响主操作）
+        // Actualizar menú de bandeja para reflejar el nuevo orden (el fallo no afecta la operación principal)
         try {
           await providersApi.updateTrayMenu();
         } catch (trayError) {
           console.error("Failed to update tray menu after sort", trayError);
-          // 托盘菜单更新失败不影响排序成功
+          // El fallo al actualizar el menú de bandeja no afecta el éxito del ordenamiento
         }
 
         toast.success(
           t("provider.sortUpdated", {
-            defaultValue: "排序已更新",
+            defaultValue: "Ordenamiento actualizado",
           }),
           { closeButton: true },
         );
@@ -98,7 +98,7 @@ export function useDragSort(providers: Record<string, Provider>, appId: AppId) {
         console.error("Failed to update provider sort order", error);
         toast.error(
           t("provider.sortUpdateFailed", {
-            defaultValue: "排序更新失败",
+            defaultValue: "Error al actualizar ordenamiento",
           }),
         );
       }
