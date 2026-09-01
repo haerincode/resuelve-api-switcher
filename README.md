@@ -1,9 +1,10 @@
 # Resuelve-API Switcher
 
-Herramienta de escritorio oficial de **Resuelve-API**. Conecta Claude Code, Codex CLI, Gemini CLI y
-Claude Desktop a Resuelve-API pegando tu Clave API una sola vez.
+Herramienta de escritorio oficial de **Resuelve-API**. Conecta Claude Code, Claude Desktop y Gemini CLI a Resuelve-API pegando tu Clave API una sola vez.
 
-Versión 1.0.0 · Windows x64 · Interfaz en español
+Versión 1.1.0 · Windows x64 · Interfaz en español
+
+> **Nota sobre Codex:** La integración con Codex CLI está temporalmente desactivada mientras investigamos problemas de compatibilidad con el proxy local. Seguiremos trabajando en ello y avisaremos cuando esté lista. Mientras tanto, puedes usar Codex apuntando directamente a `https://resuelve-api.lat/v1` editando tu `~/.codex/config.toml` manualmente.
 
 ---
 
