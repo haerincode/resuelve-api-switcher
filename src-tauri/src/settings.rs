@@ -35,7 +35,7 @@ pub struct VisibleApps {
         default = "default_true"
     )]
     pub claude_desktop: bool,
-    #[serde(default = "default_true")]
+    #[serde(default)]
     pub codex: bool,
     #[serde(default = "default_true")]
     pub gemini: bool,
@@ -52,7 +52,7 @@ impl Default for VisibleApps {
         Self {
             claude: true,
             claude_desktop: true,
-            codex: true,
+            codex: false,
             gemini: true,
             opencode: true,
             openclaw: true,

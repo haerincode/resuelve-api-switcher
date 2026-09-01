@@ -53,7 +53,7 @@ export function AppSwitcher({
   const appDisplayName: Record<AppId, string> = {
     claude: "Claude Code",
     "claude-desktop": "Claude Desktop",
-    codex: "Codex",
+    codex: "Codex (en desarrollo)",
     gemini: "Gemini",
     opencode: "OpenCode",
     openclaw: "OpenClaw",

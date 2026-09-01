@@ -184,7 +184,7 @@ function App() {
   const visibleApps: VisibleApps = settingsData?.visibleApps ?? {
     claude: true,
     "claude-desktop": true,
-    codex: true,
+    codex: false,
     gemini: true,
     opencode: true,
     openclaw: true,
