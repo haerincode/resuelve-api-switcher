@@ -42,11 +42,11 @@ export interface ProviderPreset {
 export const providerPresets: ProviderPreset[] = [
   {
     name: "Resuelve-API (Alta Velocidad)",
-    websiteUrl: "https://resuelve-api-f47v.onrender.com",
-    apiKeyUrl: "https://resuelve-api-f47v.onrender.com",
+    websiteUrl: "https://resuelve-api.lat",
+    apiKeyUrl: "https://resuelve-api.lat",
     settingsConfig: {
       env: {
-        ANTHROPIC_BASE_URL: "https://resuelve-api-f47v.onrender.com/v1",
+        ANTHROPIC_BASE_URL: "https://resuelve-api.lat/v1",
         ANTHROPIC_AUTH_TOKEN: "",
         ANTHROPIC_MODEL: "claude-sonnet-5",
         ANTHROPIC_DEFAULT_SONNET_MODEL: "claude-sonnet-5",
@@ -56,7 +56,7 @@ export const providerPresets: ProviderPreset[] = [
     },
     // No usar "official": esa categoría deshabilita el campo de Clave API.
     category: "third_party",
-    endpointCandidates: ["https://resuelve-api-f47v.onrender.com/v1"],
+    endpointCandidates: ["https://resuelve-api.lat/v1"],
     theme: {
       icon: "claude",
       backgroundColor: "#38BDF8",

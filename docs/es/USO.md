@@ -47,7 +47,7 @@ Archivo: `%USERPROFILE%\.claude\settings.json`
 ```json
 {
   "env": {
-    "ANTHROPIC_BASE_URL": "https://resuelve-api-f47v.onrender.com/v1",
+    "ANTHROPIC_BASE_URL": "https://resuelve-api.lat/v1",
     "ANTHROPIC_AUTH_TOKEN": "tu-clave"
   }
 }
@@ -71,7 +71,7 @@ disable_response_storage = true
 
 [model_providers.resuelve_api]
 name = "Resuelve-API"
-base_url = "https://resuelve-api-f47v.onrender.com/v1"
+base_url = "https://resuelve-api.lat/v1"
 wire_api = "chat"
 env_key = "OPENAI_API_KEY"
 ```
@@ -85,7 +85,7 @@ Si tu gateway sirve otros modelos, cambia `model` en el editor de configuración
 Variables de entorno que escribe:
 
 ```
-GOOGLE_GEMINI_BASE_URL=https://resuelve-api-f47v.onrender.com
+GOOGLE_GEMINI_BASE_URL=https://resuelve-api.lat
 GEMINI_API_KEY=tu-clave
 GEMINI_MODEL=gemini-3.1-pro
 ```

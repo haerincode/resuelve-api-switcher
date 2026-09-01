@@ -136,15 +136,15 @@ export const _brandedRoutes = (
 export const claudeDesktopProviderPresets: ClaudeDesktopProviderPreset[] = [
   {
     name: "Resuelve-API (Alta Velocidad)",
-    websiteUrl: "https://resuelve-api-f47v.onrender.com",
-    apiKeyUrl: "https://resuelve-api-f47v.onrender.com",
+    websiteUrl: "https://resuelve-api.lat",
+    apiKeyUrl: "https://resuelve-api.lat",
     category: "third_party",
-    baseUrl: "https://resuelve-api-f47v.onrender.com/v1",
+    baseUrl: "https://resuelve-api.lat/v1",
     apiKeyField: "ANTHROPIC_AUTH_TOKEN",
     mode: "proxy",
     apiFormat: "anthropic",
     modelRoutes: mappedRoutes("claude-sonnet-5", "claude-opus-5", "claude-sonnet-5"),
-    endpointCandidates: ["https://resuelve-api-f47v.onrender.com/v1"],
+    endpointCandidates: ["https://resuelve-api.lat/v1"],
     theme: {
       icon: "claude",
       backgroundColor: "#38BDF8",

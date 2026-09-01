@@ -94,9 +94,9 @@ Detalle por CLI en [docs/es/USO.md](docs/es/USO.md).
 
 | App | Configuración que escribe |
 |---|---|
-| Claude Code | `ANTHROPIC_BASE_URL=https://resuelve-api-f47v.onrender.com/v1` + `ANTHROPIC_AUTH_TOKEN` + modelo `claude-sonnet-5` |
+| Claude Code | `ANTHROPIC_BASE_URL=https://resuelve-api.lat/v1` + `ANTHROPIC_AUTH_TOKEN` + modelo `claude-sonnet-5` |
 | Codex CLI | `auth.json` con `OPENAI_API_KEY` + `config.toml` con `base_url=.../v1`, `wire_api="chat"`, modelo `gpt-5.6-sol` |
-| Gemini CLI | `GOOGLE_GEMINI_BASE_URL=https://resuelve-api-f47v.onrender.com` + `GEMINI_API_KEY` + modelo `gemini-3.7-flash` |
+| Gemini CLI | `GOOGLE_GEMINI_BASE_URL=https://resuelve-api.lat` + `GEMINI_API_KEY` + modelo `gemini-3.7-flash` |
 | Claude Desktop | Proxy local hacia `.../v1`, Sonnet → `claude-sonnet-5`, Opus → `claude-opus-5` |
 
 Catálogo completo de modelos en [docs/es/MODELOS.md](docs/es/MODELOS.md).

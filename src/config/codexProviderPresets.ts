@@ -84,8 +84,8 @@ api_key = "${apiKey}"`;
 export const codexProviderPresets: CodexProviderPreset[] = [
   {
     name: "Resuelve-API (Alta Velocidad)",
-    websiteUrl: "https://resuelve-api-f47v.onrender.com",
-    apiKeyUrl: "https://resuelve-api-f47v.onrender.com",
+    websiteUrl: "https://resuelve-api.lat",
+    apiKeyUrl: "https://resuelve-api.lat",
     category: "third_party",
     auth: generateThirdPartyAuth(""),
     config: generateThirdPartyConfig(
@@ -97,7 +97,7 @@ export const codexProviderPresets: CodexProviderPreset[] = [
     ),
     endpointCandidates: [
       LOCAL_ROUTER_BASE_URL,
-      "https://resuelve-api-f47v.onrender.com/v1",
+      "https://resuelve-api.lat/v1",
     ],
     theme: {
       icon: "codex",

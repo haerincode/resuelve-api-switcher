@@ -34,19 +34,19 @@ export interface GeminiProviderPreset {
 export const geminiProviderPresets: GeminiProviderPreset[] = [
   {
     name: "Resuelve-API (Alta Velocidad)",
-    websiteUrl: "https://resuelve-api-f47v.onrender.com",
-    apiKeyUrl: "https://resuelve-api-f47v.onrender.com",
+    websiteUrl: "https://resuelve-api.lat",
+    apiKeyUrl: "https://resuelve-api.lat",
     settingsConfig: {
       env: {
-        GOOGLE_GEMINI_BASE_URL: "https://resuelve-api-f47v.onrender.com",
+        GOOGLE_GEMINI_BASE_URL: "https://resuelve-api.lat",
         GEMINI_MODEL: "gemini-3.7-flash",
       },
     },
-    baseURL: "https://resuelve-api-f47v.onrender.com",
+    baseURL: "https://resuelve-api.lat",
     model: "gemini-3.7-flash",
     description: "Resuelve-API (Alta Velocidad)",
     category: "third_party",
-    endpointCandidates: ["https://resuelve-api-f47v.onrender.com"],
+    endpointCandidates: ["https://resuelve-api.lat"],
     theme: {
       icon: "gemini",
       backgroundColor: "#38BDF8",

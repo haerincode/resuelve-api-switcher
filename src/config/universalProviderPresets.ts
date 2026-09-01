@@ -67,7 +67,7 @@ export const universalProviderPresets: UniversalProviderPreset[] = [
       gemini: true,
     },
     defaultModels: RESUELVE_API_DEFAULT_MODELS,
-    websiteUrl: "https://resuelve-api-f47v.onrender.com",
+    websiteUrl: "https://resuelve-api.lat",
     icon: "anthropic",
     iconColor: "#38BDF8",
     description:
